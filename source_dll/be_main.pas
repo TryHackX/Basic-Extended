@@ -28,10 +28,10 @@ library basicext_dll;
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   {$IFDEF WINDOWS}Windows,{$ENDIF}
-  SysUtils, be_store;
+  SysUtils, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx;
 
 const
-  BE_API_VERSION = 1;
+  BE_API_VERSION = 2;
   GET_MODULE_HANDLE_EX_FLAG_PIN = 1;
   GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = 4;
 {$IFNDEF WINDOWS}
@@ -107,6 +107,24 @@ begin
   FreeAndNil(Store);
 end;
 
+procedure ResetEngines;
+var
+  i: LongInt;
+begin
+  for i := 1 to BE_PLAYERS do
+  begin
+    RadarReset(i);
+    MoveReset(i);
+    GunReset(i);
+    TrajReset(i);
+    VisReset(i);
+    WP[i].Active := False;
+    WP[i].Alive := False;
+    WP[i].Name := '';
+  end;
+  WeaponsDefault(False);
+end;
+
 function BE_Init(DataDir: PChar; ApiVersion: LongInt): LongInt; cdecl;
 var
   Dir, Txt: AnsiString;
@@ -119,6 +137,7 @@ begin
       Exit;
     end;
     PinModule;
+    ResetEngines;
     { a second BE_Init without BE_Shutdown (the script was loaded again): start fresh }
     StopAll;
     Dir := IncludeTrailingPathDelimiter(Str(DataDir, 1024));
@@ -248,6 +267,496 @@ begin
   end;
 end;
 
+procedure BE_World(Tick, Count: LongInt; I: PLongArr; F: PSingleArr); cdecl;
+begin
+  try
+    if (I <> nil) and (F <> nil) then
+      WorldLoad(Tick, Count, I, F);
+  except
+  end;
+end;
+
+procedure BE_Name(ID: LongInt; Name: PChar); cdecl;
+begin
+  try
+    WorldName(ID, Str(Name, 64));
+  except
+  end;
+end;
+
+procedure BE_Vis(S, B, Seen: LongInt); cdecl;
+begin
+  try
+    VisSet(S, B, Seen <> 0);
+  except
+  end;
+end;
+
+procedure BE_VisReset(ID: LongInt); cdecl;
+begin
+  try
+    VisReset(ID);
+  except
+  end;
+end;
+
+function BE_VisNeeded: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if VisNeeded then
+      Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_VisNext(Tick: LongInt; S, B: PLongInt; X1, Y1, X2, Y2: PSingle): LongInt; cdecl;
+var
+  a, c: LongInt;
+  p, q, r, t: Single;
+begin
+  Result := 0;
+  try
+    if VisNext(Tick, a, c, p, q, r, t) then
+    begin
+      Result := 1;
+      S^ := a;
+      B^ := c;
+      X1^ := p;
+      Y1^ := q;
+      X2^ := r;
+      Y2^ := t;
+    end;
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_RadarInt(Key, Value: LongInt); cdecl;
+begin
+  try
+    RadarInt(Key, Value);
+  except
+  end;
+end;
+
+procedure BE_RadarFloat(Key: LongInt; Value: Single); cdecl;
+begin
+  try
+    RadarFloat(Key, Value);
+  except
+  end;
+end;
+
+procedure BE_RadarText(Key: LongInt; Value: PChar); cdecl;
+begin
+  try
+    RadarText(Key, Str(Value, 400));
+  except
+  end;
+end;
+
+procedure BE_RadarUser(ID, On, Mode, Show, PX, PY: LongInt; Size, Zoom, MarkSize: Single; Editing: LongInt); cdecl;
+begin
+  try
+    RadarUser(ID, On, Mode, Show, PX, PY, Size, Zoom, MarkSize, Editing);
+  except
+  end;
+end;
+
+function BE_RadarPass(ID, Tick, Budget: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := RadarPass(ID, Tick, Budget);
+    if RadarPending(ID) <> 0 then
+      Result := Result + 65536;
+  except
+    OpCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_RadarHide(ID, Budget: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := RadarHide(ID, Budget);
+  except
+    OpCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_RadarPending(ID: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := RadarPending(ID);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_RadarReset(ID: LongInt); cdecl;
+begin
+  try
+    RadarReset(ID);
+  except
+  end;
+end;
+
+procedure BE_RadarRedraw(ID: LongInt); cdecl;
+begin
+  try
+    RadarRedraw(ID);
+  except
+  end;
+end;
+
+function BE_RadarRange(ID: LongInt): Single; cdecl;
+begin
+  Result := 0;
+  try
+    Result := RadarRange(ID);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_Op(Index: LongInt; Kind, Layer, Delay, Color: PLongInt; Scale, X, Y: PSingle): PChar; cdecl;
+begin
+  Result := ' ';
+  try
+    if (Index >= 0) and (Index < OpCount) then
+    begin
+      Kind^ := Ops[Index].Kind;
+      Layer^ := Ops[Index].Layer;
+      Delay^ := Ops[Index].Delay;
+      Color^ := Ops[Index].Color;
+      Scale^ := Ops[Index].Scale;
+      X^ := Ops[Index].X;
+      Y^ := Ops[Index].Y;
+      Result := PChar(Ops[Index].Text);
+    end
+    else
+      Kind^ := 0;
+  except
+    Result := ' ';
+  end;
+end;
+
+function BE_TextWidth(Text: PChar; Scale: Single): Single; cdecl;
+begin
+  Result := 0;
+  try
+    Result := TextAdvance(Str(Text, 400)) * Scale * WORLD_EM;
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_MoveSet(Key: LongInt; Value: Single); cdecl;
+begin
+  try
+    MoveSet(Key, Value);
+  except
+  end;
+end;
+
+function BE_Move(ID, Tick, Mode, Variant, Key, Alive: LongInt; X, Y, VX, VY: Single; AimX, AimY: LongInt;
+  OX, OY, OVX, OVY: PSingle): LongInt; cdecl;
+var
+  a, b, c, d: Single;
+begin
+  Result := 0;
+  try
+    Result := MoveStep(ID, Tick, Mode, Variant, Key, Alive, X, Y, VX, VY, AimX, AimY, a, b, c, d);
+    OX^ := a;
+    OY^ := b;
+    OVX^ := c;
+    OVY^ := d;
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_MoveBlocked(ID, Tick: LongInt); cdecl;
+begin
+  try
+    MoveBlocked(ID, Tick);
+  except
+  end;
+end;
+
+procedure BE_MoveReset(ID: LongInt); cdecl;
+begin
+  try
+    MoveReset(ID);
+  except
+  end;
+end;
+
+function BE_WeaponsLoad(Path: PChar; Realistic: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := WeaponsLoad(Str(Path, 1024), Realistic <> 0);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_Gravity(G: Single); cdecl;
+begin
+  try
+    if G > 0 then
+      BulletGravity := G * 2.25;
+  except
+  end;
+end;
+
+function BE_Weapon(W: LongInt; Speed, Damage, Spread, Inherit: PSingle; Style, Interval, Ammo, Reload,
+  StartUp: PLongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if not ValidWeapon(W) then
+      Exit;
+    Speed^ := ShotSpeed(W);
+    Damage^ := ShotDamage(W);
+    Spread^ := Weapon[W].Spread;
+    Inherit^ := Weapon[W].Inherit;
+    Style^ := ShotStyle(W);
+    Interval^ := Weapon[W].Interval;
+    Ammo^ := Weapon[W].Ammo;
+    Reload^ := Weapon[W].Reload;
+    StartUp^ := Weapon[W].StartUp;
+    Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_WeaponSound(W: LongInt): PChar; cdecl;
+begin
+  Result := '';
+  try
+    if ValidWeapon(W) then
+      Result := PChar(Weapon[W].Sound);
+  except
+    Result := '';
+  end;
+end;
+
+function BE_Path(W: LongInt; X, Y, VX, VY, AimX, AimY: Single; MaxTicks: LongInt; Spacing, MaxRange: Single): LongInt;
+  cdecl;
+begin
+  Result := 0;
+  try
+    Result := BuildPath(W, X, Y, VX, VY, AimX, AimY, MaxTicks, Spacing, MaxRange);
+  except
+    PathCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_PathPoint(Index: LongInt; X, Y: PSingle): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if (Index >= 0) and (Index < PathCount) then
+    begin
+      X^ := PathX[Index];
+      Y^ := PathY[Index];
+      Result := 1;
+    end;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_Solve(W: LongInt; SX, SY, SVX, SVY, TX, TY, TVX, TVY, TGrav: Single; DX, DY: PSingle;
+  Ticks: PLongInt): LongInt; cdecl;
+var
+  a, b: Single;
+  t: LongInt;
+begin
+  Result := 0;
+  try
+    if Solve(W, SX, SY, SVX, SVY, TX, TY, TVX, TVY, TGrav, a, b, t) then
+      Result := 1;
+    DX^ := a;
+    DY^ := b;
+    Ticks^ := t;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_Shot(W: LongInt; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed: LongInt; Style: PLongInt;
+  HitM: PSingle): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := BuildShot(W, SX, SY, SVX, SVY, DX, DY, Spread, Seed);
+    Style^ := ShotStyle(W);
+    HitM^ := ShotDamage(W);
+  except
+    ShotCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_ShotGet(Index: LongInt; X, Y, VX, VY: PSingle): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if (Index >= 0) and (Index < ShotCount) then
+    begin
+      X^ := ShotX[Index];
+      Y^ := ShotY[Index];
+      VX^ := ShotVX[Index];
+      VY^ := ShotVY[Index];
+      Result := 1;
+    end;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_GunTick(ID, Tick, W, Trigger, Infinite: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := GunTick(ID, Tick, W, Trigger, Infinite);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_GunFired(ID, Tick: LongInt); cdecl;
+begin
+  try
+    GunFired(ID, Tick);
+  except
+  end;
+end;
+
+procedure BE_GunReset(ID: LongInt); cdecl;
+begin
+  try
+    GunReset(ID);
+  except
+  end;
+end;
+
+function BE_GunTargets(Shooter, Mode: LongInt; MaxDist, MaxAngle: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := GunTargets(Shooter, Mode, MaxDist, MaxAngle);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_GunTarget(Index: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := GunTarget(Index);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_TrajInt(Key, Value: LongInt); cdecl;
+begin
+  try
+    TrajInt(Key, Value);
+  except
+  end;
+end;
+
+procedure BE_TrajFloat(Key: LongInt; Value: Single); cdecl;
+begin
+  try
+    TrajFloat(Key, Value);
+  except
+  end;
+end;
+
+procedure BE_TrajText(Key: LongInt; Value: PChar); cdecl;
+begin
+  try
+    TrajText(Key, Str(Value, 8));
+  except
+  end;
+end;
+
+function BE_TrajPass(ID, Tick, Budget, Visible, Hit: LongInt; CX, CY: Single; Cursor: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := TrajPass(ID, Tick, Budget, Visible, Hit, CX, CY, Cursor);
+  except
+    OpCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_TrajHide(ID, Budget: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := TrajHide(ID, Budget);
+  except
+    OpCount := 0;
+    Result := 0;
+  end;
+end;
+
+procedure BE_TrajReset(ID: LongInt); cdecl;
+begin
+  try
+    TrajReset(ID);
+  except
+  end;
+end;
+
+function BE_Fx(Kind, Seed: LongInt; Power: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := FxBuild(Kind, Seed, Power);
+  except
+    FxCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_FxGet(Index: LongInt; DX, DY, VX, VY, HitM: PSingle; Style, Delay: PLongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if (Index >= 0) and (Index < FxCount) then
+    begin
+      DX^ := Fx[Index].DX;
+      DY^ := Fx[Index].DY;
+      VX^ := Fx[Index].VX;
+      VY^ := Fx[Index].VY;
+      HitM^ := Fx[Index].HitM;
+      Style^ := Fx[Index].Style;
+      Delay^ := Fx[Index].Delay;
+      Result := 1;
+    end;
+  except
+    Result := 0;
+  end;
+end;
+
 exports
   BE_Init,
   BE_Shutdown,
@@ -257,6 +766,50 @@ exports
   BE_Pref_Begin,
   BE_Pref_Add,
   BE_Pref_Commit,
-  BE_Log;
+  BE_Log,
+  BE_World,
+  BE_Name,
+  BE_Vis,
+  BE_VisReset,
+  BE_VisNeeded,
+  BE_VisNext,
+  BE_RadarInt,
+  BE_RadarFloat,
+  BE_RadarText,
+  BE_RadarUser,
+  BE_RadarPass,
+  BE_RadarHide,
+  BE_RadarPending,
+  BE_RadarReset,
+  BE_RadarRedraw,
+  BE_RadarRange,
+  BE_Op,
+  BE_TextWidth,
+  BE_MoveSet,
+  BE_Move,
+  BE_MoveBlocked,
+  BE_MoveReset,
+  BE_WeaponsLoad,
+  BE_Gravity,
+  BE_Weapon,
+  BE_WeaponSound,
+  BE_Path,
+  BE_PathPoint,
+  BE_Solve,
+  BE_Shot,
+  BE_ShotGet,
+  BE_GunTick,
+  BE_GunFired,
+  BE_GunReset,
+  BE_GunTargets,
+  BE_GunTarget,
+  BE_TrajInt,
+  BE_TrajFloat,
+  BE_TrajText,
+  BE_TrajPass,
+  BE_TrajHide,
+  BE_TrajReset,
+  BE_Fx,
+  BE_FxGet;
 
 end.

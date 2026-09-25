@@ -12,9 +12,13 @@ if not exist build\test mkdir build\test
 if errorlevel 1 exit /b 1
 "%FPC%" -B -Pi386 -Twin32 -Mobjfpc -Sh -O1 -gl -Cr -Co -Ci -Fu. -FUbuild\test -FEbuild\test tests\test_dll.pas
 if errorlevel 1 exit /b 1
+"%FPC%" -B -Pi386 -Twin32 -Mobjfpc -Sh -O1 -gl -Cr -Co -Ci -Fu. -FUbuild\test -FEbuild\test tests\test_engine.pas
+if errorlevel 1 exit /b 1
 
 build\test\test_store.exe build\test
 if errorlevel 1 exit /b 1
 build\test\test_dll.exe build\win32\basicext_dll.dll build\test
+if errorlevel 1 exit /b 1
+build\test\test_engine.exe build\test
 if errorlevel 1 exit /b 1
 echo All tests passed.

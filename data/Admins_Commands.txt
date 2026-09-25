@@ -5,9 +5,14 @@ ____________________________________Admin Commands______________________________
 /editnearspawn, /countspawns, /createspawn, /createspawn <0-4>, /saveallspawns       |
 /search, /checkp, /checkd, /privacy, /resetallplayersstats, /resetallmapsstats       |                                                                     ',GOOD+700);
 /backupcreate <backup name>, /restorebackup <backup name>, /statusa <name*>          |                                                                     ',GOOD+700);
-/removeolderthan <data> (/removeolderthan 18.01.2021 or /removeolderthan 2021.01.18) | 
+/removeolderthan <data> (/removeolderthan 18.01.2021 or /removeolderthan 2021.01.18) |
 /radar [help|mode|tick|edit|zoom|show], /steamadmin, /be_status, /be_test, /be_bench |
-/explode <id|all>, /god [id], /heal <id|all>, /slap <id> [damage], /freeze <id>    |
-/bring <id>, /goto <id>, /disarm <id>, /give <id> <weapon>, /bonus <id> <1-6>       |
-/tele, /teletomouse, /flytomouse (then the reload key moves you to your cursor)     |
+/explode <id|all> [kind], /bigexplode <id|all>, /nuke <id|all>                       |
+  kinds: plain big nuke law m79 arrows firearrows bullets spas flame cluster nades   |
+         knives rain                                                                 |
+/god [id], /heal <id|all>, /slap <id> [damage], /freeze <id>                         |
+/bring <id>, /goto <id>, /disarm <id>, /give <id> <weapon>, /bonus <id> <1-6>        |
+/tele, /teletomouse [inherit|fixed], /flytomouse (reload key: tap = jump, hold =     |
+  teleport after teleport, inherit = faster the longer you hold)                     |
+/trajectory [id|off] - the flight of the bullets, /aimbot [on|off|cursor|nearest]    |
 _____________________________________________________________________________________|

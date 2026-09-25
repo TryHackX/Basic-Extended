@@ -49,12 +49,152 @@ external {$IFDEF WIN32} 'BE_Pref_Commit@scripts/Basic-Extended/basicext_dll.dll 
 procedure BE_Log(FileName, Line: PChar);
 external {$IFDEF WIN32} 'BE_Log@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Log@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+type
+  TBEInts = array[0..255] of Integer;
+  TBEFloats = array[0..127] of Single;
+
+procedure BE_World(Tick, Count: Integer; var I: TBEInts; var F: TBEFloats);
+external {$IFDEF WIN32} 'BE_World@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_World@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_Name(ID: Integer; Name: PChar);
+external {$IFDEF WIN32} 'BE_Name@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Name@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_Vis(S, B, Seen: Integer);
+external {$IFDEF WIN32} 'BE_Vis@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Vis@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_VisReset(ID: Integer);
+external {$IFDEF WIN32} 'BE_VisReset@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_VisReset@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_VisNeeded(): Integer;
+external {$IFDEF WIN32} 'BE_VisNeeded@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_VisNeeded@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_VisNext(Tick: Integer; var S, B: Integer; var X1, Y1, X2, Y2: Single): Integer;
+external {$IFDEF WIN32} 'BE_VisNext@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_VisNext@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_RadarInt(Key, Value: Integer);
+external {$IFDEF WIN32} 'BE_RadarInt@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarInt@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_RadarFloat(Key: Integer; Value: Single);
+external {$IFDEF WIN32} 'BE_RadarFloat@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarFloat@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_RadarText(Key: Integer; Value: PChar);
+external {$IFDEF WIN32} 'BE_RadarText@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarText@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_RadarUser(ID, IsOn, Mode, Show, PX, PY: Integer; Size, Zoom, MarkSize: Single; Editing: Integer);
+external {$IFDEF WIN32} 'BE_RadarUser@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarUser@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_RadarPass(ID, Tick, Budget: Integer): Integer;
+external {$IFDEF WIN32} 'BE_RadarPass@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarPass@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_RadarHide(ID, Budget: Integer): Integer;
+external {$IFDEF WIN32} 'BE_RadarHide@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarHide@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_RadarPending(ID: Integer): Integer;
+external {$IFDEF WIN32} 'BE_RadarPending@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarPending@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_RadarReset(ID: Integer);
+external {$IFDEF WIN32} 'BE_RadarReset@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarReset@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_RadarRedraw(ID: Integer);
+external {$IFDEF WIN32} 'BE_RadarRedraw@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarRedraw@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_RadarRange(ID: Integer): Single;
+external {$IFDEF WIN32} 'BE_RadarRange@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarRange@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_Op(Index: Integer; var Kind, Layer, Delay, Color: Integer; var Scale, X, Y: Single): PChar;
+external {$IFDEF WIN32} 'BE_Op@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Op@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_TextWidth(Text: PChar; Scale: Single): Single;
+external {$IFDEF WIN32} 'BE_TextWidth@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TextWidth@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_MoveSet(Key: Integer; Value: Single);
+external {$IFDEF WIN32} 'BE_MoveSet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_MoveSet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_Move(ID, Tick, Mode, Vari, Key, Alive: Integer; X, Y, VX, VY: Single; AimX, AimY: Integer;
+  var OX, OY, OVX, OVY: Single): Integer;
+external {$IFDEF WIN32} 'BE_Move@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Move@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_MoveBlocked(ID, Tick: Integer);
+external {$IFDEF WIN32} 'BE_MoveBlocked@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_MoveBlocked@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_MoveReset(ID: Integer);
+external {$IFDEF WIN32} 'BE_MoveReset@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_MoveReset@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_WeaponsLoad(Path: PChar; Realistic: Integer): Integer;
+external {$IFDEF WIN32} 'BE_WeaponsLoad@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_WeaponsLoad@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_Gravity(G: Single);
+external {$IFDEF WIN32} 'BE_Gravity@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Gravity@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_Weapon(W: Integer; var Speed, Damage, Spread, Inherit: Single; var Style, Interval, Ammo, Reload,
+  StartUp: Integer): Integer;
+external {$IFDEF WIN32} 'BE_Weapon@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Weapon@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_WeaponSound(W: Integer): PChar;
+external {$IFDEF WIN32} 'BE_WeaponSound@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_WeaponSound@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_Path(W: Integer; X, Y, VX, VY, AimX, AimY: Single; MaxTicks: Integer; Spacing, MaxRange: Single): Integer;
+external {$IFDEF WIN32} 'BE_Path@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Path@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_PathPoint(Index: Integer; var X, Y: Single): Integer;
+external {$IFDEF WIN32} 'BE_PathPoint@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_PathPoint@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_Solve(W: Integer; SX, SY, SVX, SVY, TX, TY, TVX, TVY, TGrav: Single; var DX, DY: Single;
+  var Ticks: Integer): Integer;
+external {$IFDEF WIN32} 'BE_Solve@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Solve@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_Shot(W: Integer; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed: Integer; var Style: Integer;
+  var HitM: Single): Integer;
+external {$IFDEF WIN32} 'BE_Shot@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Shot@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_ShotGet(Index: Integer; var X, Y, VX, VY: Single): Integer;
+external {$IFDEF WIN32} 'BE_ShotGet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ShotGet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_GunTick(ID, Tick, W, Trigger, Infinite: Integer): Integer;
+external {$IFDEF WIN32} 'BE_GunTick@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunTick@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_GunFired(ID, Tick: Integer);
+external {$IFDEF WIN32} 'BE_GunFired@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunFired@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_GunReset(ID: Integer);
+external {$IFDEF WIN32} 'BE_GunReset@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunReset@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_GunTargets(Shooter, Mode: Integer; MaxDist, MaxAngle: Single): Integer;
+external {$IFDEF WIN32} 'BE_GunTargets@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunTargets@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_GunTarget(Index: Integer): Integer;
+external {$IFDEF WIN32} 'BE_GunTarget@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunTarget@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_TrajInt(Key, Value: Integer);
+external {$IFDEF WIN32} 'BE_TrajInt@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TrajInt@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_TrajFloat(Key: Integer; Value: Single);
+external {$IFDEF WIN32} 'BE_TrajFloat@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TrajFloat@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_TrajText(Key: Integer; Value: PChar);
+external {$IFDEF WIN32} 'BE_TrajText@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TrajText@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_TrajPass(ID, Tick, Budget, Visible, Hit: Integer; CX, CY: Single; Cursor: Integer): Integer;
+external {$IFDEF WIN32} 'BE_TrajPass@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TrajPass@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_TrajHide(ID, Budget: Integer): Integer;
+external {$IFDEF WIN32} 'BE_TrajHide@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TrajHide@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_TrajReset(ID: Integer);
+external {$IFDEF WIN32} 'BE_TrajReset@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TrajReset@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_Fx(Kind, Seed: Integer; Power: Single): Integer;
+external {$IFDEF WIN32} 'BE_Fx@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Fx@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_FxGet(Index: Integer; var DX, DY, VX, VY, HitM: Single; var Style, Delay: Integer): Integer;
+external {$IFDEF WIN32} 'BE_FxGet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_FxGet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 implementation
 
 const
-  VERSION = '3.1';
+  VERSION = '3.2';
   { the library this main.pas was written for (source_dll/be_main.pas BE_API_VERSION) }
-  BE_API = 1;
+  BE_API = 2;
   TAG = '[Basic-Extended] ';
   TEAM_SPECTATOR = 5;
   MAX_BULLET_ID = 254;
@@ -160,6 +300,10 @@ const
   C_DISARM = 66;
   C_GIVE = 67;
   C_BONUS = 68;
+  C_TRAJ = 69;
+  C_AIMBOT = 70;
+  C_BIGEXPLODE = 71;
+  C_NUKE = 72;
   { damage number modes }
   DM_SUM = 0;
   DM_COLUMN = 1;
@@ -181,9 +325,8 @@ const
   WEP_BOW = 15;
   WEP_BOW_FIRE = 16;
   WEP_NONE = 255;
-  { arrows: dots of one arrow at most (shaft + head), layers of all arrows }
+  { arrows: dots of one arrow at most (shaft + head) }
   ARROW_DOTS_MAX = 8;
-  ARROW_LAYERS = 64;
   { the radar list stays on the screen for a minute and is sent again after 5 seconds without a
     change (texts are plain UDP packets in 2.8.2) }
   OVL_LIST_DISPLAY = 3600;
@@ -194,13 +337,10 @@ const
   { A text fades over the last 77 ticks of its display time (the client's alpha is 3 * ticks left
     + 25). Sent this much longer and taken away with ' ' at the wanted time, it keeps its colour. }
   FADE_MARGIN = 80;
-  { BigText letters are about BT_EM * Scale screen units high (480 units to the screen height; the
-    1.8 client source: 28 pt font * 4.8); the circle radar centres its marks with it }
-  BT_EM = 179;
-  { the circle radar: ring dots at most; its layers are the ring dots, the user himself, one per
-    player slot and the 8 hit marks }
+  { the circle radar: ring dots at most; its layers are the ring dots, the user himself and one per
+    player slot }
   RING_MAX = 32;
-  CIRCLE_LAYERS = 73;
+  CIRCLE_LAYERS = 65;
   { what the editor edits }
   ED_HUD = 1;
   ED_RADAR = 2;
@@ -230,6 +370,127 @@ const
   PREF_DEFAULT = 0;
   PREF_ON = 1;
   PREF_OFF = 2;
+  RADAR_TEXTS_PER_TICK = 20;
+  OVL_EXTRA_TICKS = 20;
+  SNAP_POS = 0;
+  SNAP_AIM = 1;
+  SNAP_FULL = 2;
+  OP_BIG = 1;
+  OP_WORLD = 2;
+  RI_LIST_LINES = 1;
+  RI_LIST_LAYER = 2;
+  RI_LIST_COLOR = 3;
+  RI_CIRCLE_DOTS = 4;
+  RI_CIRCLE_LAYER = 5;
+  RI_RING_COLOR = 6;
+  RI_SELF_COLOR = 7;
+  RI_ENEMY_COLOR = 8;
+  RI_FRIEND_COLOR = 9;
+  RI_SHOW_FAR = 10;
+  RI_LABEL_LAYER = 12;
+  RI_ARROWS_MAX = 13;
+  RI_ARROW_DOTS = 14;
+  RI_ARROW_LAYER = 15;
+  RI_ARROW_NEAR = 16;
+  RI_ARROW_MID = 17;
+  RI_ARROW_FAR = 18;
+  RI_REFRESH = 19;
+  RI_MARK_DISPLAY = 20;
+  RI_LIST_DISPLAY = 21;
+  RI_METER_DECIMALS = 22;
+  RI_COLOR_FULL = 23;
+  RI_COLOR_HALF = 24;
+  RI_COLOR_LOW = 25;
+  RI_VIS_RAYS = 26;
+  RI_VIS_ROUND = 27;
+  RI_TEAMGAME = 28;
+  RI_ARROW_STEPS = 29;
+  RF_RANGE = 1;
+  RF_LIST_SCALE = 2;
+  RF_CIRCLE_R = 3;
+  RF_CIRCLE_SCALE = 4;
+  RF_LABEL_SCALE = 5;
+  RF_LABEL_OFFSET = 6;
+  RF_SIZE_RANGE = 7;
+  RF_ARROW_INNER = 8;
+  RF_ARROW_OUTER = 9;
+  RF_ARROW_HEAD = 10;
+  RF_ARROW_WIDTH = 11;
+  RF_ARROW_SCALE = 12;
+  RF_ARROW_MOVE = 13;
+  RF_ARROW_LEAD = 14;
+  RF_LABEL_MOVE = 15;
+  RF_TAG_SCALE = 16;
+  RF_CIRCLE_MOVE = 17;
+  RT_RING = 1;
+  RT_SELF = 2;
+  RT_ENEMY = 3;
+  RT_FRIEND = 4;
+  RT_FAR = 5;
+  RT_FLAG = 6;
+  RT_BOW = 7;
+  RT_ARROW = 8;
+  RT_LIST_TITLE = 9;
+  RT_LIST_LINE = 10;
+  RT_NOBODY = 12;
+  TP_VAR_FIXED = 0;
+  TP_VAR_INHERIT = 1;
+  MA_MOVE = 1;
+  MA_VELOCITY = 2;
+  MA_TAP = 4;
+  MF_MOM_BASE = 1;
+  MF_MOM_PER_PIXEL = 2;
+  MF_MOM_KEEP = 3;
+  MF_MOM_MAX = 4;
+  MF_HOLD_TICKS = 5;
+  MF_HOP_TICKS = 6;
+  MF_HOP_MIN = 7;
+  MF_GAIN = 8;
+  MF_VMAX = 9;
+  MF_PUSH_TICKS = 10;
+  MF_FLY_BASE = 11;
+  MF_FLY_PER_PIXEL = 12;
+  MF_FLY_MAX = 13;
+  MF_FLY_EVERY = 14;
+  MF_FLY_DEAD = 15;
+  MF_FLY_SMOOTH = 16;
+  MF_GRAVITY = 17;
+  MF_HOP_TIMEOUT = 18;
+  MF_ACCEL = 19;
+  TJ_LAYER = 1;
+  TJ_DOTS = 2;
+  TJ_COLOR = 3;
+  TJ_HIT_COLOR = 4;
+  TJ_CURSOR_COLOR = 5;
+  TJF_SCALE = 1;
+  TJF_CURSOR_SCALE = 2;
+  TJF_MOVE = 3;
+  FX_PLAIN = 0;
+  FX_BIG = 1;
+  FX_NUKE = 2;
+  FX_LAW = 3;
+  FX_M79 = 4;
+  FX_ARROWS = 5;
+  FX_FIREARROWS = 6;
+  FX_BULLETS = 7;
+  FX_SPAS = 8;
+  FX_FLAME = 9;
+  FX_CLUSTER = 10;
+  FX_NADES = 11;
+  FX_KNIVES = 12;
+  FX_RAIN = 13;
+  FX_LAST = 13;
+  FX_KINDS = 'plain, big, nuke, law, m79, arrows, firearrows, bullets, spas, flame, cluster, nades, knives, rain';
+  FX_QUEUE = 1024;
+  FX_PER_TICK = 48;
+  AK_CROUCH = 0;
+  AK_JET = 1;
+  AK_PRONE = 2;
+  AK_FIRE = 3;
+  AT_CURSOR = 0;
+  AT_NEAREST = 1;
+  MUZZLE_HEIGHT = 11;
+  BODY_HEIGHT = 10;
 
 var
   { ---------------- settings ---------------- }
@@ -254,6 +515,7 @@ var
   HudHasPct, HudHasHp, HudHasMax, HudHasBar, HudHasRegen, HudHasVest: array[1..5] of Boolean;
   BarCache: array[0..40] of string;
   HudColorAt: array[0..100] of Longint;
+  HudColorFull, HudColorHalf, HudColorLow: Longint;
 
   RegEnabled, RegBots, RegByDamage: Boolean;
   RegDelayTicks, RegStepTicks: Integer;
@@ -281,17 +543,19 @@ var
   OvlRange, OvlScale, OvlOffsetY, OvlListScale: Single;
   OvlUpdateTicks, OvlLayerFirst, OvlListLayer, OvlListX, OvlListY, OvlListMax, OvlListTicks: Integer;
   OvlListColor: Longint;
-  OvlListTitle, OvlListLine: string;
+  OvlListTitle, OvlListLine, OvlNobody: string;
   OvlCircleX, OvlCircleY, OvlCircleTicks, OvlCircleDots, OvlCircleLayer: Integer;
   OvlCircleR, OvlCircleScale: Single;
   OvlRingColor, OvlSelfColor, OvlEnemyColor, OvlFriendColor: Longint;
   OvlRingChar, OvlSelfChar, OvlEnemyChar, OvlFriendChar, OvlFarChar: string;
   OvlSizeRange, OvlArrowInner, OvlArrowOuter, OvlArrowHead, OvlArrowScale: Single;
-  OvlShow, OvlPublicShow, OvlVisionRays, OvlVisionRound, OvlHitTicks, OvlArrowTicks, OvlArrowsMax, OvlArrowDots: Integer;
-  OvlArrowLayer: Integer;
-  OvlTags, OvlHitMarks: Boolean;
-  OvlFlagChar, OvlBowChar, OvlHitChar, OvlArrowChar: string;
-  OvlHitColor, OvlArrowNear, OvlArrowMid, OvlArrowFar: Longint;
+  OvlArrowWidth, OvlArrowMove, OvlArrowLead, OvlLabelMove, OvlTagScale, OvlCircleMove: Single;
+  OvlShow, OvlPublicShow, OvlVisionRays, OvlVisionRound, OvlArrowTicks, OvlArrowsMax, OvlArrowDots: Integer;
+  OvlArrowLayer, OvlListMeters, OvlTextsPerTick, OvlArrowSteps: Integer;
+  OvlRate, OvlRateTick, OvlBurst: Single;
+  OvlTags: Boolean;
+  OvlFlagChar, OvlBowChar, OvlArrowChar: string;
+  OvlArrowNear, OvlArrowMid, OvlArrowFar: Longint;
 
   HfEnabled: Boolean;
   HfChar: string;
@@ -300,8 +564,18 @@ var
   HfColor: Longint;
 
   TpEnabled, TpNoWalls: Boolean;
-  TpKey, TpFlyEvery: Integer;
+  TpKey, TpFlyEvery, TpHoldTicks, TpHopTicks, TpPushTicks, TpVariantDefault: Integer;
   TpMomBase, TpMomPerDist, TpMomKeep, TpMomMax, TpFlyBase, TpFlyPerDist, TpFlyMax: Single;
+  TpHopMin, TpGain, TpAccel, TpVmax, TpFlyDead, TpFlySmooth, TpHopTimeout: Single;
+
+  TrEnabled: Boolean;
+  TrLayer, TrDots, TrTicks, TrColor, TrHitColor, TrCursorColor, TrBudget: Integer;
+  TrSpacing, TrRange, TrScale, TrCursorScale, TrMove: Single;
+  AbEnabled, AbInfinite, AbSound: Boolean;
+  AbKey, AbTarget: Integer;
+  AbRange, AbAngle, AbSpread, AbSoundRange: Single;
+  WpFile, WpRealFile: string;
+  FxPower: Single;
 
   AfEnabled, AfIgnoreAdmins: Boolean;
   AfSeconds, AfWarn, AfMinPlayers: Integer;
@@ -467,7 +741,7 @@ var
 
   { the editor of the health display or the radar }
   EdOn, EdProne, EdMoved, EdNade: array[1..32] of Boolean;
-  EdUntil, EdHold, EdKind, EdShowAt: array[1..32] of Integer;
+  EdUntil, EdHold, EdKind, EdShowAt, EdPinAt: array[1..32] of Integer;
   EdPinX, EdPinY, EdX, EdY, EdScale: array[1..32] of Single;
   EdCount: Integer;
 
@@ -501,61 +775,33 @@ var
     earliest such tick }
   WtDue: array[1..32] of array[0..255] of Integer;
   WtNext: array[1..32] of Integer;
-  { hits on each circle radar user: until when a direction is shown and who fired from there }
-  HmUntil, HmShooter: array[1..32] of array[0..7] of Integer;
-  HmActive: array[1..32] of Boolean;
   { the health each human victim lost in the current tick (percent), for the hit flash }
   HfPend: array[1..32] of Single;
 
   { radar: switched on, allowed every mode ([Radar] SteamIds), and a user now (on, allowed or the
     radar public, in the game) }
   OvlOn, OvlAllowed, OvlAdmin: array[1..32] of Boolean;
-  { the next pass of each user, and a position, size or mode change to draw at once }
   RdDue: array[1..32] of Integer;
   RdRedraw: array[1..32] of Boolean;
-  { the mode drawn last (-1 = nothing): a change takes the old marks away }
-  RdDrawn: array[1..32] of Integer;
-  { labels shown (user, player) }
-  OvlLabelOn: array[1..32] of array[1..32] of Boolean;
-  { circle marks shown (user, player): position, mark, colour, when sent }
-  CbOn: array[1..32] of array[1..32] of Boolean;
-  CbX, CbY, CbSent: array[1..32] of array[1..32] of Integer;
-  CbColor: array[1..32] of array[1..32] of Longint;
-  CbChar: array[1..32] of array[1..32] of string;
-  { the ring of each user's circle: where and how big it was drawn, when }
-  CrOn: array[1..32] of Boolean;
-  CrX, CrY, CrR, CrDots, CrSent: array[1..32] of Integer;
-  CrScale: array[1..32] of Single;
-  { the hit marks of the circle shown, the arrow dots shown }
-  ChOn: array[1..32] of array[0..7] of Boolean;
-  ArOn: array[1..32] of array[0..63] of Boolean;
-  { what each arrow dot was sent as (a dot is sent again only when it moved or changed) }
-  ArX, ArY, ArSent: array[1..32] of array[0..63] of Integer;
-  ArC: array[1..32] of array[0..63] of Longint;
-  { flag carrier or bow of each living player (the pass that read them) }
-  OvlPTag: array[1..32] of Integer;
-  OvlLastTag: array[1..32] of array[1..32] of Integer;
-  { team vision: VisMine[s][b] = s could see b when that pair was looked at last; the spotters of
-    this round, where the round is; positions read once a tick for the rays }
-  VisMine: array[1..32] of array[1..32] of Boolean;
-  VisList: array[0..31] of Integer;
-  VisCount, VisK, VisB, VisNextRound: Integer;
-  VisNeeded: Boolean;
-  VpTick, VpAimX, VpAimY: array[1..32] of Integer;
-  VpX, VpY: array[1..32] of Single;
-  VpAlive: array[1..32] of Boolean;
-  { the slot each admin's overlay continues from when one pass was cut at TEXTS_PER_TICK }
-  OvlNext: array[1..32] of Integer;
-  OvlLastX, OvlLastY: array[1..32] of array[1..32] of Single;
-  OvlLastPct, OvlLastTick: array[1..32] of array[1..32] of Integer;
+  RdMark, RdTokens: array[1..32] of Single;
+  RdRetry, RdTokTick, RdEvery, RdNeed: array[1..32] of Integer;
   OvlCount: Integer;
-  { the radar list each user sees now, and when it was sent }
-  OvlListText: array[1..32] of string;
-  OvlListSent: array[1..32] of Integer;
-  { the living players as one radar pass read them }
-  OvlPAlive: array[1..32] of Boolean;
-  OvlPX, OvlPY: array[1..32] of Single;
-  OvlPPct: array[1..32] of Integer;
+  VisNeeded: Boolean;
+  WI: TBEInts;
+  WF: TBEFloats;
+  SnapTick, SnapExtraTick, SnapLevel: Integer;
+  SnapIdx: array[1..32] of Integer;
+  OvlUsers: array[0..31] of Integer;
+  OvlNextTick: Integer;
+  TpVariant: array[1..32] of Integer;
+  TrWatch, TrDue: array[1..32] of Integer;
+  TrCount: Integer;
+  AbOn, AbHeld: array[1..32] of Boolean;
+  AbMode, AbW, AbSoundAt: array[1..32] of Integer;
+  AbCount: Integer;
+  FxQTick, FxQTarget, FxQStyle: array[0..1023] of Integer;
+  FxQX, FxQY, FxQVX, FxQVY, FxQHit: array[0..1023] of Single;
+  FxQCount: Integer;
 
   { timers }
   SpecLeft: array[1..32] of Integer;
@@ -564,8 +810,8 @@ var
   WhoisLeft: Integer;
   TcpAdmins: TStringList;
   { teleport to the cursor: switched on by the admin, the key as last seen }
-  TpOn, TpWas: array[1..32] of Boolean;
-  TpMode, TpNext: array[1..32] of Integer;
+  TpOn, HumanOf: array[1..32] of Boolean;
+  TpMode: array[1..32] of Integer;
   TpCount: Integer;
   { away from the keyboard: seconds alive without a key or a cursor move, the cursor last seen }
   AfIdle, AfAimX, AfAimY: array[1..32] of Integer;
@@ -587,7 +833,7 @@ var
 
   { counters for /be_status }
   StatHud, StatDmg, StatOvl, StatHeals, StatKits, StatScans, StatBullets, StatSince, StatHid: Integer;
-  StatRays, StatAfk: Integer;
+  StatRays, StatAfk, StatShots, StatTraj: Integer;
 
 { ================================ text and number helpers ================================ }
 
@@ -602,6 +848,13 @@ begin
   Errors := Errors + 1;
   if Errors <= ERRORS_SHOWN then
     Log('error in ' + Where + ': ' + ExceptionToString(ExceptionType, ExceptionParam));
+end;
+
+function BoolInt(B: Boolean): Integer;
+begin
+  Result := 0;
+  if B then
+    Result := 1;
 end;
 
 function BoolText(B: Boolean): string;
@@ -1014,6 +1267,12 @@ end;
 procedure TextSent(ID: Integer);
 begin
   SentCount[ID] := SentCount[ID] + 1;
+end;
+
+procedure RadarDirty(ID: Integer);
+begin
+  RdRedraw[ID] := True;
+  OvlNextTick := 0;
 end;
 
 { Tick + N, kept below the point where the server's tick counter starts again from 0 }
@@ -1523,6 +1782,9 @@ begin
   CFull := CfgColor('HealthHud', 'ColorFull', $00FF00);
   CHalf := CfgColor('HealthHud', 'ColorHalf', $FFFF00);
   CLow := CfgColor('HealthHud', 'ColorLow', $FF0000);
+  HudColorFull := CFull;
+  HudColorHalf := CHalf;
+  HudColorLow := CLow;
   for i := 0 to 100 do
     if i >= 50 then
       HudColorAt[i] := MixColor(CHalf, CFull, (i - 50) * 0.02)
@@ -1704,7 +1966,9 @@ begin
   OvlListLayer := CfgInt('Radar', 'ListLayer', 198, 0, 255);
   OvlListColor := CfgColor('Radar', 'ListColor', $E0E0E0);
   OvlListTitle := CfgStr('Radar', 'ListTitle', 'Radar');
-  OvlListLine := CfgStr('Radar', 'ListLine', '{dir} {tag}{name} {pct}% {dist}');
+  OvlListLine := CfgStr('Radar', 'ListLine', '{dir} {tag}{name} {pct}% {m}');
+  OvlListMeters := CfgInt('Radar', 'ListMeterDecimals', 2, 0, 3);
+  OvlNobody := CfgStr('Radar', 'ListNobody', '(nobody within {m})');
   OvlCircleX := CfgInt('Radar', 'CircleX', 10, 0, 854);
   OvlCircleY := CfgInt('Radar', 'CircleY', 110, 0, 480);
   OvlCircleR := CfgFloat('Radar', 'CircleRadius', 50, 10, 240);
@@ -1713,6 +1977,7 @@ begin
   OvlCircleDots := CfgInt('Radar', 'CircleDots', 16, 0, RING_MAX);
   OvlCircleLayer := CfgInt('Radar', 'CircleLayerFirst', 110, 0, 255 - CIRCLE_LAYERS);
   OvlShowFar := CfgBool('Radar', 'ShowFar', True);
+  OvlCircleMove := CfgFloat('Radar', 'CircleMovePixels', 1, 0, 20);
   OvlRingChar := MarkChar(CfgStr('Radar', 'RingChar', '.'), '.');
   OvlRingColor := CfgColor('Radar', 'RingColor', $808080);
   OvlSelfChar := MarkChar(CfgStr('Radar', 'SelfChar', '+'), '+');
@@ -1724,7 +1989,8 @@ begin
   OvlFarChar := MarkChar(CfgStr('Radar', 'FarChar', '.'), '.');
   OvlUpdateTicks := CfgInt('Radar', 'UpdateTicks', 6, 1, 600);
   OvlScale := CfgFloat('Radar', 'Scale', 0.02, 0.005, 0.5);
-  OvlOffsetY := CfgFloat('Radar', 'OffsetY', 28, -200, 200);
+  OvlOffsetY := CfgFloat('Radar', 'OffsetY', 25, -200, 200);
+  OvlLabelMove := CfgFloat('Radar', 'LabelMovePixels', 2, 0, 50);
   OvlLayerFirst := CfgInt('Radar', 'LayerFirst', 150, 0, 224);
   S := CfgStr('Radar', 'Show', 'all');
   OvlShow := ShowOf(S);
@@ -1746,20 +2012,27 @@ begin
   OvlTags := CfgBool('Radar', 'Tags', True);
   OvlFlagChar := MarkChar(CfgStr('Radar', 'FlagChar', 'F'), 'F');
   OvlBowChar := MarkChar(CfgStr('Radar', 'BowChar', 'R'), 'R');
-  OvlHitMarks := CfgBool('Radar', 'HitMarks', True);
-  OvlHitTicks := CfgInt('Radar', 'HitTicks', 45, 10, 600);
-  OvlHitChar := MarkChar(CfgStr('Radar', 'HitChar', 'o'), 'o');
-  OvlHitColor := CfgColor('Radar', 'HitColor', $FF0000);
-  OvlArrowTicks := CfgInt('Radar', 'ArrowUpdateTicks', 4, 1, 600);
+  OvlTextsPerTick := CfgInt('Radar', 'TextsPerTick', RADAR_TEXTS_PER_TICK, 1, 40);
+  OvlRate := CfgFloat('Radar', 'MaxTextsPerSecond', 150, 10, 2000);
+  OvlRateTick := OvlRate / 60;
+  OvlBurst := OvlRate / 5;
+  if OvlBurst < OvlTextsPerTick then
+    OvlBurst := OvlTextsPerTick;
+  OvlArrowTicks := CfgInt('Radar', 'ArrowUpdateTicks', 5, 1, 600);
   OvlArrowsMax := CfgInt('Radar', 'ArrowsMax', 4, 1, 8);
-  OvlArrowDots := CfgInt('Radar', 'ArrowDots', 3, 2, ARROW_DOTS_MAX - 2);
-  OvlArrowInner := CfgFloat('Radar', 'ArrowInner', 26, 5, 300);
-  OvlArrowOuter := CfgFloat('Radar', 'ArrowOuter', 60, 10, 400);
+  OvlArrowDots := CfgInt('Radar', 'ArrowDots', 2, 1, ARROW_DOTS_MAX - 2);
+  OvlArrowSteps := CfgInt('Radar', 'ArrowColorSteps', 4, 1, 16);
+  OvlArrowInner := CfgFloat('Radar', 'ArrowInner', 16, 5, 300);
+  OvlArrowOuter := CfgFloat('Radar', 'ArrowOuter', 32, 10, 400);
   if OvlArrowOuter < OvlArrowInner + 5 then
     OvlArrowOuter := OvlArrowInner + 5;
-  OvlArrowHead := CfgFloat('Radar', 'ArrowHead', 8, 2, 60);
-  OvlArrowScale := CfgFloat('Radar', 'ArrowScale', 0.03, 0.005, 0.5);
-  OvlArrowChar := MarkChar(CfgStr('Radar', 'ArrowChar', 'o'), 'o');
+  OvlArrowHead := CfgFloat('Radar', 'ArrowHead', 6, 1, 60);
+  OvlArrowWidth := CfgFloat('Radar', 'ArrowWidth', 5, 1, 60);
+  OvlArrowScale := CfgFloat('Radar', 'ArrowScale', 0.085, 0.005, 0.5);
+  OvlArrowMove := CfgFloat('Radar', 'ArrowMove', 1.5, 0, 50);
+  OvlArrowLead := CfgFloat('Radar', 'ArrowLead', 1, 0, 3);
+  OvlTagScale := CfgFloat('Radar', 'ArrowTagScale', 0.5, 0.1, 3);
+  OvlArrowChar := MarkChar(CfgStr('Radar', 'ArrowChar', '.'), '.');
   OvlArrowNear := CfgColor('Radar', 'ArrowColorNear', $FF2020);
   OvlArrowMid := CfgColor('Radar', 'ArrowColorMid', $FFFF20);
   OvlArrowFar := CfgColor('Radar', 'ArrowColorFar', $20FF20);
@@ -1795,10 +2068,77 @@ begin
   TpMomPerDist := CfgFloat('Teleport', 'MomentumPerPixel', 0.008, 0, 1);
   TpMomKeep := CfgFloat('Teleport', 'MomentumKeep', 1, 0, 2);
   TpMomMax := CfgFloat('Teleport', 'MomentumMax', 11, 0, 11);
-  TpFlyBase := CfgFloat('Teleport', 'FlyBase', 3, 0, 11);
-  TpFlyPerDist := CfgFloat('Teleport', 'FlyPerPixel', 0.02, 0, 1);
-  TpFlyMax := CfgFloat('Teleport', 'FlyMax', 11, 0, 11);
-  TpFlyEvery := CfgInt('Teleport', 'FlyEveryTicks', 6, 1, 60);
+  TpHoldTicks := CfgInt('Teleport', 'HoldTicks', 15, 1, 600);
+  TpHopTicks := CfgInt('Teleport', 'HopTicks', 6, 1, 120);
+  TpHopMin := CfgFloat('Teleport', 'HopMinPixels', 24, 0, 2000);
+  TpPushTicks := CfgInt('Teleport', 'PushTicks', 3, 1, 60);
+  TpHopTimeout := CfgInt('Teleport', 'HopTimeoutTicks', 20, 1, 600);
+  S := LowerCase(Trim(CfgStr('Teleport', 'HoldSpeed', 'inherit')));
+  TpVariantDefault := TP_VAR_INHERIT;
+  if S = 'fixed' then
+    TpVariantDefault := TP_VAR_FIXED
+  else if S <> 'inherit' then
+    CfgWarn('Teleport', 'HoldSpeed', S, 'inherit or fixed; inherit used');
+  TpGain := CfgFloat('Teleport', 'InheritGain', 0.6, 0, 11);
+  TpAccel := CfgFloat('Teleport', 'InheritAccel', 4, 0, 60);
+  TpVmax := CfgFloat('Teleport', 'InheritMax', 9, 1, 11);
+  TpFlyBase := CfgFloat('Teleport', 'FlyBase', 1, 0, 11);
+  TpFlyPerDist := CfgFloat('Teleport', 'FlyPerPixel', 0.03, 0, 1);
+  TpFlyMax := CfgFloat('Teleport', 'FlyMax', 9, 0, 11);
+  TpFlyEvery := CfgInt('Teleport', 'FlyEveryTicks', 2, 1, 60);
+  TpFlyDead := CfgFloat('Teleport', 'FlyDeadZone', 18, 0, 500);
+  TpFlySmooth := CfgFloat('Teleport', 'FlySmooth', 0.5, 0.05, 1);
+
+  TrEnabled := CfgBool('Trajectory', 'Enabled', True);
+  if TrEnabled then
+    AddWords(CfgStr('Trajectory', 'Commands', 'trajectory|traj'), C_TRAJ, True)
+  else
+    CfgStr('Trajectory', 'Commands', '');
+  TrTicks := CfgInt('Trajectory', 'UpdateTicks', 5, 1, 60);
+  TrBudget := CfgInt('Trajectory', 'TextsPerUpdate', 20, 1, 64);
+  TrDots := CfgInt('Trajectory', 'Dots', 16, 2, 60);
+  TrMove := CfgFloat('Trajectory', 'MovePixels', 2, 0, 50);
+  if TrBudget <= TrDots then
+    TrBudget := TrDots + 1;
+  TrLayer := CfgInt('Trajectory', 'LayerFirst', 100, 0, 255 - TrDots);
+  TrSpacing := CfgFloat('Trajectory', 'Spacing', 16, 4, 200);
+  TrRange := CfgFloat('Trajectory', 'Range', 900, 50, 5000);
+  TrScale := CfgFloat('Trajectory', 'Scale', 0.08, 0.005, 0.5);
+  TrCursorScale := CfgFloat('Trajectory', 'CursorScale', 0.1, 0.005, 0.5);
+  TrColor := CfgColor('Trajectory', 'Color', $FF3030);
+  TrHitColor := CfgColor('Trajectory', 'HitColor', $33CC00);
+  TrCursorColor := CfgColor('Trajectory', 'CursorColor', $DCB201);
+
+  AbEnabled := CfgBool('Aimbot', 'Enabled', True);
+  if AbEnabled then
+    AddWords(CfgStr('Aimbot', 'Commands', 'aimbot'), C_AIMBOT, True)
+  else
+    CfgStr('Aimbot', 'Commands', '');
+  S := LowerCase(Trim(CfgStr('Aimbot', 'Key', 'crouch')));
+  AbKey := AK_CROUCH;
+  if (S = 'jet') or (S = 'jetpack') then
+    AbKey := AK_JET
+  else if S = 'prone' then
+    AbKey := AK_PRONE
+  else if (S = 'fire') or (S = 'shoot') then
+    AbKey := AK_FIRE
+  else if S <> 'crouch' then
+    CfgWarn('Aimbot', 'Key', S, 'crouch, jet, prone or fire; crouch used');
+  S := LowerCase(Trim(CfgStr('Aimbot', 'Target', 'cursor')));
+  AbTarget := AT_CURSOR;
+  if S = 'nearest' then
+    AbTarget := AT_NEAREST
+  else if S <> 'cursor' then
+    CfgWarn('Aimbot', 'Target', S, 'cursor or nearest; cursor used');
+  AbAngle := CfgFloat('Aimbot', 'MaxAngle', 70, 1, 180);
+  AbRange := CfgFloat('Aimbot', 'Range', 900, 50, 5000);
+  AbSpread := CfgFloat('Aimbot', 'Spread', 1, 0, 5);
+  AbInfinite := CfgBool('Aimbot', 'InfiniteAmmo', False);
+  AbSound := CfgBool('Aimbot', 'Sound', True);
+  AbSoundRange := CfgFloat('Aimbot', 'SoundRange', 900, 0, 10000);
+
+  WpFile := Trim(CfgStr('Weapons', 'File', 'auto'));
+  WpRealFile := Trim(CfgStr('Weapons', 'RealisticFile', 'auto'));
   S := LowerCase(Trim(CfgStr('Teleport', 'Key', 'reload')));
   TpKey := TK_RELOAD;
   if S = 'grenade' then
@@ -1828,7 +2168,14 @@ begin
       Log('settings.ini: [Radar] ListLayer is used by the health display or the circle radar too');
     if (HudLayer >= OvlCircleLayer) and (HudLayer < OvlCircleLayer + CIRCLE_LAYERS) then
       Log('settings.ini: [HealthHud] Layer is one of the circle radar layers ([Radar] CircleLayerFirst)');
+    if TrEnabled then
+      if ((TrLayer + TrDots >= OvlLayerFirst) and (TrLayer <= OvlLayerFirst + 31)) or
+        ((TrLayer + TrDots >= OvlArrowLayer) and (TrLayer <= OvlArrowLayer + OvlArrowsMax * ARROW_DOTS_MAX - 1)) then
+        Log('settings.ini: the WorldText layers of [Trajectory] and [Radar] overlap');
   end;
+  if TrEnabled and DmgEnabled then
+    if (TrLayer + TrDots >= DmgLayerFirst) and (TrLayer <= DmgLayerLast) then
+      Log('settings.ini: the WorldText layers of [Trajectory] and [DamageNumbers] overlap');
 
   TgEnabled := CfgBool('TeamGuard', 'Enabled', True);
 
@@ -2223,6 +2570,9 @@ begin
   AdKillSkipAdmins := CfgBool('Admin', 'KillAllSkipsAdmins', False);
   AdKickSkipAdmins := CfgBool('Admin', 'KickAllSkipsAdmins', True);
   AddWords(CfgStr('Admin', 'ExplodeCommands', 'explode'), C_EXPLODE, True);
+  AddWords(CfgStr('Admin', 'BigExplodeCommands', 'bigexplode|boom'), C_BIGEXPLODE, True);
+  AddWords(CfgStr('Admin', 'NukeCommands', 'nuke'), C_NUKE, True);
+  FxPower := CfgFloat('Admin', 'ExplodePower', 1, 0.1, 10);
   AddWords(CfgStr('Admin', 'GodCommands', 'god'), C_GOD, True);
   AddWords(CfgStr('Admin', 'HealCommands', 'heal'), C_HEAL, True);
   AddWords(CfgStr('Admin', 'SlapCommands', 'slap'), C_SLAP, True);
@@ -2985,83 +3335,6 @@ begin
       end;
 end;
 
-{ ================================ radar hit marks ================================ }
-
-{ one of 8 directions: 0 right, then clockwise (Y grows downwards): 1 down-right, 2 down,
-  3 down-left, 4 left, 5 up-left, 6 up, 7 up-right; 0.4142 = tan(22.5 degrees) }
-function DirOf(DX, DY: Single): Integer;
-var
-  AX, AY: Single;
-begin
-  AX := Abs(DX);
-  AY := Abs(DY);
-  if AY <= 0.4142 * AX then
-  begin
-    if DX >= 0 then
-      Result := 0
-    else
-      Result := 4;
-  end
-  else if AX <= 0.4142 * AY then
-  begin
-    if DY >= 0 then
-      Result := 2
-    else
-      Result := 6;
-  end
-  else if DX >= 0 then
-  begin
-    if DY >= 0 then
-      Result := 1
-    else
-      Result := 7;
-  end
-  else if DY >= 0 then
-    Result := 3
-  else
-    Result := 5;
-end;
-
-{ V was hit from S. A user of the circle radar sees it as a red mark on the ring towards the
-  shooter ([Radar] HitMarks), one per direction (the latest shooter from there), for HitTicks. }
-procedure HitMarkAdd(V, S, Tick: Integer);
-var
-  D: Integer;
-  DX, DY: Single;
-begin
-  if not OvlHitMarks then
-    Exit;
-  if not OvlAdmin[V] then
-    Exit;
-  if RdDrawn[V] <> OVL_CIRCLE then
-    Exit;
-  { the killing hit is settled after the death: nothing for a dead player }
-  if not PL[V].Alive then
-    Exit;
-  DX := PL[S].X - PL[V].X;
-  DY := PL[S].Y - PL[V].Y;
-  if Abs(DX) + Abs(DY) < 1 then
-    Exit;
-  D := DirOf(DX, DY);
-  HmUntil[V][D] := After(Tick, OvlHitTicks);
-  HmShooter[V][D] := S;
-  HmActive[V] := True;
-  { the circle shows it on its next pass, at once }
-  RdDue[V] := Tick;
-end;
-
-{ the marks end (death, respawn, a new map); the circle takes them away on its next pass }
-procedure HitMarkClear(V: Integer);
-var
-  D: Integer;
-begin
-  if not HmActive[V] then
-    Exit;
-  for D := 0 to 7 do
-    if HmUntil[V][D] > 0 then
-      HmUntil[V][D] := 1;
-end;
-
 { ================================ damage numbers ================================ }
 
 function DmgIsOn(ID: Integer): Boolean;
@@ -3118,13 +3391,9 @@ begin
     if S <> V then
     begin
       Dealt[S][V] := Dealt[S][V] + Taken;
-      { the victim's circle radar shows where it came from, and his screen flashes red }
-      if PL[V].Human or DebugBots then
-      begin
-        HitMarkAdd(V, S, Game.TickCount);
-        if HfEnabled then
+      if HfEnabled then
+        if PL[V].Human or DebugBots then
           HfPend[V] := HfPend[V] + Taken * 100 / MaxHealth;
-      end;
     end;
   if VicLastShow[V] then
   begin
@@ -3178,11 +3447,12 @@ begin
   Result := not Map.RayCast(VX, VY, TX, TY, False, False, False, False, 0);
 end;
 
-{ where a damage number is drawn: centred over the hit player (a letter is about WT_CHAR_WIDTH * Scale
-  map pixels wide), OffsetY above his feet; a column grows upwards }
-procedure DmgPlace(S, V: Integer; Width: Integer; var X, Y: Single);
+procedure DmgPlace(S, V: Integer; Widest: string; var X, Y: Single);
 begin
-  X := DnX[S][V] - Width * DmgScale * WT_CHAR_WIDTH / 2 + DmgOffsetX;
+  if BeOk then
+    X := DnX[S][V] - BE_TextWidth(Widest, DmgScale) / 2 + DmgOffsetX
+  else
+    X := DnX[S][V] - Length(Widest) * DmgScale * WT_CHAR_WIDTH / 2 + DmgOffsetX;
   Y := DnY[S][V] - DmgOffsetY;
   if DmgMode = DM_COLUMN then
     Y := Y - (DnLines[S][V] - 1) * DmgScale * WT_LINE_HEIGHT;
@@ -3190,9 +3460,9 @@ end;
 
 procedure DmgFlush(Tick: Integer);
 var
-  k, n, Cut, S, V, Layer, Width, FlashTicks: Integer;
+  k, n, Cut, S, V, Layer, FlashTicks: Integer;
   P: TActivePlayer;
-  T, Line, Col: string;
+  T, Line, Col, Widest: string;
   C: Longint;
   X, Y, H: Single;
   Fresh, Sight: Boolean;
@@ -3307,7 +3577,7 @@ begin
       end;
       DnText[S][V] := Col;
       T := Col;
-      Width := Length(Line);
+      Widest := Line;
     end
     else
     begin
@@ -3315,7 +3585,7 @@ begin
         T := DmgNumber(DnSum[S][V])
       else
         T := Line;
-      Width := Length(T);
+      Widest := T;
     end;
     if S = V then
       C := DmgColorSelf
@@ -3331,10 +3601,10 @@ begin
     if DnKill[S][V] then
     begin
       T := T + ' ' + DmgKillMark;
-      Width := Width + 1 + Length(DmgKillMark);
+      Widest := Widest + ' ' + DmgKillMark;
       C := DmgColorKill;
     end;
-    DmgPlace(S, V, Width, X, Y);
+    DmgPlace(S, V, Widest, X, Y);
     P.WorldText(DnLayer[S][V], T, WtTicks(DmgDisplayTicks), C, DmgScale, X, Y);
     WtSharp(S, DnLayer[S][V], Tick, DmgDisplayTicks);
     TextSent(S);
@@ -3342,12 +3612,24 @@ begin
   end;
 end;
 
+function LastLine(T: string): string;
+var
+  k: Integer;
+begin
+  Result := T;
+  k := Pos(#10, Result);
+  while k > 0 do
+  begin
+    Delete(Result, 1, k);
+    k := Pos(#10, Result);
+  end;
+end;
+
 { the kill turns the victim's number of this shooter red, with the kill mark }
 procedure DmgKill(S, V, Tick: Integer);
 var
-  T: string;
+  T, Widest: string;
   X, Y: Single;
-  Width: Integer;
   Waiting: Boolean;
 begin
   { usually the killing hit is not settled yet: the flush of this tick adds the mark }
@@ -3376,15 +3658,15 @@ begin
   if DmgMode = DM_COLUMN then
   begin
     T := DnText[S][V];
-    Width := 4;
+    Widest := LastLine(T);
   end
   else
   begin
     T := DmgNumber(DnSum[S][V]);
-    Width := Length(T);
+    Widest := T;
   end;
-  Width := Width + 1 + Length(DmgKillMark);
-  DmgPlace(S, V, Width, X, Y);
+  Widest := Widest + ' ' + DmgKillMark;
+  DmgPlace(S, V, Widest, X, Y);
   PL[S].WorldText(DnLayer[S][V], T + ' ' + DmgKillMark, WtTicks(DmgDisplayTicks), DmgColorKill, DmgScale, X, Y);
   WtSharp(S, DnLayer[S][V], Tick, DmgDisplayTicks);
   TextSent(S);
@@ -3543,889 +3825,607 @@ begin
       Result := OvlPublicShow;
 end;
 
-{ who sees the radar now, and whether any of them needs the team vision; worked out when one of
-  these changes, not on every pass }
-procedure OverlayRecount();
+procedure WorldSnap(Tick, Level: Integer; Extra: Boolean);
 var
-  i: Integer;
-begin
-  OvlCount := 0;
-  VisNeeded := False;
-  for i := 1 to 32 do
-  begin
-    OvlAdmin[i] := False;
-    if OvlEnabled then
-      if OvlOn[i] then
-        if RadarMay(i) then
-          if ActiveSlot[i] then
-            if PL[i].Human or DebugBots then
-              OvlAdmin[i] := True;
-    if OvlAdmin[i] then
-    begin
-      OvlCount := OvlCount + 1;
-      if RadarShowOf(i) <> SHOW_ALL then
-        VisNeeded := True;
-    end;
-  end;
-end;
-
-{ the marks of one mode go away at once }
-procedure RadarHideMode(ID, Mode: Integer);
-var
-  b, k: Integer;
-  P: TActivePlayer;
-begin
-  P := PL[ID];
-  if Mode = OVL_LIST then
-  begin
-    if OvlListText[ID] <> '' then
-      if P.Active then
-        P.BigText(OvlListLayer, ' ', 1, ColorGood, 0.01, 0, 0);
-    OvlListText[ID] := '';
-    OvlListSent[ID] := 0;
-  end
-  else if Mode = OVL_LABELS then
-  begin
-    for b := 1 to 32 do
-      if OvlLabelOn[ID][b] then
-      begin
-        OvlLabelOn[ID][b] := False;
-        if P.Active then
-          P.WorldText(OvlLayerFirst + b - 1, ' ', 1, ColorGood, 0.01, 0, 0);
-      end;
-  end
-  else if Mode = OVL_CIRCLE then
-  begin
-    if CrOn[ID] then
-      if P.Active then
-      begin
-        for k := 0 to CrDots[ID] - 1 do
-          P.BigText(OvlCircleLayer + k, ' ', 1, ColorGood, 0.01, 0, 0);
-        P.BigText(OvlCircleLayer + RING_MAX, ' ', 1, ColorGood, 0.01, 0, 0);
-      end;
-    CrOn[ID] := False;
-    CrDots[ID] := 0;
-    for b := 1 to 32 do
-      if CbOn[ID][b] then
-      begin
-        CbOn[ID][b] := False;
-        if P.Active then
-          P.BigText(OvlCircleLayer + RING_MAX + b, ' ', 1, ColorGood, 0.01, 0, 0);
-      end;
-    for k := 0 to 7 do
-      if ChOn[ID][k] then
-      begin
-        ChOn[ID][k] := False;
-        if P.Active then
-          P.BigText(OvlCircleLayer + RING_MAX + 33 + k, ' ', 1, ColorGood, 0.01, 0, 0);
-      end;
-  end
-  else if Mode = OVL_ARROWS then
-  begin
-    for k := 0 to ARROW_LAYERS - 1 do
-      if ArOn[ID][k] then
-      begin
-        ArOn[ID][k] := False;
-        if P.Active then
-          P.WorldText(OvlArrowLayer + k, ' ', 1, ColorGood, 0.01, 0, 0);
-      end;
-  end;
-end;
-
-{ everything of the radar goes away (switched off, a new mode, a new layer after /reloadsettings) }
-procedure OverlayHide(ID: Integer);
-begin
-  RadarHideMode(ID, RdDrawn[ID]);
-  RdDrawn[ID] := -1;
-end;
-
-{ the living players, read once for all radar users of this tick; the flag and the bow only when
-  [Radar] Tags is on (two more reads per player) }
-procedure OverlaySnapshot();
-var
-  b, W: Integer;
+  b, n, k, f, W: Integer;
   Q: TActivePlayer;
+  Aims, Vels, All, Alive: Boolean;
 begin
+  if SnapTick = Tick then
+    if SnapLevel >= Level then
+      if (SnapExtraTick = Tick) or (not Extra) then
+        Exit;
+  SnapTick := Tick;
+  SnapLevel := Level;
+  if Extra then
+    SnapExtraTick := Tick;
+  Aims := Level >= SNAP_AIM;
+  Vels := Level >= SNAP_FULL;
+  n := 0;
   for b := 1 to TopSlot do
-  begin
-    OvlPAlive[b] := False;
-    OvlPTag[b] := TAG_NONE;
     if ActiveSlot[b] then
     begin
       Q := PL[b];
-      if Q.Alive then
+      k := n * 8;
+      f := n * 4;
+      All := SnapIdx[b] <> n;
+      if All then
       begin
-        OvlPAlive[b] := True;
-        OvlPX[b] := Q.X;
-        OvlPY[b] := Q.Y;
-        OvlPPct[b] := HealthPct(Q.Health);
-        if OvlTags then
+        SnapIdx[b] := n;
+        WI[k] := b;
+      end;
+      Alive := Q.Alive;
+      W := 0;
+      if Alive then
+        W := 1;
+      if HumanOf[b] then
+        W := W + 2;
+      WI[k + 1] := W;
+      WI[k + 2] := TeamOf[b];
+      WF[f] := Q.X;
+      WF[f + 1] := Q.Y;
+      if All or Aims or OvlAdmin[b] then
+      begin
+        WI[k + 6] := Q.MouseAimX;
+        WI[k + 7] := Q.MouseAimY;
+      end;
+      if All or Vels or OvlAdmin[b] then
+      begin
+        if Alive then
         begin
-          if Q.Flagger then
-            OvlPTag[b] := TAG_FLAG
-          else
-          begin
-            W := Q.Primary.WType;
-            if (W = WEP_BOW) or (W = WEP_BOW_FIRE) then
-              OvlPTag[b] := TAG_BOW;
-          end;
+          WF[f + 2] := Q.VelX;
+          WF[f + 3] := Q.VelY;
+        end
+        else
+        begin
+          WF[f + 2] := 0;
+          WF[f + 3] := 0;
         end;
       end;
+      if All or Extra then
+      begin
+        W := 0;
+        if Alive then
+          W := HealthPct(Q.Health);
+        WI[k + 3] := W;
+        W := TAG_NONE;
+        if Alive then
+          if OvlTags then
+          begin
+            if Q.Flagger then
+              W := TAG_FLAG
+            else
+            begin
+              W := Q.Primary.WType;
+              if (W = WEP_BOW) or (W = WEP_BOW_FIRE) then
+                W := TAG_BOW
+              else
+                W := TAG_NONE;
+            end;
+          end;
+        WI[k + 4] := W;
+        W := 0;
+        if OvlAdmin[b] then
+          W := Q.Ping;
+        WI[k + 5] := W;
+      end;
+      n := n + 1;
     end;
-  end;
+  BE_World(Tick, n, WI, WF);
 end;
 
-function TagText(T: Integer): string;
-begin
-  Result := '';
-  if T = TAG_FLAG then
-    Result := OvlFlagChar
-  else if T = TAG_BOW then
-    Result := OvlBowChar;
-end;
-
-{ where another player is, seen from the radar user: < > left and right, ^ v above and below }
-function RadarDir(DX, DY: Single): string;
-begin
-  Result := '';
-  if DX < -40 then
-    Result := '<'
-  else if DX > 40 then
-    Result := '>';
-  if DY < -40 then
-    Result := Result + '^'
-  else if DY > 40 then
-    Result := Result + 'v';
-  if Result = '' then
-    Result := 'o';
-end;
-
-{ the user's own position: where he stands, or lies dead }
-procedure RadarCentre(A: Integer; var X, Y: Single);
-begin
-  if OvlPAlive[A] then
-  begin
-    X := OvlPX[A];
-    Y := OvlPY[A];
-  end
-  else
-  begin
-    X := PL[A].X;
-    Y := PL[A].Y;
-  end;
-end;
-
-{ ---- team vision: who is seen by whom (radar Show = seen / seenall) ---- }
-
-{ a player's position, life and cursor, read once a tick however many rays need them }
-procedure VisionPos(i, Tick: Integer);
+procedure OpsSend(A, n: Integer);
 var
+  k, Kind, Layer, Delay, Color: Integer;
+  Sc, X, Y: Single;
+  T: string;
   P: TActivePlayer;
 begin
-  if VpTick[i] = Tick then
+  if n <= 0 then
     Exit;
-  VpTick[i] := Tick;
-  P := PL[i];
-  VpAlive[i] := False;
-  if ActiveSlot[i] then
-    if P.Alive then
-    begin
-      VpAlive[i] := True;
-      VpX[i] := P.X;
-      VpY[i] := P.Y;
-      VpAimX[i] := P.MouseAimX;
-      VpAimY[i] := P.MouseAimY;
-    end;
-  if not VpAlive[i] then
-    if ActiveSlot[i] then
-    begin
-      VpX[i] := P.X;
-      VpY[i] := P.Y;
-    end;
+  P := PL[A];
+  if not P.Active then
+    Exit;
+  for k := 0 to n - 1 do
+  begin
+    T := BE_Op(k, Kind, Layer, Delay, Color, Sc, X, Y);
+    if Kind = OP_BIG then
+      P.BigText(Layer, T, Delay, Color, Sc, Round(X), Round(Y))
+    else if Kind = OP_WORLD then
+      P.WorldText(Layer, T, Delay, Color, Sc, X, Y);
+  end;
 end;
 
-{ Could S see B by the rule of realistic mode (see CanSee): a living S only in front of his aim, a
-  dead one from where he lies, in any direction; up to LOS_RANGE, no wall between the upper bodies. }
-function SpotSee(S, B, Tick: Integer): Boolean;
+procedure RadarUserSync(A: Integer);
 var
-  VX, VY, TX, TY, DX, DY: Single;
+  M, X, Y, IsOn, Ed: Integer;
+  Mk: Single;
 begin
-  Result := False;
-  VisionPos(S, Tick);
-  VisionPos(B, Tick);
-  if not VpAlive[B] then
-    Exit;
-  VX := VpX[S];
-  VY := VpY[S] - LOS_HEIGHT - 2;
-  TX := VpX[B];
-  TY := VpY[B] - LOS_HEIGHT;
-  DX := TX - VX;
-  DY := TY - VY;
-  if DX * DX + DY * DY > LOS_RANGE * LOS_RANGE then
-    Exit;
-  if VpAlive[S] then
-    if DX * (VpAimX[S] - VX) + DY * (VpAimY[S] - VY) <= 0 then
-      Exit;
-  Result := not Map.RayCast(VX, VY, TX, TY, False, False, False, False, 0);
+  M := RadarMode(A);
+  if M <> OVL_LIST then
+    if TeamOf[A] = TEAM_SPECTATOR then
+      M := OVL_LIST;
+  RadarPos(A, M, X, Y);
+  IsOn := 0;
+  if OvlAdmin[A] then
+    IsOn := 1;
+  Ed := 0;
+  Mk := RadarSize(A);
+  if RadarEditing(A) then
+  begin
+    Ed := 1;
+    if RdMark[A] > 0 then
+      Mk := RdMark[A];
+  end;
+  BE_RadarUser(A, IsOn, M, RadarShowOf(A), X, Y, RadarSize(A), RadarZoom(A), Mk, Ed);
+  RdEvery[A] := RadarTicks(A);
+  RdNeed[A] := 4;
+  if M = OVL_ARROWS then
+    RdNeed[A] := OvlArrowDots + 2;
 end;
 
-{ is S a spotter somebody's radar needs: a radar user with a filter, or a team mate of one }
-function VisSpotter(S: Integer): Boolean;
+procedure OverlayHide(ID: Integer);
 var
-  a: Integer;
+  n: Integer;
 begin
-  Result := False;
-  for a := 1 to TopSlot do
-    if OvlAdmin[a] then
-      if RadarShowOf(a) <> SHOW_ALL then
-      begin
-        if a = S then
-          Result := True
-        else if TeamGame() then
-          if TeamOf[a] = TeamOf[S] then
-            Result := True;
-        if Result then
-          Exit;
-      end;
+  if not BeOk then
+    Exit;
+  n := BE_RadarHide(ID, 255);
+  OpsSend(ID, n);
+  StatOvl := StatOvl + n;
 end;
 
-{ the spotters of this round: radar users with a filter and their team mates }
-procedure VisionList();
+procedure OverlayRecount();
 var
   i: Integer;
+  Was: Boolean;
 begin
-  VisCount := 0;
-  for i := 1 to TopSlot do
-    if ActiveSlot[i] then
-      if VisSpotter(i) then
-      begin
-        VisList[VisCount] := i;
-        VisCount := VisCount + 1;
-      end;
-end;
-
-{ Every tick while a radar needs it: the next VisionRaysPerTick pairs (spotter, player) are looked
-  at with Map.RayCast, round the table; with 16 against 16 it is all seen again every third of a
-  second. The table keeps each answer until that pair comes again. }
-procedure VisionTick(Tick: Integer);
-var
-  n, Guard, s, b: Integer;
-  Teams: Boolean;
-begin
-  if VisCount = 0 then
+  OvlCount := 0;
+  OvlNextTick := 0;
+  VisNeeded := False;
+  for i := 1 to 32 do
   begin
-    if Tick < VisNextRound then
-      Exit;
-    VisNextRound := After(Tick, OvlVisionRound);
-    VisionList();
-    VisK := 0;
-    VisB := 0;
-    if VisCount = 0 then
-      Exit;
-  end;
-  Teams := TeamGame();
-  n := 0;
-  Guard := 0;
-  while (n < OvlVisionRays) and (Guard < OvlVisionRays * 4) do
-  begin
-    Guard := Guard + 1;
-    VisB := VisB + 1;
-    if VisB > TopSlot then
+    Was := OvlAdmin[i];
+    OvlAdmin[i] := False;
+    if OvlEnabled then
+      if BeOk then
+        if OvlOn[i] then
+          if RadarMay(i) then
+            if ActiveSlot[i] then
+              if PL[i].Human or DebugBots then
+                OvlAdmin[i] := True;
+    if OvlAdmin[i] then
     begin
-      VisB := 1;
-      VisK := VisK + 1;
-      if VisK >= VisCount then
+      OvlUsers[OvlCount] := i;
+      OvlCount := OvlCount + 1;
+      if RadarShowOf(i) <> SHOW_ALL then
+        VisNeeded := True;
+      if not Was then
       begin
-        { the table is round: the next one starts VisionRoundTicks after this one started (who is a
-          spotter may have changed by then) }
-        VisK := 0;
-        VisB := 0;
-        VisCount := 0;
-        StatRays := StatRays + n;
-        Exit;
+        RadarDirty(i);
+        RdTokens[i] := OvlBurst;
+        RdTokTick[i] := Game.TickCount;
+        RdRetry[i] := 0;
       end;
     end;
-    s := VisList[VisK];
-    b := VisB;
-    if s = b then
-      Continue;
-    VisMine[s][b] := False;
-    if not ActiveSlot[s] then
-      Continue;
-    if not ActiveSlot[b] then
-      Continue;
-    if Teams then
-      if TeamOf[s] = TeamOf[b] then
-        Continue;
-    VisMine[s][b] := SpotSee(s, b, Tick);
+    if BeOk then
+    begin
+      if Was then
+        if not OvlAdmin[i] then
+          if ActiveSlot[i] then
+            OverlayHide(i);
+      RadarUserSync(i);
+    end;
+  end;
+end;
+
+procedure OverlayTick(Tick: Integer);
+var
+  k, i, n, Budget, T, Next: Integer;
+  Fresh, Extra: Boolean;
+begin
+  if Tick < OvlNextTick then
+    Exit;
+  Next := Tick + 600;
+  Extra := Tick - SnapExtraTick >= OVL_EXTRA_TICKS;
+  for k := 0 to OvlCount - 1 do
+  begin
+    i := OvlUsers[k];
+    Fresh := (Tick >= RdDue[i]) or RdRedraw[i];
+    if Fresh or (Tick >= RdRetry[i]) then
+    begin
+      if Fresh then
+      begin
+        WorldSnap(Tick, SNAP_POS, Extra);
+        Extra := False;
+        if RdRedraw[i] then
+        begin
+          RdRedraw[i] := False;
+          RadarUserSync(i);
+        end;
+        T := RdEvery[i];
+        if T < 1 then
+          T := 1;
+        RdDue[i] := After(Tick - Tick mod T, T);
+      end;
+      RdTokens[i] := RdTokens[i] + (Tick - RdTokTick[i]) * OvlRateTick;
+      RdTokTick[i] := Tick;
+      if RdTokens[i] > OvlBurst then
+        RdTokens[i] := OvlBurst;
+      Budget := Trunc(RdTokens[i]);
+      if Budget > OvlTextsPerTick then
+        Budget := OvlTextsPerTick;
+      if Budget < 1 then
+        Budget := 1;
+      n := BE_RadarPass(i, Tick, Budget);
+      RdRetry[i] := RdDue[i];
+      if n >= 65536 then
+      begin
+        n := n - 65536;
+        T := 1;
+        if RdTokens[i] - n < RdNeed[i] then
+          T := Trunc((RdNeed[i] - RdTokens[i] + n) / OvlRateTick) + 1;
+        if Tick + T < RdRetry[i] then
+          RdRetry[i] := Tick + T;
+      end;
+      OpsSend(i, n);
+      RdTokens[i] := RdTokens[i] - n;
+      StatOvl := StatOvl + n;
+    end;
+    if RdRetry[i] < Next then
+      Next := RdRetry[i];
+  end;
+  OvlNextTick := Next;
+end;
+
+procedure VisionTick(Tick: Integer);
+var
+  S, B, n: Integer;
+  X1, Y1, X2, Y2: Single;
+begin
+  if (Tick - SnapTick >= 3) or (SnapLevel < SNAP_AIM) then
+    WorldSnap(Tick, SNAP_AIM, False);
+  n := 0;
+  while BE_VisNext(Tick, S, B, X1, Y1, X2, Y2) = 1 do
+  begin
+    if Map.RayCast(X1, Y1, X2, Y2, False, False, False, False, 0) then
+      BE_Vis(S, B, 0)
+    else
+      BE_Vis(S, B, 1);
     n := n + 1;
   end;
   StatRays := StatRays + n;
 end;
 
-{ does A's radar show B now: team mates always, the others by A's filter }
-function RadarShows(A, B: Integer): Boolean;
-var
-  Sh, s: Integer;
-  Teams: Boolean;
+function FxName(K: Integer): string;
 begin
-  Result := True;
-  Sh := RadarShowOf(A);
-  if Sh = SHOW_ALL then
-    Exit;
-  Teams := TeamGame();
-  if Teams then
-    if TeamOf[B] = TeamOf[A] then
+  case K of
+    FX_PLAIN: Result := 'plain';
+    FX_BIG: Result := 'big';
+    FX_NUKE: Result := 'nuke';
+    FX_LAW: Result := 'law';
+    FX_M79: Result := 'm79';
+    FX_ARROWS: Result := 'arrows';
+    FX_FIREARROWS: Result := 'firearrows';
+    FX_BULLETS: Result := 'bullets';
+    FX_SPAS: Result := 'spas';
+    FX_FLAME: Result := 'flame';
+    FX_CLUSTER: Result := 'cluster';
+    FX_NADES: Result := 'nades';
+    FX_KNIVES: Result := 'knives';
+    FX_RAIN: Result := 'rain';
+  else
+    Result := '';
+  end;
+end;
+
+function FxKindOf(S: string): Integer;
+var
+  k: Integer;
+begin
+  S := LowerCase(Trim(S));
+  Result := -1;
+  if (S = '') or (S = 'normal') then
+    S := 'plain'
+  else if (S = 'boom') or (S = 'bigexplode') then
+    S := 'big'
+  else if (S = 'rocket') or (S = 'rockets') then
+    S := 'law'
+  else if (S = 'arrow') or (S = 'bow') then
+    S := 'arrows'
+  else if (S = 'firearrow') or (S = 'flamedarrows') then
+    S := 'firearrows'
+  else if (S = 'bullet') or (S = 'guns') then
+    S := 'bullets'
+  else if (S = 'shotgun') or (S = 'shells') then
+    S := 'spas'
+  else if (S = 'fire') or (S = 'flamer') then
+    S := 'flame'
+  else if (S = 'grenades') or (S = 'frags') then
+    S := 'nades'
+  else if S = 'knife' then
+    S := 'knives';
+  for k := 0 to FX_LAST do
+    if FxName(k) = S then
+    begin
+      Result := k;
       Exit;
-  if VisMine[A][B] then
-    Exit;
-  if Teams then
-    for s := 1 to TopSlot do
-      if s <> A then
-        if TeamOf[s] = TeamOf[A] then
-          if VisMine[s][B] then
-          begin
-            if Sh = SHOW_SEENALL then
-              Exit;
-            if OvlPAlive[s] then
-              Exit;
-          end;
-  Result := False;
+    end;
 end;
 
-{ Mode = list: the nearest living players within reach, at most ListLines of them, in a steady
-  text on the screen. The lines keep the slot order, so they stay in their places; the text is sent
-  again only when it changes, moves or is about to run out. A spectator gets everybody alive,
-  without distance. }
-procedure OverlayList(A, Tick: Integer);
+procedure FxAdd(T, Kind: Integer);
 var
-  b, k, Best, X0, Y0: Integer;
-  Adm: TActivePlayer;
-  ax, ay, DX, DY, R2, BestD, Sc: Single;
-  Ref: Boolean;
-  D2: array[1..32] of Single;
-  Pick: array[1..32] of Boolean;
-  T, L, Tg: string;
+  n, k, Tick, Style, Delay: Integer;
+  DX, DY, VX, VY, HitM: Single;
 begin
-  Adm := PL[A];
-  Ref := TeamOf[A] <> TEAM_SPECTATOR;
-  ax := 0;
-  ay := 0;
-  if Ref then
-    RadarCentre(A, ax, ay);
-  R2 := RadarRange(A);
-  R2 := R2 * R2;
-  for b := 1 to TopSlot do
+  Tick := Game.TickCount;
+  n := BE_Fx(Kind, Tick * 31 + T * 977 + Random(0, 100000), FxPower);
+  for k := 0 to n - 1 do
   begin
-    Pick[b] := False;
-    D2[b] := -1;
-    if b <> A then
-      if OvlPAlive[b] then
-        if RadarShows(A, b) then
-        begin
-          D2[b] := 0;
-          if Ref then
-          begin
-            DX := OvlPX[b] - ax;
-            DY := OvlPY[b] - ay;
-            D2[b] := DX * DX + DY * DY;
-            if D2[b] > R2 then
-              D2[b] := -1;
-          end;
-        end;
-  end;
-  k := 0;
-  while k < OvlListMax do
-  begin
-    Best := 0;
-    BestD := 0;
-    for b := 1 to TopSlot do
-      if D2[b] >= 0 then
-        if not Pick[b] then
-          if (Best = 0) or (D2[b] < BestD) then
-          begin
-            Best := b;
-            BestD := D2[b];
-          end;
-    if Best = 0 then
+    if FxQCount >= FX_QUEUE then
       Break;
-    Pick[Best] := True;
-    k := k + 1;
-  end;
-  T := OvlListTitle;
-  if RadarEditing(A) then
-    T := T + ' <edit>';
-  for b := 1 to TopSlot do
-    if Pick[b] then
+    if BE_FxGet(k, DX, DY, VX, VY, HitM, Style, Delay) = 1 then
     begin
-      Tg := TagText(OvlPTag[b]);
-      if Tg <> '' then
-        Tg := Tg + ' ';
-      L := ReplaceAll(OvlListLine, '{name}', PL[b].Name);
-      L := ReplaceAll(L, '{pct}', IntToStr(OvlPPct[b]));
-      L := ReplaceAll(L, '{tag}', Tg);
-      if Ref then
-      begin
-        L := ReplaceAll(L, '{dist}', IntToStr(Round(Sqrt(D2[b]) / 10) * 10));
-        L := ReplaceAll(L, '{dir}', RadarDir(OvlPX[b] - ax, OvlPY[b] - ay));
-      end
-      else
-      begin
-        L := ReplaceAll(L, '{dist}', '');
-        L := ReplaceAll(L, '{dir}', '');
-      end;
-      L := Trim(L);
-      if T = '' then
-        T := L
-      else
-        T := T + #13#10 + L;
-    end;
-  if k = 0 then
-  begin
-    L := '(nobody within ' + IntToStr(Round(Sqrt(R2))) + ')';
-    if T = '' then
-      T := L
-    else
-      T := T + #13#10 + L;
-  end;
-  RadarPos(A, OVL_LIST, X0, Y0);
-  Sc := QScale(OvlListScale * RadarSize(A));
-  if not RdRedraw[A] then
-    if T = OvlListText[A] then
-      if Tick - OvlListSent[A] < OVL_LIST_REFRESH then
-        Exit;
-  Adm.BigText(OvlListLayer, T, OVL_LIST_DISPLAY, OvlListColor, Sc, X0, Y0);
-  OvlListText[A] := T;
-  OvlListSent[A] := Tick;
-  StatOvl := StatOvl + 1;
-end;
-
-{ Mode = labels: one line "name health%" centred OffsetY above the feet of each living player near
-  the user. A label is sent again when its player moved or his health changed (or before it runs
-  out) and taken away with ' ' when he dies or leaves the range, so it keeps its full colour. At
-  most TEXTS_PER_TICK texts at a time: a crowd is covered over a few passes. }
-procedure OverlayLabels(A, Tick: Integer);
-var
-  b, k, Pct: Integer;
-  Adm: TActivePlayer;
-  ax, ay, bx, by, R2, X, Y: Single;
-  T, Tg: string;
-  Want: Boolean;
-begin
-  Adm := PL[A];
-  RadarCentre(A, ax, ay);
-  R2 := RadarRange(A);
-  R2 := R2 * R2;
-  b := OvlNext[A];
-  k := 0;
-  while k < TopSlot do
-  begin
-    if not TextRoom(A, Tick) then
-      Break;
-    k := k + 1;
-    b := b + 1;
-    if b > TopSlot then
-      b := 1;
-    Want := False;
-    if b <> A then
-      if OvlPAlive[b] then
-      begin
-        bx := OvlPX[b] - ax;
-        by := OvlPY[b] - ay;
-        if bx * bx + by * by <= R2 then
-          Want := RadarShows(A, b);
-      end;
-    if Want then
-    begin
-      Pct := OvlPPct[b];
-      if (not OvlLabelOn[A][b]) or (Abs(OvlPX[b] - OvlLastX[A][b]) > 2) or (Abs(OvlPY[b] - OvlLastY[A][b]) > 2) or
-        (Pct <> OvlLastPct[A][b]) or (Tick - OvlLastTick[A][b] >= OVL_LIST_REFRESH) or
-        (OvlPTag[b] <> OvlLastTag[A][b]) then
-      begin
-        T := PL[b].Name + ' ' + IntToStr(Pct) + '%';
-        Tg := TagText(OvlPTag[b]);
-        if Tg <> '' then
-          T := T + ' [' + Tg + ']';
-        X := OvlPX[b] - Length(T) * OvlScale * WT_CHAR_WIDTH / 2;
-        Y := OvlPY[b] - OvlOffsetY;
-        Adm.WorldText(OvlLayerFirst + b - 1, T, OVL_MARK_DISPLAY, HudColorAt[Pct], OvlScale, X, Y);
-        TextSent(A);
-        OvlLabelOn[A][b] := True;
-        OvlLastX[A][b] := OvlPX[b];
-        OvlLastY[A][b] := OvlPY[b];
-        OvlLastPct[A][b] := Pct;
-        OvlLastTag[A][b] := OvlPTag[b];
-        OvlLastTick[A][b] := Tick;
-        StatOvl := StatOvl + 1;
-      end;
-    end
-    else if OvlLabelOn[A][b] then
-    begin
-      Adm.WorldText(OvlLayerFirst + b - 1, ' ', 1, ColorGood, 0.01, 0, 0);
-      TextSent(A);
-      OvlLabelOn[A][b] := False;
+      FxQTick[FxQCount] := Tick + Delay;
+      FxQTarget[FxQCount] := T;
+      FxQStyle[FxQCount] := Style;
+      FxQX[FxQCount] := DX;
+      FxQY[FxQCount] := DY;
+      FxQVX[FxQCount] := VX;
+      FxQVY[FxQCount] := VY;
+      FxQHit[FxQCount] := HitM;
+      FxQCount := FxQCount + 1;
     end;
   end;
-  OvlNext[A] := b;
 end;
 
-{ One mark of the circle radar, centred on (X, Y): BigText draws from the top-left corner of the
-  letters, their middle is about 0.42 em per letter to the right and 0.66 em down. }
-procedure CircleMark(ID, Layer: Integer; Ch: string; C: Longint; Sc, X, Y: Single);
-var
-  Em: Single;
+procedure FxStart(T, Kind: Integer);
 begin
-  Em := BT_EM * Sc;
-  PL[ID].BigText(Layer, Ch, OVL_MARK_DISPLAY, C, Sc, Round(X - 0.42 * Em * Length(Ch)), Round(Y - 0.66 * Em));
-  TextSent(ID);
-  StatOvl := StatOvl + 1;
+  AdminHit[T] := Game.TickCount;
+  if (Kind = FX_PLAIN) or (not BeOk) then
+    Map.CreateBullet(PL[T].X, PL[T].Y, 0, 0, 1000 * FxPower, 4, PL[T])
+  else
+    FxAdd(T, Kind);
 end;
 
-{ Mode = circle: a ring of dots on the screen with the user in the middle; the players within reach
-  are marks at their places (team mates in their colour, F for a flag carrier, R for a bow), those
-  further away sit on the ring in their direction (ShowFar), hits on the user are red marks on the
-  ring towards the shooter (HitMarks). A mark is sent again only when it moves or changes, and taken
-  away with ' ' when not wanted. While the editor is open only the ring and the user are drawn. }
-procedure OverlayCircle(A, Tick: Integer);
+procedure FxTick(Tick: Integer);
 var
-  b, k, X0, Y0, Dots, Px, Py, S: Integer;
-  Adm: TActivePlayer;
-  Sz, R, Sc, CX, CY, ax, ay, DX, DY, D, Ang, Rng: Single;
-  Ch: string;
-  C: Longint;
-  Redraw, Want, Friend, Teams, Editing: Boolean;
+  k, n, Fired, T, LastT: Integer;
+  X, Y: Single;
 begin
-  Adm := PL[A];
-  Sz := RadarSize(A);
-  RadarPos(A, OVL_CIRCLE, X0, Y0);
-  R := OvlCircleR * Sz;
-  Sc := QScale(OvlCircleScale * Sz / Sqrt(RadarZoom(A)));
-  CX := X0 + R;
-  CY := Y0 + R;
-  Dots := OvlCircleDots;
-  Rng := RadarRange(A);
-  Editing := RadarEditing(A);
-  { the ring and the user himself: again when it moved, changed its size or is about to run out }
-  Redraw := RdRedraw[A];
-  if not CrOn[A] then
-    Redraw := True;
-  if (CrX[A] <> X0) or (CrY[A] <> Y0) or (CrR[A] <> Round(R * 10)) or (CrDots[A] <> Dots) or (CrScale[A] <> Sc) then
-    Redraw := True;
-  if Tick - CrSent[A] >= OVL_LIST_REFRESH then
-    Redraw := True;
-  if Redraw then
-  begin
-    for k := Dots to CrDots[A] - 1 do
-      Adm.BigText(OvlCircleLayer + k, ' ', 1, ColorGood, 0.01, 0, 0);
-    for k := 0 to Dots - 1 do
-    begin
-      Ang := 2 * Pi * k / Dots;
-      CircleMark(A, OvlCircleLayer + k, OvlRingChar, OvlRingColor, Sc, CX + R * Cos(Ang), CY + R * Sin(Ang));
-    end;
-    CircleMark(A, OvlCircleLayer + RING_MAX, OvlSelfChar, OvlSelfColor, Sc, CX, CY);
-    CrOn[A] := True;
-    CrX[A] := X0;
-    CrY[A] := Y0;
-    CrR[A] := Round(R * 10);
-    CrDots[A] := Dots;
-    CrSent[A] := Tick;
-    CrScale[A] := Sc;
-  end;
-  if Editing then
-    Exit;
-  RadarCentre(A, ax, ay);
-  Teams := TeamGame();
-  for b := 1 to TopSlot do
-    if b <> A then
-    begin
-      Want := False;
-      if OvlPAlive[b] then
-        if RadarShows(A, b) then
-        begin
-          DX := OvlPX[b] - ax;
-          DY := OvlPY[b] - ay;
-          D := Sqrt(DX * DX + DY * DY);
-          Friend := False;
-          if Teams then
-            if TeamOf[b] = TeamOf[A] then
-              Friend := True;
-          if Friend then
-          begin
-            Ch := OvlFriendChar;
-            C := OvlFriendColor;
-          end
-          else
-          begin
-            Ch := OvlEnemyChar;
-            C := OvlEnemyColor;
-          end;
-          if OvlPTag[b] <> TAG_NONE then
-            Ch := TagText(OvlPTag[b]);
-          if D <= Rng then
-          begin
-            Want := True;
-            Px := Round(CX + DX / Rng * R);
-            Py := Round(CY + DY / Rng * R);
-          end
-          else if OvlShowFar then
-          begin
-            Want := True;
-            if OvlPTag[b] = TAG_NONE then
-              Ch := OvlFarChar;
-            Px := Round(CX + DX / D * R);
-            Py := Round(CY + DY / D * R);
-          end;
-        end;
-      if Want then
-      begin
-        if Redraw or (not CbOn[A][b]) or (CbX[A][b] <> Px) or (CbY[A][b] <> Py) or (CbColor[A][b] <> C) or
-          (CbChar[A][b] <> Ch) or (Tick - CbSent[A][b] >= OVL_LIST_REFRESH) then
-          if TextRoom(A, Tick) then
-          begin
-            CircleMark(A, OvlCircleLayer + RING_MAX + b, Ch, C, Sc, Px, Py);
-            CbOn[A][b] := True;
-            CbX[A][b] := Px;
-            CbY[A][b] := Py;
-            CbColor[A][b] := C;
-            CbChar[A][b] := Ch;
-            CbSent[A][b] := Tick;
-          end;
-      end
-      else if CbOn[A][b] then
-        if TextRoom(A, Tick) then
-        begin
-          Adm.BigText(OvlCircleLayer + RING_MAX + b, ' ', 1, ColorGood, 0.01, 0, 0);
-          TextSent(A);
-          CbOn[A][b] := False;
-        end;
-    end;
-  { hits on the user: red marks on the ring, towards the shooter while they last }
-  if HmActive[A] then
-  begin
-    HmActive[A] := False;
-    for k := 0 to 7 do
-      if HmUntil[A][k] > 0 then
-      begin
-        if Tick >= HmUntil[A][k] then
-        begin
-          HmUntil[A][k] := 0;
-          if ChOn[A][k] then
-          begin
-            Adm.BigText(OvlCircleLayer + RING_MAX + 33 + k, ' ', 1, ColorGood, 0.01, 0, 0);
-            ChOn[A][k] := False;
-          end;
-        end
-        else
-        begin
-          HmActive[A] := True;
-          S := HmShooter[A][k];
-          DX := 0;
-          DY := 0;
-          if (S >= 1) and (S <= 32) then
-            if ActiveSlot[S] then
-            begin
-              DX := PL[S].X - ax;
-              DY := PL[S].Y - ay;
-            end;
-          D := Sqrt(DX * DX + DY * DY);
-          if D < 1 then
-          begin
-            DX := Cos(k * Pi / 4);
-            DY := Sin(k * Pi / 4);
-            D := 1;
-          end;
-          CircleMark(A, OvlCircleLayer + RING_MAX + 33 + k, OvlHitChar, OvlHitColor, QScale(Sc * 1.4),
-            CX + DX / D * R, CY + DY / D * R);
-          ChOn[A][k] := True;
-        end;
-      end;
-  end;
-end;
-
-{ one dot of an arrow: sent when it moved 2 pixels, changed colour or is about to run out (every
-  WorldText is a packet of its own: the arrows are the dearest mode) }
-procedure ArrowDot(A, Layer: Integer; Ch: string; C: Longint; X, Y: Single; Tick: Integer);
-var
-  Px, Py: Integer;
-begin
-  Px := Round(X);
-  Py := Round(Y);
-  if ArOn[A][Layer] then
-    if Abs(ArX[A][Layer] - Px) < 2 then
-      if Abs(ArY[A][Layer] - Py) < 2 then
-        if ArC[A][Layer] = C then
-          if Tick - ArSent[A][Layer] < OVL_LIST_REFRESH then
-            Exit;
-  PL[A].WorldText(OvlArrowLayer + Layer, Ch, OVL_MARK_DISPLAY, C, OvlArrowScale, Px, Py);
-  ArOn[A][Layer] := True;
-  ArX[A][Layer] := Px;
-  ArY[A][Layer] := Py;
-  ArC[A][Layer] := C;
-  ArSent[A][Layer] := Tick;
-  StatOvl := StatOvl + 1;
-end;
-
-{ Mode = arrows: arrows of dots around the user's own soldier (WorldText), each pointing at one of
-  the nearest players within reach: the dots go from ArrowInner to ArrowOuter pixels, the colour tells
-  the distance (ArrowColorNear - ArrowColorMid - ArrowColorFar) and grows brighter towards the tip,
-  two dots make the head (the flag or bow letter sits on the tip). Drawn again on every pass, so they
-  follow the user; the dots of an arrow not needed any more are taken away with ' '. }
-procedure OverlayArrows(A, Tick: Integer);
-var
-  b, k, n, i, j, Best, Layer, Dots: Integer;
-  Adm: TActivePlayer;
-  ax, ay, cx, cy, DX, DY, D, Ux, Uy, R, Rng, BestD, T, X, Y, W, H: Single;
-  C, CBase: Longint;
-  Pick: array[1..32] of Boolean;
-  D2: array[1..32] of Single;
-  Used: array[0..63] of Boolean;
-  Ch: string;
-begin
-  Adm := PL[A];
-  RadarCentre(A, ax, ay);
-  cx := ax;
-  cy := ay - LOS_HEIGHT;
-  Rng := RadarRange(A);
-  Dots := OvlArrowDots;
-  for k := 0 to ARROW_LAYERS - 1 do
-    Used[k] := False;
-  for b := 1 to TopSlot do
-  begin
-    Pick[b] := False;
-    D2[b] := -1;
-    if b <> A then
-      if OvlPAlive[b] then
-        if RadarShows(A, b) then
-        begin
-          DX := OvlPX[b] - ax;
-          DY := OvlPY[b] - ay;
-          D2[b] := DX * DX + DY * DY;
-          if D2[b] > Rng * Rng then
-            D2[b] := -1;
-        end;
-  end;
   n := 0;
-  while n < OvlArrowsMax do
-  begin
-    Best := 0;
-    BestD := 0;
-    for b := 1 to TopSlot do
-      if D2[b] >= 0 then
-        if not Pick[b] then
-          if (Best = 0) or (D2[b] < BestD) then
-          begin
-            Best := b;
-            BestD := D2[b];
-          end;
-    if Best = 0 then
-      Break;
-    Pick[Best] := True;
-    b := Best;
-    D := Sqrt(D2[b]);
-    DX := OvlPX[b] - ax;
-    DY := OvlPY[b] - ay;
-    if D < 1 then
+  Fired := 0;
+  LastT := 0;
+  X := 0;
+  Y := 0;
+  for k := 0 to FxQCount - 1 do
+    if (FxQTick[k] <= Tick) and (Fired < FX_PER_TICK) then
     begin
-      Ux := 1;
-      Uy := 0;
+      T := FxQTarget[k];
+      if ActiveSlot[T] then
+      begin
+        if T <> LastT then
+        begin
+          LastT := T;
+          X := PL[T].X;
+          Y := PL[T].Y;
+        end;
+        AdminHit[T] := Tick;
+        Map.CreateBullet(X + FxQX[k], Y + FxQY[k], FxQVX[k], FxQVY[k], FxQHit[k], FxQStyle[k], PL[T]);
+        Fired := Fired + 1;
+      end;
     end
     else
     begin
-      Ux := DX / D;
-      Uy := DY / D;
-    end;
-    { the colour of the distance: near - mid - far }
-    T := D / Rng;
-    if T < 0.5 then
-      CBase := MixColor(OvlArrowNear, OvlArrowMid, T * 2)
-    else
-      CBase := MixColor(OvlArrowMid, OvlArrowFar, (T - 0.5) * 2);
-    W := OvlArrowScale * WT_CHAR_WIDTH / 2;
-    H := OvlArrowScale * WT_LINE_HEIGHT / 2;
-    { the shaft: dots from the inner to the outer radius, darker at the tail }
-    for i := 0 to Dots - 1 do
-    begin
-      if Dots > 1 then
-        R := OvlArrowInner + (OvlArrowOuter - OvlArrowInner) * i / (Dots - 1)
-      else
-        R := OvlArrowOuter;
-      C := MixColor(MixColor(CBase, 0, 0.6), CBase, (i + 1) * 1.0 / Dots);
-      Ch := OvlArrowChar;
-      if i = Dots - 1 then
-        if OvlPTag[b] <> TAG_NONE then
-          Ch := TagText(OvlPTag[b]);
-      Layer := n * ARROW_DOTS_MAX + i;
-      X := cx + Ux * R - W * Length(Ch);
-      Y := cy + Uy * R - H;
-      ArrowDot(A, Layer, Ch, C, X, Y, Tick);
-      Used[Layer] := True;
-    end;
-    { the head: two dots behind the tip, to both sides }
-    for j := 0 to 1 do
-    begin
-      if j = 0 then
+      if n <> k then
       begin
-        X := cx + Ux * (OvlArrowOuter - OvlArrowHead) - Uy * OvlArrowHead * 0.8;
-        Y := cy + Uy * (OvlArrowOuter - OvlArrowHead) + Ux * OvlArrowHead * 0.8;
-      end
-      else
-      begin
-        X := cx + Ux * (OvlArrowOuter - OvlArrowHead) + Uy * OvlArrowHead * 0.8;
-        Y := cy + Uy * (OvlArrowOuter - OvlArrowHead) - Ux * OvlArrowHead * 0.8;
+        FxQTick[n] := FxQTick[k];
+        FxQTarget[n] := FxQTarget[k];
+        FxQStyle[n] := FxQStyle[k];
+        FxQX[n] := FxQX[k];
+        FxQY[n] := FxQY[k];
+        FxQVX[n] := FxQVX[k];
+        FxQVY[n] := FxQVY[k];
+        FxQHit[n] := FxQHit[k];
       end;
-      Layer := n * ARROW_DOTS_MAX + Dots + j;
-      ArrowDot(A, Layer, OvlArrowChar, CBase, X - W, Y - H, Tick);
-      Used[Layer] := True;
+      n := n + 1;
     end;
-    n := n + 1;
-  end;
-  for k := 0 to ARROW_LAYERS - 1 do
-    if ArOn[A][k] then
-      if not Used[k] then
+  FxQCount := n;
+end;
+
+procedure TrStop(ID: Integer);
+var
+  n: Integer;
+begin
+  if TrWatch[ID] > 0 then
+    TrCount := TrCount - 1;
+  TrWatch[ID] := 0;
+  if TrCount < 0 then
+    TrCount := 0;
+  if BeOk then
+    if ActiveSlot[ID] then
+    begin
+      n := BE_TrajHide(ID, 255);
+      OpsSend(ID, n);
+    end;
+end;
+
+procedure TrTick(Tick: Integer);
+var
+  i, T, W, n, k, Vis, Hit, m, Cur, AX, AY: Integer;
+  P: TActivePlayer;
+  PX, PY, QX, QY: Single;
+begin
+  for i := 1 to TopSlot do
+    if TrWatch[i] > 0 then
+      if Tick >= TrDue[i] then
       begin
-        Adm.WorldText(OvlArrowLayer + k, ' ', 1, ColorGood, 0.01, 0, 0);
-        ArOn[A][k] := False;
+        TrDue[i] := After(Tick, TrTicks);
+        T := TrWatch[i];
+        if (not ActiveSlot[T]) or (not ActiveSlot[i]) then
+        begin
+          TrStop(i);
+          Continue;
+        end;
+        P := PL[T];
+        Vis := 0;
+        Hit := -1;
+        Cur := 0;
+        AX := 0;
+        AY := 0;
+        if P.Alive then
+        begin
+          AX := P.MouseAimX;
+          AY := P.MouseAimY;
+          if T <> i then
+            Cur := 1;
+          W := P.Primary.WType;
+          if (W >= 0) and (W <= 16) and (W <> 12) then
+          begin
+            n := BE_Path(W, P.X, P.Y - MUZZLE_HEIGHT, P.VelX, P.VelY, AX, AY, 600, TrSpacing, TrRange);
+            if n > 0 then
+              if BE_PathPoint(0, PX, PY) = 1 then
+              begin
+                Vis := 1;
+                k := 1;
+                while k < n do
+                begin
+                  if BE_PathPoint(k, QX, QY) <> 1 then
+                    Break;
+                  Vis := k + 1;
+                  if Map.RayCast(PX, PY, QX, QY, False, False, True, False, 0) then
+                  begin
+                    Hit := k;
+                    Break;
+                  end;
+                  PX := QX;
+                  PY := QY;
+                  k := k + 1;
+                end;
+              end;
+          end;
+        end;
+        m := BE_TrajPass(i, Tick, TrBudget, Vis, Hit, AX, AY, Cur);
+        OpsSend(i, m);
+        StatTraj := StatTraj + m;
       end;
 end;
 
-{ every tick while somebody uses the radar: each user gets a pass when his own interval is up (or
-  right after he moved it, resized it or changed the mode); a spectator gets the list }
-procedure OverlayTick(Tick: Integer);
-var
-  i, M: Integer;
-  Snap: Boolean;
+function AbKeyDown(P: TActivePlayer): Boolean;
 begin
-  Snap := False;
+  if AbKey = AK_JET then
+    Result := P.KeyJetpack
+  else if AbKey = AK_PRONE then
+    Result := P.KeyProne
+  else if AbKey = AK_FIRE then
+    Result := P.KeyShoot
+  else
+    Result := P.KeyCrouch;
+end;
+
+procedure AbPlay(i, W, Tick: Integer);
+var
+  k: Integer;
+  Snd: string;
+  R, X, Y: Single;
+begin
+  if Tick < AbSoundAt[i] then
+    Exit;
+  AbSoundAt[i] := Tick + 4;
+  Snd := BE_WeaponSound(W);
+  if Snd = '' then
+    Exit;
+  R := AbSoundRange;
+  X := PL[i].X;
+  Y := PL[i].Y;
+  for k := 1 to TopSlot do
+    if ActiveSlot[k] then
+      if HumanOf[k] then
+        if (Abs(PL[k].X - X) <= R) and (Abs(PL[k].Y - Y) <= R) then
+          PL[k].PlaySound(Snd, X, Y);
+end;
+
+procedure AimbotTick(Tick: Integer);
+var
+  i, W, G, c, n, k, T, Style, Ticks: Integer;
+  P, Q: TActivePlayer;
+  SX, SY, SVX, SVY, TX, TY, TG, DX, DY, HitM, X, Y, VX, VY: Single;
+begin
   for i := 1 to TopSlot do
-    if OvlAdmin[i] then
-      if (Tick >= RdDue[i]) or RdRedraw[i] then
+    if AbOn[i] then
+    begin
+      P := PL[i];
+      if not P.Active then
       begin
-        if not Snap then
-        begin
-          OverlaySnapshot();
-          Snap := True;
-        end;
-        RdDue[i] := After(Tick, RadarTicks(i));
-        M := RadarMode(i);
-        if M <> OVL_LIST then
-          if TeamOf[i] = TEAM_SPECTATOR then
-            M := OVL_LIST;
-        if M <> RdDrawn[i] then
-        begin
-          RadarHideMode(i, RdDrawn[i]);
-          RdDrawn[i] := M;
-          RdRedraw[i] := True;
-        end;
-        if M = OVL_LIST then
-          OverlayList(i, Tick)
-        else if M = OVL_CIRCLE then
-          OverlayCircle(i, Tick)
-        else if M = OVL_ARROWS then
-          OverlayArrows(i, Tick)
-        else
-          OverlayLabels(i, Tick);
-        RdRedraw[i] := False;
+        AbOn[i] := False;
+        AbCount := AbCount - 1;
+        Continue;
       end;
+      if not P.Alive then
+        Continue;
+      if not AbKeyDown(P) then
+      begin
+        if AbHeld[i] then
+        begin
+          AbHeld[i] := False;
+          BE_GunTick(i, Tick, AbW[i], 0, 0);
+        end;
+        Continue;
+      end;
+      W := P.Primary.WType;
+      if (W < 0) or (W > 16) or (W = 12) then
+        Continue;
+      AbW[i] := W;
+      AbHeld[i] := True;
+      G := BE_GunTick(i, Tick, W, 1, BoolInt(AbInfinite));
+      if G <> 1 then
+        Continue;
+      if not P.IsAdmin then
+      begin
+        AbOn[i] := False;
+        AbCount := AbCount - 1;
+        Say(i, 'Aimbot off: you are not an admin any more.', ColorBad);
+        Continue;
+      end;
+      WorldSnap(Tick, SNAP_AIM, False);
+      SX := P.X;
+      SY := P.Y - MUZZLE_HEIGHT;
+      SVX := P.VelX;
+      SVY := P.VelY;
+      c := BE_GunTargets(i, AbMode[i], AbRange, AbAngle);
+      T := 0;
+      k := 0;
+      while (k < c) and (k < 4) do
+      begin
+        n := BE_GunTarget(k);
+        if (n >= 1) and (n <= 32) then
+          if not Map.RayCast(SX, SY, PL[n].X, PL[n].Y - BODY_HEIGHT, False, False, True, False, 0) then
+          begin
+            T := n;
+            Break;
+          end;
+        k := k + 1;
+      end;
+      if T = 0 then
+        Continue;
+      Q := PL[T];
+      TX := Q.X;
+      TY := Q.Y - BODY_HEIGHT;
+      TG := 0;
+      if not Q.OnGround then
+        TG := Game.Gravity;
+      BE_Solve(W, SX, SY, SVX, SVY, TX, TY, Q.VelX, Q.VelY, TG, DX, DY, Ticks);
+      n := BE_Shot(W, SX, SY, SVX, SVY, DX, DY, AbSpread, Tick * 17 + i * 131, Style, HitM);
+      for k := 0 to n - 1 do
+        if BE_ShotGet(k, X, Y, VX, VY) = 1 then
+          Map.CreateBullet(X, Y, VX, VY, HitM, Style, P);
+      BE_GunFired(i, Tick);
+      StatShots := StatShots + n;
+      if AbSound then
+        AbPlay(i, W, Tick);
+    end;
+  if AbCount < 0 then
+    AbCount := 0;
 end;
 
 { ================================ the editor (health display, radar) ================================ }
@@ -4434,7 +4434,7 @@ end;
 procedure EditorShow(ID: Integer);
 begin
   if EdKind[ID] = ED_RADAR then
-    RdRedraw[ID] := True
+    RadarDirty(ID)
   else
     HudMark(ID, True);
 end;
@@ -4471,7 +4471,7 @@ begin
     end
     else
       Say(ID, 'Radar editor closed without saving.', ColorGood);
-    RdRedraw[ID] := True;
+    RadarDirty(ID);
     Exit;
   end;
   if Save then
@@ -4530,11 +4530,14 @@ begin
   EdMoved[ID] := False;
   EdPinX[ID] := P.X;
   EdPinY[ID] := P.Y;
+  EdPinAt[ID] := 0;
+  EdShowAt[ID] := 0;
   if Kind = ED_RADAR then
   begin
     EdX[ID] := X;
     EdY[ID] := Y;
     EdScale[ID] := S;
+    RdMark[ID] := S;
     if not OvlOn[ID] then
     begin
       RdPOn[ID] := PREF_ON;
@@ -4587,7 +4590,7 @@ var
   i, Steps, ShowTicks: Integer;
   P: TActivePlayer;
   L, R, U, D, Big, Small, Prone, Nade, Any: Boolean;
-  Step, Lo, Hi, SizeStep: Single;
+  Step, Lo, Hi, SizeStep, Drift: Single;
 begin
   for i := 1 to TopSlot do
     if EdOn[i] then
@@ -4638,7 +4641,9 @@ begin
         Lo := 0.3;
         Hi := 4;
         SizeStep := 1.05;
-        ShowTicks := 6;
+        if RadarMode(i) = OVL_CIRCLE then
+          SizeStep := 1.02;
+        ShowTicks := 10;
       end
       else
       begin
@@ -4674,10 +4679,10 @@ begin
               EdY[i] := 475;
             EdMoved[i] := True;
           end;
-        { the size: one step a press, then one every 8 ticks while held. Every size the client
+        { the size: one step a press, then one every 6 ticks while held. Every size the client
           meets costs it a new set of letters; a fast stream of sizes stalled the game. }
         if Big or Small then
-          if (EdHold[i] = 1) or ((EdHold[i] > 20) and (EdHold[i] mod 8 = 0)) then
+          if (EdHold[i] = 1) or ((EdHold[i] > 24) and (EdHold[i] mod 6 = 0)) then
           begin
             if Big then
               EdScale[i] := EdScale[i] * SizeStep;
@@ -4707,13 +4712,22 @@ begin
           EditorShow(i);
         end;
       end;
-      { the player stands still: put back when the movement keys moved him (every Move goes to every
-        player, so not more often than every second tick) }
-      if Tick mod 2 = 0 then
-        if (Abs(P.X - EdPinX[i]) > 2) or (Abs(P.Y - EdPinY[i]) > 2) then
+      Drift := Abs(P.X - EdPinX[i]) + Abs(P.Y - EdPinY[i]);
+      if Tick >= EdPinAt[i] then
+        if L or R or U or D then
+        begin
+          if Drift > 80 then
+          begin
+            P.Move(EdPinX[i], EdPinY[i]);
+            P.SetVelocity(0, 0);
+            EdPinAt[i] := Tick + 20;
+          end;
+        end
+        else if Drift > 4 then
         begin
           P.Move(EdPinX[i], EdPinY[i]);
           P.SetVelocity(0, 0);
+          EdPinAt[i] := Tick + 6;
         end;
     end;
 end;
@@ -6000,6 +6014,9 @@ begin
     Say(ID, 'library: not running (the players'' choices are not kept, the logger does not write)', ColorBad);
   Say(ID, 'vision rays ' + IntToStr(StatRays) + ', players moved to the spectators (AFK) ' + IntToStr(StatAfk) +
     ', teleport on for ' + IntToStr(TpCount) + ', low health now ' + IntToStr(LowCount), ColorGood);
+  Say(ID, 'aimbot on for ' + IntToStr(AbCount) + ' (bullets ' + IntToStr(StatShots) + '), trajectory for ' +
+    IntToStr(TrCount) + ' (texts ' + IntToStr(StatTraj) + '), explosion bullets waiting ' + IntToStr(FxQCount),
+    ColorGood);
   StatHud := 0;
   StatDmg := 0;
   StatOvl := 0;
@@ -6010,6 +6027,8 @@ begin
   StatHid := 0;
   StatRays := 0;
   StatAfk := 0;
+  StatShots := 0;
+  StatTraj := 0;
   StatSince := Game.TickCount;
 end;
 
@@ -6133,10 +6152,138 @@ begin
   Words.Free;
 end;
 
+procedure EngineWeapons();
+var
+  F: string;
+  R, n: Integer;
+begin
+  R := 0;
+  F := WpFile;
+  if Game.Realistic then
+  begin
+    R := 1;
+    F := WpRealFile;
+  end;
+  if LowerCase(F) = 'auto' then
+  begin
+    if R = 1 then
+    begin
+      n := BE_WeaponsLoad('configs/weapons_realistic.ini', 1);
+      if n = 0 then
+        n := BE_WeaponsLoad('weapons_realistic.ini', 1);
+    end
+    else
+    begin
+      n := BE_WeaponsLoad('configs/weapons.ini', 0);
+      if n = 0 then
+        n := BE_WeaponsLoad('weapons.ini', 0);
+    end;
+  end
+  else
+  begin
+    n := BE_WeaponsLoad(F, R);
+    if F <> '' then
+      if n = 0 then
+        Log('settings.ini: [Weapons] ' + F + ' was not found: the weapons of Soldat 1.7.1 are used');
+  end;
+  BE_Gravity(Game.Gravity);
+  BE_MoveSet(MF_GRAVITY, Game.Gravity);
+end;
+
+procedure EngineConfigure();
+begin
+  if not BeOk then
+    Exit;
+  BE_RadarInt(RI_LIST_LINES, OvlListMax);
+  BE_RadarInt(RI_LIST_LAYER, OvlListLayer);
+  BE_RadarInt(RI_LIST_COLOR, OvlListColor);
+  BE_RadarInt(RI_CIRCLE_DOTS, OvlCircleDots);
+  BE_RadarInt(RI_CIRCLE_LAYER, OvlCircleLayer);
+  BE_RadarInt(RI_RING_COLOR, OvlRingColor);
+  BE_RadarInt(RI_SELF_COLOR, OvlSelfColor);
+  BE_RadarInt(RI_ENEMY_COLOR, OvlEnemyColor);
+  BE_RadarInt(RI_FRIEND_COLOR, OvlFriendColor);
+  BE_RadarInt(RI_SHOW_FAR, BoolInt(OvlShowFar));
+  BE_RadarInt(RI_LABEL_LAYER, OvlLayerFirst);
+  BE_RadarInt(RI_ARROWS_MAX, OvlArrowsMax);
+  BE_RadarInt(RI_ARROW_DOTS, OvlArrowDots);
+  BE_RadarInt(RI_ARROW_LAYER, OvlArrowLayer);
+  BE_RadarInt(RI_ARROW_NEAR, OvlArrowNear);
+  BE_RadarInt(RI_ARROW_MID, OvlArrowMid);
+  BE_RadarInt(RI_ARROW_FAR, OvlArrowFar);
+  BE_RadarInt(RI_REFRESH, OVL_LIST_REFRESH);
+  BE_RadarInt(RI_MARK_DISPLAY, OVL_MARK_DISPLAY);
+  BE_RadarInt(RI_LIST_DISPLAY, OVL_LIST_DISPLAY);
+  BE_RadarInt(RI_METER_DECIMALS, OvlListMeters);
+  BE_RadarInt(RI_COLOR_FULL, HudColorFull);
+  BE_RadarInt(RI_COLOR_HALF, HudColorHalf);
+  BE_RadarInt(RI_COLOR_LOW, HudColorLow);
+  BE_RadarInt(RI_VIS_RAYS, OvlVisionRays);
+  BE_RadarInt(RI_VIS_ROUND, OvlVisionRound);
+  BE_RadarInt(RI_TEAMGAME, BoolInt(TeamGame()));
+  BE_RadarInt(RI_ARROW_STEPS, OvlArrowSteps);
+  BE_RadarFloat(RF_RANGE, OvlRange);
+  BE_RadarFloat(RF_LIST_SCALE, OvlListScale);
+  BE_RadarFloat(RF_CIRCLE_R, OvlCircleR);
+  BE_RadarFloat(RF_CIRCLE_SCALE, OvlCircleScale);
+  BE_RadarFloat(RF_LABEL_SCALE, OvlScale);
+  BE_RadarFloat(RF_LABEL_OFFSET, OvlOffsetY);
+  BE_RadarFloat(RF_SIZE_RANGE, OvlSizeRange);
+  BE_RadarFloat(RF_ARROW_INNER, OvlArrowInner);
+  BE_RadarFloat(RF_ARROW_OUTER, OvlArrowOuter);
+  BE_RadarFloat(RF_ARROW_HEAD, OvlArrowHead);
+  BE_RadarFloat(RF_ARROW_WIDTH, OvlArrowWidth);
+  BE_RadarFloat(RF_ARROW_SCALE, OvlArrowScale);
+  BE_RadarFloat(RF_ARROW_MOVE, OvlArrowMove);
+  BE_RadarFloat(RF_ARROW_LEAD, OvlArrowLead);
+  BE_RadarFloat(RF_LABEL_MOVE, OvlLabelMove);
+  BE_RadarFloat(RF_TAG_SCALE, OvlTagScale);
+  BE_RadarFloat(RF_CIRCLE_MOVE, OvlCircleMove);
+  BE_RadarText(RT_RING, OvlRingChar);
+  BE_RadarText(RT_SELF, OvlSelfChar);
+  BE_RadarText(RT_ENEMY, OvlEnemyChar);
+  BE_RadarText(RT_FRIEND, OvlFriendChar);
+  BE_RadarText(RT_FAR, OvlFarChar);
+  BE_RadarText(RT_FLAG, OvlFlagChar);
+  BE_RadarText(RT_BOW, OvlBowChar);
+  BE_RadarText(RT_ARROW, OvlArrowChar);
+  BE_RadarText(RT_LIST_TITLE, OvlListTitle);
+  BE_RadarText(RT_LIST_LINE, OvlListLine);
+  BE_RadarText(RT_NOBODY, OvlNobody);
+  BE_MoveSet(MF_MOM_BASE, TpMomBase);
+  BE_MoveSet(MF_MOM_PER_PIXEL, TpMomPerDist);
+  BE_MoveSet(MF_MOM_KEEP, TpMomKeep);
+  BE_MoveSet(MF_MOM_MAX, TpMomMax);
+  BE_MoveSet(MF_HOLD_TICKS, TpHoldTicks);
+  BE_MoveSet(MF_HOP_TICKS, TpHopTicks);
+  BE_MoveSet(MF_HOP_MIN, TpHopMin);
+  BE_MoveSet(MF_GAIN, TpGain);
+  BE_MoveSet(MF_VMAX, TpVmax);
+  BE_MoveSet(MF_PUSH_TICKS, TpPushTicks);
+  BE_MoveSet(MF_FLY_BASE, TpFlyBase);
+  BE_MoveSet(MF_FLY_PER_PIXEL, TpFlyPerDist);
+  BE_MoveSet(MF_FLY_MAX, TpFlyMax);
+  BE_MoveSet(MF_FLY_EVERY, TpFlyEvery);
+  BE_MoveSet(MF_FLY_DEAD, TpFlyDead);
+  BE_MoveSet(MF_FLY_SMOOTH, TpFlySmooth);
+  BE_MoveSet(MF_HOP_TIMEOUT, TpHopTimeout);
+  BE_MoveSet(MF_ACCEL, TpAccel);
+  BE_TrajInt(TJ_LAYER, TrLayer);
+  BE_TrajInt(TJ_DOTS, TrDots);
+  BE_TrajInt(TJ_COLOR, TrColor);
+  BE_TrajInt(TJ_HIT_COLOR, TrHitColor);
+  BE_TrajInt(TJ_CURSOR_COLOR, TrCursorColor);
+  BE_TrajFloat(TJF_SCALE, TrScale);
+  BE_TrajFloat(TJF_CURSOR_SCALE, TrCursorScale);
+  BE_TrajFloat(TJF_MOVE, TrMove);
+  EngineWeapons();
+end;
+
 procedure LoadAll();
 begin
   LoadSettings();
   BuildCommandList();
+  EngineConfigure();
   if RegEnabled then
     if not HudEnabled then
       Log('regeneration runs without the health display');
@@ -6331,7 +6478,7 @@ begin
         EditorStop(ID, False);
       OverlayHide(ID);
     end;
-    RdRedraw[ID] := True;
+    RadarDirty(ID);
     OverlayRecount();
     PrefsSave(ID);
     Say(ID, 'Radar ' + BoolText(OvlOn[ID]) + ' (' + RadarModeName(RadarMode(ID)) + '). More: ' + Cmd + ' help',
@@ -6358,7 +6505,7 @@ begin
       RdPMode[ID] := 0
     else
       RdPMode[ID] := M + 1;
-    RdRedraw[ID] := True;
+    RadarDirty(ID);
     PrefsSave(ID);
     Say(ID, 'Radar mode ' + RadarModeName(M) + '.', ColorGood);
     if not OvlOn[ID] then
@@ -6383,7 +6530,7 @@ begin
           Say(ID, 'Not faster than every ' + IntToStr(N) + ' ticks on this server.', ColorBad);
         end;
     RdPTicks[ID] := N;
-    RdDue[ID] := Game.TickCount;
+    RadarDirty(ID);
     PrefsSave(ID);
     Say(ID, 'The radar is updated every ' + IntToStr(RadarTicks(ID)) + ' ticks.', ColorGood);
   end
@@ -6403,7 +6550,7 @@ begin
     RdPZoom[ID] := V;
     if Abs(V - 1) < 0.001 then
       RdPZoom[ID] := 0;
-    RdRedraw[ID] := True;
+    RadarDirty(ID);
     PrefsSave(ID);
     Say(ID, 'Radar zoom ' + FloatStr(V, 2) + ': it reaches ' + IntToStr(Round(RadarRange(ID))) + ' pixels.', ColorGood);
   end
@@ -6430,7 +6577,7 @@ begin
     end
     else if M = OvlPublicShow then
       RdPShow[ID] := 0;
-    RdRedraw[ID] := True;
+    RadarDirty(ID);
     OverlayRecount();
     PrefsSave(ID);
     Say(ID, 'The radar shows: ' + ShowName(RadarShowOf(ID)) + '.', ColorGood);
@@ -6463,7 +6610,7 @@ begin
     end;
     RdPX[ID] := X;
     RdPY[ID] := Y;
-    RdRedraw[ID] := True;
+    RadarDirty(ID);
     PrefsSave(ID);
     Say(ID, 'Radar position ' + IntToStr(X) + ' ' + IntToStr(Y) + '.', ColorGood);
   end
@@ -6482,7 +6629,7 @@ begin
     RdPSize[ID] := V;
     if Abs(V - 1) < 0.001 then
       RdPSize[ID] := 0;
-    RdRedraw[ID] := True;
+    RadarDirty(ID);
     PrefsSave(ID);
     Say(ID, 'Radar size ' + FloatStr(V, 2) + '.', ColorGood);
   end
@@ -6497,7 +6644,7 @@ begin
     RdPSize[ID] := 0;
     RdPZoom[ID] := 0;
     RdPShow[ID] := 0;
-    RdRedraw[ID] := True;
+    RadarDirty(ID);
     OverlayRecount();
     PrefsSave(ID);
     Say(ID, 'Radar: the server settings again.', ColorGood);
@@ -6514,26 +6661,43 @@ begin
   end;
 end;
 
-{ /tele, /teletomouse, /flytomouse: with the key of [Teleport] Key the admin jumps to his cursor and
-  stops, jumps and keeps flying in that direction, or flies towards the cursor while he holds the key.
-  The game sends the cursor with the key press, so the jump goes where the cursor is at that moment.
-  The same command again switches it off; another one switches to its mode. }
-procedure CmdTele(ID: Integer; Console: Boolean; Mode: Integer);
+procedure CmdTele(ID: Integer; Console: Boolean; Mode: Integer; Args: string);
 var
-  K, Name: string;
+  K, Name, W: string;
+  Vari: Integer;
 begin
   if Console then
   begin
     Say(ID, 'The teleport is for admins in the game.', ColorBad);
     Exit;
   end;
-  if TpOn[ID] and (TpMode[ID] = Mode) then
+  if not BeOk then
+  begin
+    Say(ID, 'The teleport needs basicext_dll, which is not running.', ColorBad);
+    Exit;
+  end;
+  W := LowerCase(Trim(Args));
+  Vari := TpVariant[ID];
+  if W <> '' then
+  begin
+    if (W = 'inherit') or (W = 'accel') or (W = 'i') then
+      Vari := TP_VAR_INHERIT
+    else if (W = 'fixed') or (W = 'f') then
+      Vari := TP_VAR_FIXED
+    else
+    begin
+      Say(ID, 'Use: /teletomouse [inherit|fixed] - inherit = the longer you hold, the faster you fly.', ColorBad);
+      Exit;
+    end;
+  end;
+  if TpOn[ID] and (TpMode[ID] = Mode) and ((W = '') or (Vari = TpVariant[ID])) then
   begin
     TpOn[ID] := False;
     TpMode[ID] := TP_OFF;
     TpCount := TpCount - 1;
     if TpCount < 0 then
       TpCount := 0;
+    BE_MoveReset(ID);
     Say(ID, 'Teleport off.', ColorGood);
     Exit;
   end;
@@ -6541,7 +6705,8 @@ begin
     TpCount := TpCount + 1;
   TpOn[ID] := True;
   TpMode[ID] := Mode;
-  TpWas[ID] := True;
+  TpVariant[ID] := Vari;
+  BE_MoveReset(ID);
   K := 'reload';
   if TpKey = TK_GRENADE then
     K := 'grenade'
@@ -6550,9 +6715,17 @@ begin
   else if TpKey = TK_CHANGE then
     K := 'change weapon';
   if Mode = TP_MOMENTUM then
-    Name := 'you jump to your cursor and keep flying that way (faster for a longer jump)'
-  else if Mode = TP_FLY then
-    Name := 'you fly towards your cursor while you hold it (faster when it is further)'
+  begin
+    Name := 'tap ' + K + ' = jump to your cursor and keep flying that way; hold it = teleport after teleport towards the cursor';
+    if Vari = TP_VAR_INHERIT then
+      Name := Name + ', faster the longer you hold (up to ' + FloatStr(TpVmax, 1) + ')'
+    else
+      Name := Name + ', the speed by the cursor distance';
+    Say(ID, 'Teleport on: ' + Name + '. The same command switches it off.', ColorGood);
+    Exit;
+  end;
+  if Mode = TP_FLY then
+    Name := 'you fly towards your cursor while you hold it (faster when it is further, you hover when it is on you)'
   else
     Name := 'you jump to your cursor and stop there';
   Say(ID, 'Teleport on: press ' + K + ' and ' + Name + '. The same command switches it off.', ColorGood);
@@ -6582,24 +6755,49 @@ begin
     Say(ID, 'Player not found (' + W + ')', ColorBad);
 end;
 
-{ /explode <player|all> }
-procedure CmdExplode(ID: Integer; Args: string);
+procedure CmdExplode(ID: Integer; Args: string; Kind: Integer);
 var
-  T, i: Integer;
+  T, i, K, n: Integer;
+  W, Rest: string;
 begin
-  if LowerCase(Trim(Args)) = 'all' then
+  W := FirstWord(Trim(Args));
+  Rest := Trim(AfterFirstWord(Trim(Args)));
+  K := Kind;
+  if Rest <> '' then
   begin
+    K := FxKindOf(Rest);
+    if K < 0 then
+    begin
+      Say(ID, 'Unknown explosion "' + Rest + '". Kinds: ' + FX_KINDS + '.', ColorBad);
+      Exit;
+    end;
+  end;
+  if K <> FX_PLAIN then
+    if not BeOk then
+    begin
+      Say(ID, 'This explosion needs basicext_dll, which is not running: a plain one is used.', ColorBad);
+      K := FX_PLAIN;
+    end;
+  if W = '' then
+  begin
+    Say(ID, 'Use: /explode <player|all> [' + ReplaceAll(FX_KINDS, ', ', '|') + ']', ColorBad);
+    Exit;
+  end;
+  if LowerCase(W) = 'all' then
+  begin
+    n := 0;
     for i := 1 to TopSlot do
       if i <> ID then
         if PL[i].Active then
           if PL[i].Alive then
           begin
-            AdminHit[i] := Game.TickCount;
-            Map.CreateBullet(PL[i].X, PL[i].Y, 0, 0, 1000, 4, PL[i]);
+            FxStart(i, K);
+            n := n + 1;
           end;
+    Say(ID, 'Explosion (' + FxName(K) + ') on ' + IntToStr(n) + ' players.', ColorGood);
     Exit;
   end;
-  T := AdminTarget(ID, Args, False);
+  T := AdminTarget(ID, W, False);
   if T < 1 then
     Exit;
   if not PL[T].Alive then
@@ -6607,9 +6805,137 @@ begin
     Say(ID, PL[T].Name + ' is dead.', ColorBad);
     Exit;
   end;
-  AdminHit[T] := Game.TickCount;
-  Map.CreateBullet(PL[T].X, PL[T].Y, 0, 0, 1000, 4, PL[T]);
-  Say(ID, PL[T].Name + ' exploded.', ColorGood);
+  FxStart(T, K);
+  Say(ID, PL[T].Name + ' exploded (' + FxName(K) + ').', ColorGood);
+end;
+
+procedure CmdTraj(ID: Integer; Args: string; Console: Boolean);
+var
+  T: Integer;
+  W: string;
+begin
+  if Console then
+  begin
+    Say(ID, 'The trajectory is drawn in the game, for an admin who is on the server.', ColorBad);
+    Exit;
+  end;
+  if not BeOk then
+  begin
+    Say(ID, 'The trajectory needs basicext_dll, which is not running.', ColorBad);
+    Exit;
+  end;
+  W := LowerCase(Trim(Args));
+  if (W = 'off') or ((W = '') and (TrWatch[ID] > 0)) then
+  begin
+    TrStop(ID);
+    Say(ID, 'Trajectory off.', ColorGood);
+    Exit;
+  end;
+  if W = '' then
+  begin
+    if TeamOf[ID] = TEAM_SPECTATOR then
+    begin
+      Say(ID, 'Use: /trajectory <player> - the flight of his bullets; /trajectory off', ColorBad);
+      Exit;
+    end;
+    T := ID;
+  end
+  else
+  begin
+    T := FindPlayer(FirstWord(Trim(Args)));
+    if T < 1 then
+    begin
+      Say(ID, 'Player not found (' + FirstWord(Trim(Args)) + ')', ColorBad);
+      Exit;
+    end;
+  end;
+  if TrWatch[ID] = T then
+  begin
+    TrStop(ID);
+    Say(ID, 'Trajectory off.', ColorGood);
+    Exit;
+  end;
+  if TrWatch[ID] > 0 then
+    TrStop(ID);
+  TrWatch[ID] := T;
+  TrDue[ID] := 0;
+  TrCount := TrCount + 1;
+  if T = ID then
+    Say(ID, 'Trajectory on: where the bullets of your weapon fly (green = where they hit). /trajectory off', ColorGood)
+  else
+    Say(ID, 'Trajectory on: where the bullets of ' + PL[T].Name + ' fly (green = where they hit). /trajectory off',
+      ColorGood);
+end;
+
+function AbKeyName(): string;
+begin
+  if AbKey = AK_JET then
+    Result := 'jet'
+  else if AbKey = AK_PRONE then
+    Result := 'prone'
+  else if AbKey = AK_FIRE then
+    Result := 'fire'
+  else
+    Result := 'crouch';
+end;
+
+procedure CmdAimbot(ID: Integer; Args: string; Console: Boolean);
+var
+  W, M: string;
+  NewOn: Boolean;
+begin
+  if Console then
+  begin
+    Say(ID, 'The aimbot is for admins in the game.', ColorBad);
+    Exit;
+  end;
+  if not BeOk then
+  begin
+    Say(ID, 'The aimbot needs basicext_dll, which is not running.', ColorBad);
+    Exit;
+  end;
+  W := LowerCase(Trim(Args));
+  NewOn := not AbOn[ID];
+  if W = 'on' then
+    NewOn := True
+  else if W = 'off' then
+    NewOn := False
+  else if (W = 'nearest') or (W = 'near') then
+  begin
+    AbMode[ID] := AT_NEAREST;
+    NewOn := True;
+  end
+  else if (W = 'cursor') or (W = 'aim') then
+  begin
+    AbMode[ID] := AT_CURSOR;
+    NewOn := True;
+  end
+  else if W <> '' then
+  begin
+    Say(ID, 'Use: /aimbot [on|off|cursor|nearest]', ColorBad);
+    Exit;
+  end;
+  if NewOn and not AbOn[ID] then
+  begin
+    AbCount := AbCount + 1;
+    if (W <> 'nearest') and (W <> 'near') and (W <> 'cursor') and (W <> 'aim') then
+      AbMode[ID] := AbTarget;
+  end
+  else if AbOn[ID] and not NewOn then
+    AbCount := AbCount - 1;
+  AbOn[ID] := NewOn;
+  AbHeld[ID] := False;
+  BE_GunReset(ID);
+  if not NewOn then
+  begin
+    Say(ID, 'Aimbot off.', ColorGood);
+    Exit;
+  end;
+  M := 'the enemy nearest to your cursor';
+  if AbMode[ID] = AT_NEAREST then
+    M := 'the nearest enemy';
+  Say(ID, 'Aimbot on: hold ' + AbKeyName() + ' and your weapon fires at ' + M + ' (it leads moving targets). /aimbot off',
+    ColorGood);
 end;
 
 { /god [player]: no damage for him until it is switched off (or he leaves) }
@@ -6893,9 +7219,13 @@ begin
       else
         CmdRadar(ID, Args, '/radar');
     C_RADAR: CmdRadar(ID, Args, '!radar');
-    C_TELE: CmdTele(ID, Console, TP_JUMP);
+    C_TELE: CmdTele(ID, Console, TP_JUMP, '');
     C_MEDIC: CmdMedic(ID);
-    C_EXPLODE: CmdExplode(ID, Args);
+    C_EXPLODE: CmdExplode(ID, Args, FX_PLAIN);
+    C_BIGEXPLODE: CmdExplode(ID, Args, FX_BIG);
+    C_NUKE: CmdExplode(ID, Args, FX_NUKE);
+    C_TRAJ: CmdTraj(ID, Args, Console);
+    C_AIMBOT: CmdAimbot(ID, Args, Console);
     C_GOD: CmdGod(ID, Args);
     C_HEAL: CmdHeal(ID, Args);
     C_SLAP: CmdSlap(ID, Args);
@@ -6905,8 +7235,8 @@ begin
     C_DISARM: CmdWeapon(ID, Args, True);
     C_GIVE: CmdWeapon(ID, Args, False);
     C_BONUS: CmdBonus(ID, Args);
-    C_TELEMOUSE: CmdTele(ID, Console, TP_MOMENTUM);
-    C_FLYMOUSE: CmdTele(ID, Console, TP_FLY);
+    C_TELEMOUSE: CmdTele(ID, Console, TP_MOMENTUM, Args);
+    C_FLYMOUSE: CmdTele(ID, Console, TP_FLY, '');
     C_ADMINLIST:
       if AdListLines.Count = 0 then
         Say(ID, 'There are no admin commands to display', ColorBad)
@@ -6948,15 +7278,7 @@ begin
               if not (AdKickSkipAdmins and PL[i].IsAdmin) then
                 PL[i].Kick(TKickSilent);
       end;
-    C_EXPLODEALL:
-      for i := 1 to TopSlot do
-        if i <> ID then
-          if PL[i].Active then
-            if PL[i].Alive then
-            begin
-              AdminHit[i] := Game.TickCount;
-              Map.CreateBullet(PL[i].X, PL[i].Y, 0, 0, 1000, 4, PL[i]);
-            end;
+    C_EXPLODEALL: CmdExplode(ID, 'all ' + Args, FX_PLAIN);
     C_RANDOMIZE:
       begin
         ShuffleMapsList();
@@ -6985,8 +7307,7 @@ begin
         begin
           OverlayAllow(i);
           RadarApplyOn(i);
-          RdRedraw[i] := True;
-          HitMarkClear(i);
+          RadarDirty(i);
           if not TpEnabled then
             TpOn[i] := False;
         end;
@@ -7175,14 +7496,12 @@ end;
 
 { ================================ timers ================================ }
 
-{ /tele: on the key press the admin jumps to his cursor (the game sends the cursor with the key), not
-  into a wall ([Teleport] NotIntoWalls) }
 procedure TeleportTick(Tick: Integer);
 var
-  i: Integer;
+  i, A, Key, Al: Integer;
   P: TActivePlayer;
-  K, Blocked, Go: Boolean;
-  X, Y, PX, PY, DX, DY, D, Sp, VX, VY: Single;
+  Down, Blocked: Boolean;
+  X, Y, VX, VY, OX, OY, OVX, OVY: Single;
 begin
   for i := 1 to TopSlot do
     if TpOn[i] then
@@ -7196,80 +7515,59 @@ begin
         Continue;
       end;
       if TpKey = TK_GRENADE then
-        K := P.KeyGrenade
+        Down := P.KeyGrenade
       else if TpKey = TK_THROW then
-        K := P.KeyThrow
+        Down := P.KeyThrow
       else if TpKey = TK_CHANGE then
-        K := P.KeyChangeWeap
+        Down := P.KeyChangeWeap
       else
-        K := P.KeyReload;
-      { a jump on the press; the flight also every FlyEveryTicks while the key is held }
-      Go := False;
-      if K then
+        Down := P.KeyReload;
+      Key := 0;
+      if Down then
+        Key := 1;
+      Al := 0;
+      X := 0;
+      Y := 0;
+      VX := 0;
+      VY := 0;
+      if P.Alive then
       begin
-        if not TpWas[i] then
-          Go := True
-        else if TpMode[i] = TP_FLY then
-          if Tick >= TpNext[i] then
-            Go := True;
+        Al := 1;
+        X := P.X;
+        Y := P.Y;
+        VX := P.VelX;
+        VY := P.VelY;
       end;
-      TpWas[i] := K;
-      if Go then
-        if P.Alive then
+      A := BE_Move(i, Tick, TpMode[i], TpVariant[i], Key, Al, X, Y, VX, VY, P.MouseAimX, P.MouseAimY, OX, OY, OVX, OVY);
+      if A = 0 then
+        Continue;
+      if not P.IsAdmin then
+      begin
+        TpOn[i] := False;
+        TpMode[i] := TP_OFF;
+        TpCount := TpCount - 1;
+        Say(i, 'Teleport off: you are not an admin any more.', ColorBad);
+        Continue;
+      end;
+      if (A and MA_MOVE) <> 0 then
+      begin
+        Blocked := False;
+        if TpNoWalls then
+          Blocked := Map.RayCast(OX, OY - 10, OX + 1, OY - 9, True, False, False, False, TeamOf[i]);
+        if Blocked then
         begin
-          if not P.IsAdmin then
+          BE_MoveBlocked(i, Tick);
+          if (A and MA_TAP) <> 0 then
           begin
-            TpOn[i] := False;
-            TpMode[i] := TP_OFF;
-            TpCount := TpCount - 1;
-            Say(i, 'Teleport off: you are not an admin any more.', ColorBad);
+            Say(i, 'Your cursor is inside a wall.', ColorBad);
             Continue;
           end;
-          X := P.MouseAimX;
-          Y := P.MouseAimY;
-          PX := P.X;
-          PY := P.Y;
-          DX := X - PX;
-          DY := Y - PY;
-          D := Sqrt(DX * DX + DY * DY);
-          if TpMode[i] = TP_FLY then
-          begin
-            { no jump: a push towards the cursor, stronger when it is further }
-            TpNext[i] := After(Tick, TpFlyEvery);
-            if D >= 1 then
-            begin
-              Sp := TpFlyBase + D * TpFlyPerDist;
-              if Sp > TpFlyMax then
-                Sp := TpFlyMax;
-              P.SetVelocity(DX / D * Sp, DY / D * Sp);
-            end;
-          end
-          else
-          begin
-            Blocked := False;
-            if TpNoWalls then
-              Blocked := Map.RayCast(X, Y - 10, X + 1, Y - 9, True, False, False, False, TeamOf[i]);
-            if Blocked then
-              Say(i, 'Your cursor is inside a wall.', ColorBad)
-            else if TpMode[i] = TP_MOMENTUM then
-            begin
-              { the speed he had, and more for a longer jump, all in the direction of the jump }
-              VX := P.VelX;
-              VY := P.VelY;
-              Sp := Sqrt(VX * VX + VY * VY) * TpMomKeep + TpMomBase + D * TpMomPerDist;
-              if Sp > TpMomMax then
-                Sp := TpMomMax;
-              P.Move(X, Y);
-              if D >= 1 then
-                P.SetVelocity(DX / D * Sp, DY / D * Sp);
-            end
-            else
-            begin
-              P.Move(X, Y);
-              P.SetVelocity(0, 0);
-            end;
-          end;
-        end;
+        end
+        else
+          P.Move(OX, OY);
+      end;
+      if (A and MA_VELOCITY) <> 0 then
+        P.SetVelocity(OVX, OVY);
     end;
   if TpCount < 0 then
     TpCount := 0;
@@ -7492,26 +7790,34 @@ begin
     LastSupp[i] := 0;
     RegenStart[i] := Tick;
     HudSentTick[i] := 0;
-    OvlListSent[i] := 0;
     CallLast[i] := 0;
     SeenTick[i] := -1;
     EdUntil[i] := Tick + HudEditorTicks;
+    EdShowAt[i] := 0;
+    EdPinAt[i] := 0;
     RdDue[i] := Tick;
-    VpTick[i] := -1;
-    CrSent[i] := 0;
+    RadarDirty(i);
+    RdRetry[i] := 0;
+    RdTokTick[i] := Tick;
+    TrDue[i] := Tick;
     WtNext[i] := 0;
-    for j := 0 to 7 do
-      if HmUntil[i][j] > 0 then
-        HmUntil[i][j] := Tick;
     for j := 0 to 255 do
       WtDue[i][j] := 0;
     for j := 1 to 32 do
-    begin
       DnLast[i][j] := 0;
-      OvlLastTick[i][j] := 0;
-      CbSent[i][j] := 0;
+    if BeOk then
+    begin
+      BE_RadarReset(i);
+      BE_TrajReset(i);
+      BE_MoveReset(i);
+      BE_GunReset(i);
     end;
   end;
+  SnapTick := -1;
+  SnapExtraTick := -1000000;
+  OvlNextTick := 0;
+  if BeOk then
+    OverlayRecount();
 end;
 
 procedure OnTick(Ticks: Integer);
@@ -7598,6 +7904,24 @@ begin
       TeleportTick(Tick);
     except
       StageError('teleport');
+    end;
+  if AbCount > 0 then
+    try
+      AimbotTick(Tick);
+    except
+      StageError('aimbot');
+    end;
+  if TrCount > 0 then
+    try
+      TrTick(Tick);
+    except
+      StageError('trajectory');
+    end;
+  if FxQCount > 0 then
+    try
+      FxTick(Tick);
+    except
+      StageError('explosions');
     end;
   if FrCount > 0 then
     try
@@ -7881,8 +8205,6 @@ begin
         Say(V, S, KiColor);
       end;
 
-  HitMarkClear(V);
-
   if K <> V then
   begin
     if Enemies(K, V) then
@@ -7928,7 +8250,6 @@ begin
   ResetLife(ID);
   if EdOn[ID] then
     EditorStop(ID, False);
-  HitMarkClear(ID);
   HudMark(ID, True);
 end;
 
@@ -7973,17 +8294,37 @@ begin
   RsWait[ID] := 0;
   MdWants[ID] := False;
   LgWatched[ID] := False;
+  if TpOn[ID] then
+    TpCount := TpCount - 1;
   TpOn[ID] := False;
-  TpWas[ID] := True;
+  TpMode[ID] := TP_OFF;
+  TpVariant[ID] := TpVariantDefault;
+  if AbOn[ID] then
+    AbCount := AbCount - 1;
+  AbOn[ID] := False;
+  if TrWatch[ID] > 0 then
+    TrCount := TrCount - 1;
+  TrWatch[ID] := 0;
+  TrDue[ID] := 0;
+  HumanOf[ID] := PL[ID].Human;
+  SnapExtraTick := -1000000;
+  SnapIdx[ID] := -1;
+  if BeOk then
+  begin
+    BE_Name(ID, PL[ID].Name);
+    BE_RadarReset(ID);
+    BE_TrajReset(ID);
+    BE_MoveReset(ID);
+    BE_GunReset(ID);
+    BE_VisReset(ID);
+  end;
   HudLowSet(ID, False);
-  HmActive[ID] := False;
   EdShowAt[ID] := 0;
+  EdPinAt[ID] := 0;
+  RdMark[ID] := 0;
   WtNext[ID] := 0;
   RdDue[ID] := 0;
-  RdRedraw[ID] := True;
-  RdDrawn[ID] := -1;
-  CrOn[ID] := False;
-  CrDots[ID] := 0;
+  RadarDirty(ID);
   EdKind[ID] := ED_HUD;
   TrackLeft[ID] := 0;
   CallLast[ID] := 0;
@@ -7995,9 +8336,6 @@ begin
   HudLast[ID] := '';
   OverlayAllow(ID);
   RadarApplyOn(ID);
-  OvlNext[ID] := 0;
-  OvlListText[ID] := '';
-  OvlListSent[ID] := 0;
   { a hit on the slot's last player that is not settled yet takes nothing from this one }
   VicLastBefore[ID] := 0;
   OutQ[ID].Clear;
@@ -8009,25 +8347,7 @@ begin
     DnKillPend[ID][i] := False;
     DnKillPend[i][ID] := False;
     Dealt[i][ID] := 0;
-    OvlLastTick[ID][i] := 0;
-    OvlLastTick[i][ID] := 0;
-    OvlLabelOn[ID][i] := False;
-    CbOn[ID][i] := False;
   end;
-  for i := 0 to 7 do
-  begin
-    HmUntil[ID][i] := 0;
-    ChOn[ID][i] := False;
-  end;
-  for i := 0 to ARROW_LAYERS - 1 do
-    ArOn[ID][i] := False;
-  for i := 1 to 32 do
-  begin
-    VisMine[ID][i] := False;
-    VisMine[i][ID] := False;
-    OvlLastTag[ID][i] := 0;
-  end;
-  VpTick[ID] := -1;
   for i := DmgLayerFirst to DmgLayerLast do
     WtDue[ID][i] := 0;
 end;
@@ -8107,36 +8427,41 @@ begin
   HudShown[ID] := False;
   HudDirty[ID] := False;
   HudLowSet(ID, False);
-  HmActive[ID] := False;
   if TpOn[ID] then
   begin
     TpOn[ID] := False;
     TpCount := TpCount - 1;
   end;
+  TpMode[ID] := TP_OFF;
+  if AbOn[ID] then
+  begin
+    AbOn[ID] := False;
+    AbCount := AbCount - 1;
+  end;
+  if TrWatch[ID] > 0 then
+  begin
+    TrWatch[ID] := 0;
+    TrCount := TrCount - 1;
+  end;
+  for i := 1 to TopSlot do
+    if TrWatch[i] = ID then
+      if i <> ID then
+        TrStop(i);
   OvlOn[ID] := False;
   OvlAllowed[ID] := False;
-  OvlListText[ID] := '';
-  RdDrawn[ID] := -1;
-  CrOn[ID] := False;
-  { his mark and label go from the radars of the others at once (the passes may not reach his slot
-    any more) }
-  for i := 1 to TopSlot do
+  if BeOk then
   begin
-    if CbOn[i][ID] then
-    begin
-      CbOn[i][ID] := False;
-      if PL[i].Active then
-        PL[i].BigText(OvlCircleLayer + RING_MAX + ID, ' ', 1, ColorGood, 0.01, 0, 0);
-    end;
-    if OvlLabelOn[i][ID] then
-    begin
-      OvlLabelOn[i][ID] := False;
-      if PL[i].Active then
-        PL[i].WorldText(OvlLayerFirst + ID - 1, ' ', 1, ColorGood, 0.01, 0, 0);
-    end;
-    CbOn[ID][i] := False;
-    OvlLabelOn[ID][i] := False;
+    BE_RadarReset(ID);
+    BE_TrajReset(ID);
+    BE_MoveReset(ID);
+    BE_GunReset(ID);
+    BE_VisReset(ID);
   end;
+  for i := 1 to TopSlot do
+    if OvlAdmin[i] then
+      RadarDirty(i);
+  for i := 1 to 32 do
+    SnapIdx[i] := -1;
   OutQ[ID].Clear;
   PrefKey[ID] := '';
   TeamOf[ID] := -1;
@@ -8164,7 +8489,7 @@ begin
   GrantSteamAdmin(ID);
   OverlayAllow(ID);
   RadarApplyOn(ID);
-  RdRedraw[ID] := True;
+  RadarDirty(ID);
   OverlayRecount();
   LogWatchCheck(ID);
   if LgEnabled then
@@ -8218,7 +8543,7 @@ begin
   TeamOf[ID] := Player.Team;
   SpecLeft[ID] := 0;
   AfIdle[ID] := 0;
-  RdRedraw[ID] := True;
+  RadarDirty(ID);
   if LgEnabled then
     if LgJoins then
       LogLine(ID, Player.Name + ' joined ' + TeamName(TeamOf[ID]));
@@ -8281,9 +8606,9 @@ begin
     ResetLife(i);
     for j := 1 to 32 do
       DnLayer[i][j] := 0;
-    HitMarkClear(i);
-    RdRedraw[i] := True;
+    RadarDirty(i);
   end;
+  EngineConfigure();
   if RuAfterMap then
     if RuLines.Count > 0 then
       ShowList(0, RuLines, RuColors, RuColor, 0, True);
@@ -8352,8 +8677,8 @@ begin
   for i := 1 to 32 do
   begin
     ActiveSlot[i] := PL[i].Active;
-    RdDrawn[i] := -1;
     EdKind[i] := ED_HUD;
+    SnapIdx[i] := -1;
   end;
   RecountTop();
   CfgKeys := File.CreateStringList();
