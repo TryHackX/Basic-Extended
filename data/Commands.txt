@@ -1,0 +1,8 @@
+__________Commands_List:___________________________________________________
+!j !s     !rate          !rate <*> !time        !whois       !admin       |
+!ping     !ping <*>      !track    !track <*>   !rules       !reginfo     |
+!visits   !lastvisitors  !locate                !locate <*>  !locateall   |
+?nextmap  ?lastmap       !map                   !maps        !allmaps     |
+!nextmap  !lastmap       !map <part|full name>  !randommap   !vote        |
+!hp       !hp help       !dmg      !maplist     ?map         !cmd         |
+__________________________________________________________________________|

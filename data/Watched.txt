@@ -1,0 +1,2 @@
+# Basic-Extended [Logger]: watched players get their own log file (logs/basic-extended/watched).
+# One Steam id (any form), an IP or a player name per line.

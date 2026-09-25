@@ -1,0 +1,6 @@
+$FFFF00	_______________________________________________
+$FFFF00	|Respect the following rules or GTFO:         |
+$00FF00	|ALLOWED: Spraying, Capping, Camping.         |
+$FF0000	|RESTRICTED: Cheating, Excessive camping      |
+$FF0000	|            Spam, Bugs, Team change abuse.   |
+$FF0000	|_____________________________________________|

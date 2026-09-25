@@ -1,0 +1,55 @@
+Try !cmd or !commands to see the complete commands list.
+Try !reginfo to see the complete list of stats and account related commands.
+Try !visits to see the server visit list.
+Try !lastvisitors to see the 10 people who recently visited the server.
+Try !j to join to game or !s to join to spectators.
+Try !rate or !rate <player ID|part name|full name> to see your K/D ratio or selected player ratio.
+Try !time to see time on the server.
+Try !whois to see who is connected administrators or administrators in the game.
+Try !admin to try to summon the administrator.
+Try !ping or !ping <player ID|part name|full name> to see your ping or selected player ping.
+Try !track or !track <player ID|part name|full name> to see your or selected player, average and max ping.
+Try !rules to show list rules on this server.
+Try !locate or !locate <player ID|part name|full name> to check your or the selected player location.
+Try !locateall to check the location of all players on the server.
+Try ?nextmap or ?lastmap or !map to see what is nextmap, lastmap and current map.
+Try !nextmap or !lastmap to start voting to change map to nextmap or lastmap.
+Try !map <map name | part map name> to start voting to change map to indicated.
+Try !maps to view the full server maplist.
+Try !allmaps to view all the maps available on the server in the currently game style.
+When voting for the map change, you can type !v !vote or press the F12 button.
+Hello on my server! Type /info command to learn something about the server and commands.
+When you write an accusation of fraud in the message, you will receive information on where to report it.
+You can also use locate commands silently using /locate /locate <player ID|part name|full name> /locateall.
+Command /votemap <map name>, works in mode searches similar to "!map <map name | part map name>".
+Command !map <map name | part map name> has alternatives !votemap <map name> and /votemap <map name>.
+Command !lastmap has alternatives !votelast and !votelastmap.
+Type !top to view the top 15 players on the server.
+You knew the !top command, can be used with a parameter example !top <player name | part name | player id>.
+You knew the !top command, can be used with a parameter example !top <ranking position number>.
+Using command !topme to display the top of the 15 players with the roster centered on you.
+Command !topid <player id> you can use when in ranking is player with the same name as the id of searched player.
+Check your stats, use !stats command to see your basic stats.
+You can also use the !stats command on other players, type !stats <player ID|part name|full name>.
+Check your others stats, use !otherstats command to see your other stats.
+You can also use the !otherstats command on other players, type !otherstats <player ID|part name|full name>.
+Check !contact or !zitro to view contact details and stats script version.
+Enter !reginfo to see accounts and statistics commands.
+Enable or disable display of the hud overlay showing ranking, points, and action system, try it !hud.
+Write !rank to display your ranking position.
+Write !rank <player ID|part name|full name> to display selected player ranking position.
+To quickly see who is in the position, type !ranknum <number>.
+Type !mapstats to check the popularity, ranking and statistics of the current map.
+Type !mapstats <map name> to check the popularity, ranking and statistics of the selected map.
+Take a look at the top 15 map ranking by typing !topmaps.
+You knew the !topmaps command, can be used with a parameter example !topmaps <map name>.
+You knew the !topmaps command, can be used with a parameter example !topmaps <map ranking position number>.
+You want a high number of points, take care of your protection days. Check quantity typing !status.
+The !status command will allow you to check the registration date, last visit and protect days count.
+The command !status can be used on players, example !status <player ID|part name|full name>.
+Check how many you have points protection days type !status.
+Randomize the game map using !randommap. This command will start voting for random map.
+Type !hp to switch your health display on or off, !hp help to change its style, size and place.
+Type !hp edit to move your health display with the movement keys (lie down to save).
+Type !dmg to switch the damage numbers over the players you hit.
+Health comes back by itself after a few seconds without being hit or shot at - there are no medkits.

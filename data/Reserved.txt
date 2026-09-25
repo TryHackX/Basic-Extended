@@ -1,0 +1,3 @@
+# Basic-Extended [Reservation]: the players the reserved slots are kept for.
+# One Steam id (any form: S123456789, 76561198083722517, STEAM_0:1:61728394, [U:1:123456789]) or an IP
+# at the start of a line; the rest of the line is a comment. Names and computer ids do not count.

@@ -1,0 +1,6 @@
+# Basic-Extended: Steam admins. One Steam id at the start of a line, in any form:
+# S123456789, 76561198083722517, STEAM_0:1:61728394 or [U:1:123456789].
+# The rest of the line is a comment (a name). /steamadmin add|del <player or id> edits this file.
+# These players become admins once Steam confirms their account (see [Admin] in settings.ini).
+76561199846115789
+S1885850061

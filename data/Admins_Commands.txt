@@ -1,0 +1,13 @@
+____________________________________Admin Commands___________________________________|
+/kickall /killall /explodeall /setscore <team id> <score> /randomize /reloadsettings |
+/banr <ID> <Time(m|h|d|mon|y)> <Reason>, /banipr, /banhwr <time> <data> <reason>     |
+/displayspawns, /removeallspawn, /removenearspawn, /ip <*>, /hwid <*>                |
+/editnearspawn, /countspawns, /createspawn, /createspawn <0-4>, /saveallspawns       |
+/search, /checkp, /checkd, /privacy, /resetallplayersstats, /resetallmapsstats       |                                                                     ',GOOD+700);
+/backupcreate <backup name>, /restorebackup <backup name>, /statusa <name*>          |                                                                     ',GOOD+700);
+/removeolderthan <data> (/removeolderthan 18.01.2021 or /removeolderthan 2021.01.18) | 
+/radar [help|mode|tick|edit|zoom|show], /steamadmin, /be_status, /be_test, /be_bench |
+/explode <id|all>, /god [id], /heal <id|all>, /slap <id> [damage], /freeze <id>    |
+/bring <id>, /goto <id>, /disarm <id>, /give <id> <weapon>, /bonus <id> <1-6>       |
+/tele, /teletomouse, /flytomouse (then the reload key moves you to your cursor)     |
+_____________________________________________________________________________________|
