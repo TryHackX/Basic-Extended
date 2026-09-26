@@ -100,6 +100,7 @@ begin
   WorldName(3, 'Far Guy');
   RadarText(RT_LIST_LINE, '{dir} {tag}{name} {pct}% {m} {dist}');
   RadarInt(RI_METER_DECIMALS, 2);
+  RadarInt(RI_LIST_COLOR_BY, LC_NONE);
   RadarUser(1, 1, OVL_LIST, SHOW_ALL, 10, 150, 1, 1, 1, 0);
   n := RadarPass(1, 1000, 8);
   Check(n = 1, 'list: one text');
@@ -119,6 +120,33 @@ begin
   RadarUser(1, 0, OVL_LIST, SHOW_ALL, 10, 150, 1, 1, 1, 0);
   n := RadarPass(1, 1302, 8);
   Check((n = 1) and (Ops[0].Text = ' '), 'list hidden when off');
+  RadarReset(1);
+  RadarInt(RI_LIST_COLOR_BY, LC_TEAM);
+  RadarInt(RI_TEAMGAME, 1);
+  WClear;
+  WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 50, 0, 0, 100, 100, 0, 0);
+  WAdd(2, WF_ALIVE, 2, 80, TAG_FLAG, 0, 0, 0, 240, 100, 0, 0);
+  WAdd(5, WF_ALIVE, 1, 70, 0, 0, 0, 0, 300, 100, 0, 0);
+  WLoad(1400);
+  WorldName(5, 'Mate');
+  WorldFlag(0, 1, 2, 400, 100);
+  WorldFlag(1, 2, 1, 50, 50);
+  RadarOpt(1, RO_FRIENDS, 1);
+  RadarUser(1, 1, OVL_LIST, SHOW_ALL, 10, 150, 1, 1, 1, 0);
+  n := RadarPass(1, 1400, 20);
+  Check(n = 4, 'coloured list: title, two players, the dropped flag: ' + IntToStr(n));
+  k := FindOp(KIND_BIG, 180);
+  Check((k >= 0) and (Ops[k].Color = $FF4040) and (Pos('Kruger', Ops[k].Text) > 0), 'enemy line red');
+  k := FindOp(KIND_BIG, 181);
+  Check((k >= 0) and (Ops[k].Color = $40FF40) and (Pos('Mate', Ops[k].Text) > 0), 'team mate line green');
+  Check((k >= 0) and (Ops[k].Y > Ops[FindOp(KIND_BIG, 180)].Y), 'second line lower');
+  k := FindOp(KIND_BIG, 182);
+  Check((k >= 0) and (Pos('Red flag', Ops[k].Text) > 0), 'dropped flag listed, the one in base not');
+  WorldFlag(0, 1, 0, 0, 0);
+  WorldFlag(1, 2, 0, 0, 0);
+  RadarInt(RI_TEAMGAME, 0);
+  RadarInt(RI_LIST_COLOR_BY, LC_NONE);
+  RadarReset(1);
 end;
 
 function OpCenterX(k: LongInt): Single;
@@ -455,6 +483,23 @@ begin
       FlyX := OVX;
   end;
   Check((FlyX > 7.5) and (FlyX <= 11), 'fly reaches FlyMax, each axis at most 11: ' + FloatToStr(FlyX));
+  MoveSet(MF_FLY_MAX, 30);
+  MoveReset(10);
+  MoveStep(10, 500, TP_FLY, VAR_FIXED, 0, 1, 0, 1, 0, 0, 0, 0, 0, 2000, 0, OX, OY, OVX, OVY);
+  n := 0;
+  PX := 0;
+  for T := 501 to 560 do
+  begin
+    A := MoveStep(10, T, TP_FLY, VAR_FIXED, 1, 1, 0, 1, 0, PX, 0, 11, 0, Round(PX) + 2000, 0, OX, OY, OVX, OVY);
+    if (A and MA_MOVE) <> 0 then
+    begin
+      Inc(n);
+      PX := OX;
+    end;
+    PX := PX + 11;
+  end;
+  Check((n >= 8) and (PX > 60 * 11 + 500), 'fly above 11 a tick with jumps: ' + IntToStr(n) + ' ' + FloatToStr(PX));
+  MoveSet(MF_FLY_MAX, 11);
 end;
 
 procedure TestBallistics;
@@ -604,7 +649,31 @@ begin
   Check(GunTarget(0) = 5, 'closest to the cursor line first');
   n := GunTargets(1, TM_NEAREST, 800, 180);
   Check((n = 3) and (GunTarget(0) = 5), 'nearest first');
+  n := GunTargets(1, TM_RADIUS, 800, 250);
+  Check((n = 1) and (GunTarget(0) = 2), 'only the enemy near the cursor: ' + IntToStr(n));
+  n := GunTargets(1, TM_RADIUS, 800, 150);
+  Check(n = 0, 'nobody within a small circle: ' + IntToStr(n));
+  n := GunTargets(1, TM_RADIUS, 800, 700);
+  Check((n = 3) and (GunTarget(0) = 2) and (GunTarget(1) = 5) and (GunTarget(2) = 3), 'nearest to the cursor first');
   RadarInt(RI_TEAMGAME, 0);
+end;
+
+procedure TestCircle;
+var
+  n: LongInt;
+begin
+  TrajReset(3);
+  n := AimCircle(3, 100, 64, 12, 120, $FF8000, 500, 400, 150, 0.08);
+  Check(n = 12, 'circle drawn: ' + IntToStr(n));
+  Check((Ops[0].Kind = KIND_WORLD) and (Ops[0].Layer = 120), 'circle on its layers');
+  n := AimCircle(3, 103, 64, 12, 120, $FF8000, 500, 400, 150, 0.08);
+  Check(n = 0, 'still circle sends nothing: ' + IntToStr(n));
+  n := AimCircle(3, 106, 64, 12, 120, $FF8000, 540, 400, 150, 0.08);
+  Check(n = 12, 'moved circle sent again: ' + IntToStr(n));
+  n := AimCircleHide(3, 64);
+  Check(n = 12, 'circle hidden: ' + IntToStr(n));
+  n := AimCircleHide(3, 64);
+  Check(n = 0, 'hidden once: ' + IntToStr(n));
 end;
 
 procedure TestTraj;
@@ -721,6 +790,13 @@ begin
           PutWord(F, L[k]);
       end;
     PutInt(F, 0);
+    PutInt(F, 0);
+    PutInt(F, 1);
+    PutByte(F, 1);
+    PutZero(F, 3);
+    PutSingle(F, 1000);
+    PutSingle(F, 150);
+    PutSingle(F, 17);
   finally
     F.Free;
   end;
@@ -767,6 +843,11 @@ begin
   Check(MapRay(650, 150, 850, 150, MR_BULLET, 0), 'bullet-only polygon stops bullets');
   Check(not MapRay(650, 150, 850, 150, 0, 0), 'bullet-only polygon is not a wall for sight');
   Check(MapPointSolid(150, 150, 0, 0) and not MapPointSolid(250, 150, 0, 0), 'point in a wall');
+  Check(MapColliders = 1, 'one collider');
+  Check(MapRay(900, 150, 1100, 150, MR_BULLET or MR_COLLIDER, 0), 'collider stops the bullet');
+  Check(not MapRay(900, 150, 1100, 150, MR_BULLET, 0), 'collider ignored without the flag');
+  Check(not MapRay(900, 170, 1100, 170, MR_BULLET or MR_COLLIDER, 0), 'collider radius is a 1.7th');
+  Check(MapEdgeCount >= 4, 'outline edges: ' + IntToStr(MapEdgeCount));
   Muzzle(0, 0, 1000, -11.4, 0, OX, OY, DX, DY);
   Check(Near(OX, 1.3, 0.05) and Near(OY, -13.4, 0.05) and Near(DX, 1, 0.001), 'standing muzzle');
   Muzzle(0, 0, -1000, -1.6, SF_PRONE, OX, OY, DX, DY);
@@ -798,6 +879,18 @@ begin
     if (Ops[i].Text = '.') and (Ops[i].X > MaxX) then
       MaxX := Ops[i].X;
   Check((n > 0) and (MaxX > 700) and (MaxX < 900), 'path cut at the edge of the view: ' + FloatToStr(MaxX));
+  TrajReset(6);
+  n := TrajTrack(6, 400, 100, 1, 8, 0, -300, 148, 55, 0);
+  Found := False;
+  for i := 0 to OpCount - 1 do
+    if Ops[i].Text = 'x' then
+    begin
+      Found := True;
+      HitX := Ops[i].X;
+    end;
+  Check((n > 2) and Found and (HitX > 80) and (HitX < 105), 'tracked bullet path ends at the wall');
+  n := TrajTrack(6, 405, 100, 0, 8, 0, -300 + 55 * 3, 148, 55 * 0.97, 0);
+  Check((n >= 1) and (n <= 4), 'bullet moved on: only the dots behind it go: ' + IntToStr(n));
   MapClear;
   Check(TrajStep(4, 301, 100, 8, 0, 0, 0, -1000, 0, 0, 600, -1000, 0) = -1, 'no map: the script draws');
   Check(not MapRay(0, 150, 300, 150, MR_BULLET, 0), 'no map: no walls');
@@ -830,7 +923,7 @@ var
   T, ID, Kind, n, k: LongInt;
   BX, V: Single;
   Txt: AnsiString;
-  Tot: TAcTotals;
+  Tot, Ac7: TAcTotals;
 begin
   WeaponsDefault(False);
   AcSet(AC_ENABLED, 1);
@@ -868,10 +961,28 @@ begin
   AcTotals(3, Tot);
   Check((Tot[T_BINK_HITS] = 1) and (Tot[T_B_HITS] = 3), 'hit under bink counted');
   Check((Tot[T_MOVE_HITS] = 1) and (Tot[T_M_HITS] = 3), 'hit while running counted');
-  Check((Tot[T_HITS] = 4) and (Tot[T_HEADS] = 2), 'head hits: ' + IntToStr(Tot[T_HEADS]) + '/' +
-    IntToStr(Tot[T_HITS]));
   Check(AcScore(3) >= 40, 'score: ' + IntToStr(AcScore(3)));
-  Check(Pos('start-up 1/3 short (min 0, avg 14', AcLineOf(Tot)) > 0, 'line: ' + AcLineOf(Tot));
+  Check(Pos('start-up 1/3 too fast', AcBrief(Tot)) > 0, 'brief: ' + AcBrief(Tot));
+  Check(Pos('1 of 3 shots too fast (fastest 0, average 14 ticks)', AcDetail(Tot)) > 0, 'detail: ' + AcDetail(Tot));
+  Check(AcFindings(Tot) = 2, 'findings: ' + IntToStr(AcFindings(Tot)));
+  Check(Pos('s ago: Sniper', AcReview(3, 600)) > 0, 'review: ' + AcReview(3, 600));
+  AcReset(7);
+  AcAmmo(7, 1000, 3, 40);
+  AcAmmo(7, 1030, 3, 36);
+  AcTotals(7, Ac7);
+  Check(AcFindings(Ac7) = 0, 'ammo at the fire rate');
+  AcAmmo(7, 1040, 3, 20);
+  AcTotals(7, Tot);
+  Check(Tot[T_AMMO] = 1, 'ammo used too fast');
+  AcAmmo(7, 1050, 3, 0);
+  AcAmmo(7, 1070, 3, 40);
+  AcTotals(7, Tot);
+  Check(Tot[T_RELOAD] = 1, 'reload too fast');
+  AcAmmo(7, 1100, 3, 38);
+  AcAmmo(7, 1110, 3, 0);
+  AcAmmo(7, 1300, 3, 40);
+  AcTotals(7, Tot);
+  Check((Tot[T_RELOAD] = 1) and (Tot[T_AMMO] = 1), 'a manual reload and a normal one are fine');
   while AcNext(ID, Kind, Txt) do ;
   AcReset(4);
   WClear;
@@ -894,6 +1005,17 @@ begin
   WorldLoad(720, WN, @WI, @WF);
   AcWorld(720);
   Check(not AcNext(ID, Kind, Txt), 'walking is not a teleport');
+  AcReset(5);
+  for k := 0 to 8 do
+  begin
+    WClear;
+    WAdd(5, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 100 + k * 200, 100, 0, 0);
+    WorldLoad(2000 + k * 10, WN, @WI, @WF);
+    AcWorld(2000 + k * 10);
+  end;
+  AcTotals(5, Tot);
+  Check(Tot[T_SPEED] = 1, 'sustained speed seen: ' + IntToStr(Tot[T_SPEED]));
+  while AcNext(ID, Kind, Txt) do ;
   AcSet(AC_ENABLED, 0);
 end;
 
@@ -928,6 +1050,7 @@ begin
   TestGun;
   TestTargets;
   TestTraj;
+  TestCircle;
   TestMap(Dir);
   TestAc;
   TestFx;

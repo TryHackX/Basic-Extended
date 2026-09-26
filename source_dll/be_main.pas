@@ -31,7 +31,7 @@ uses
   SysUtils, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac;
 
 const
-  BE_API_VERSION = 3;
+  BE_API_VERSION = 4;
   GET_MODULE_HANDLE_EX_FLAG_PIN = 1;
   GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = 4;
 {$IFNDEF WINDOWS}
@@ -194,8 +194,8 @@ begin
           Store.LastError + Writer.LastError + ')';
     end;
     if MapReady then
-      StatusBuf := StatusBuf + ', map polygons ' + IntToStr(MapPolys) + ', trajectories computed ' +
-        IntToStr(TrajRecomputed)
+      StatusBuf := StatusBuf + ', map polygons ' + IntToStr(MapPolys) + ' and colliders ' + IntToStr(MapColliders) +
+        ', trajectories computed ' + IntToStr(TrajRecomputed)
     else
       StatusBuf := StatusBuf + ', map not loaded';
   except
@@ -323,6 +323,14 @@ procedure BE_SnapExtra(ID, Pct, Tag, Ping: LongInt); cdecl;
 begin
   try
     WorldExtra(ID, Pct, Tag, Ping);
+  except
+  end;
+end;
+
+procedure BE_SnapFlag(Index, Team, State: LongInt; X, Y: Single); cdecl;
+begin
+  try
+    WorldFlag(Index, Team, State, X, Y);
   except
   end;
 end;
@@ -467,7 +475,7 @@ begin
     end;
 end;
 
-function BE_AcLine(ID: LongInt; Key: PChar): PChar; cdecl;
+function BE_AcText(ID: LongInt; Key: PChar; Kind, Tick: LongInt): PChar; cdecl;
 var
   T, S: TAcTotals;
   K: AnsiString;
@@ -475,21 +483,61 @@ begin
   AcBuf := '';
   try
     AcTotals(ID, T);
-    AcBuf := AcLineOf(T);
-    K := Str(Key, 200);
-    if K <> '' then
-    begin
-      AcStored(K, S);
-      if S[T_SESSIONS] > 0 then
-      begin
-        AcMerge(S, T);
-        AcBuf := 'now ' + AcBuf + ' | all ' + IntToStr(S[T_SESSIONS]) + ' games ' + AcLineOf(S);
-      end;
+    case Kind of
+      0: AcBuf := AcBrief(T);
+      1: AcBuf := AcDetail(T);
+      2, 3:
+        begin
+          K := Str(Key, 200);
+          AcStored(K, S);
+          if S[T_SESSIONS] < 0 then
+            S[T_SESSIONS] := 0;
+          AcMerge(S, T);
+          if Kind = 2 then
+          begin
+            if S[T_SESSIONS] = 1 then
+              AcBuf := '1 game: ' + AcBrief(S)
+            else
+              AcBuf := IntToStr(S[T_SESSIONS]) + ' games: ' + AcBrief(S);
+          end
+          else
+            AcBuf := AcDetail(S);
+        end;
+      4: AcBuf := AcReview(ID, Tick);
     end;
   except
     AcBuf := '';
   end;
   Result := PChar(AcBuf);
+end;
+
+function BE_AcFindings(ID: LongInt): LongInt; cdecl;
+var
+  T: TAcTotals;
+begin
+  Result := 0;
+  try
+    AcTotals(ID, T);
+    Result := AcFindings(T);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_AcAmmo(ID, Tick, W, Ammo: LongInt); cdecl;
+begin
+  try
+    AcAmmo(ID, Tick, W, Ammo);
+  except
+  end;
+end;
+
+procedure BE_AcAmmoReset(ID: LongInt); cdecl;
+begin
+  try
+    AcAmmoReset(ID);
+  except
+  end;
 end;
 
 procedure BE_AcSave(ID: LongInt; Key: PChar); cdecl;
@@ -504,7 +552,7 @@ begin
     if (Store = nil) or (K = '') then
       Exit;
     AcTotals(ID, T);
-    if T[T_SU_N] + T[T_RATE] + T[T_JUMPS] + T[T_B_HITS] + T[T_M_HITS] + T[T_HITS] = 0 then
+    if T[T_SU_N] + T[T_RATE] + T[T_JUMPS] + T[T_B_HITS] + T[T_M_HITS] + T[T_SPEED] + T[T_AMMO] + T[T_RELOAD] = 0 then
       Exit;
     AcStored(K, S);
     AcMerge(S, T);
@@ -1033,11 +1081,11 @@ begin
   end;
 end;
 
-function BE_GunTargets(Shooter, Mode: LongInt; MaxDist, MaxAngle: Single): LongInt; cdecl;
+function BE_GunTargets(Shooter, Mode: LongInt; MaxDist, Limit: Single): LongInt; cdecl;
 begin
   Result := 0;
   try
-    Result := GunTargets(Shooter, Mode, MaxDist, MaxAngle);
+    Result := GunTargets(Shooter, Mode, MaxDist, Limit);
   except
     Result := 0;
   end;
@@ -1053,7 +1101,7 @@ begin
   end;
 end;
 
-function BE_GunPick(Shooter, Mode: LongInt; MaxDist, MaxAngle, SX, SY, BodyH: Single; MaxCheck: LongInt): LongInt;
+function BE_GunPick(Shooter, Mode: LongInt; MaxDist, Limit, SX, SY, BodyH: Single; MaxCheck, RayFlags: LongInt): LongInt;
   cdecl;
 var
   c, k, n, T: LongInt;
@@ -1066,13 +1114,13 @@ begin
     T := 0;
     if ValidID(Shooter) then
       T := WP[Shooter].Team;
-    c := GunTargets(Shooter, Mode, MaxDist, MaxAngle);
+    c := GunTargets(Shooter, Mode, MaxDist, Limit);
     k := 0;
     while (k < c) and (k < MaxCheck) do
     begin
       n := GunTarget(k);
       if ValidID(n) then
-        if not MapRay(SX, SY, WP[n].X, WP[n].Y - BodyH, MR_BULLET, T) then
+        if not MapRay(SX, SY, WP[n].X, WP[n].Y - BodyH, RayFlags, T) then
         begin
           Result := n;
           Exit;
@@ -1125,6 +1173,39 @@ begin
   Result := -1;
   try
     Result := TrajStep(ID, Tick, Budget, W, Flags, Team, X, Y, VX, VY, AimX, AimY, Cursor);
+  except
+    OpCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_TrajTrack(ID, Tick, Budget, Start, W, Team: LongInt; BX, BY, BVX, BVY: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := TrajTrack(ID, Tick, Budget, Start, W, Team, BX, BY, BVX, BVY);
+  except
+    OpCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_AimCircle(ID, Tick, Budget, Count, First, Color: LongInt; CX, CY, R, Scale: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AimCircle(ID, Tick, Budget, Count, First, Color, CX, CY, R, Scale);
+  except
+    OpCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_AimCircleHide(ID, Budget: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AimCircleHide(ID, Budget);
   except
     OpCount := 0;
     Result := 0;
@@ -1198,6 +1279,7 @@ exports
   BE_SnapVel,
   BE_SnapExtra,
   BE_SnapEnd,
+  BE_SnapFlag,
   BE_Human,
   BE_AcSet,
   BE_AcReset,
@@ -1208,7 +1290,10 @@ exports
   BE_AcWatched,
   BE_AcNext,
   BE_AcScore,
-  BE_AcLine,
+  BE_AcText,
+  BE_AcFindings,
+  BE_AcAmmo,
+  BE_AcAmmoReset,
   BE_AcSave,
   BE_AcForget,
   BE_Name,
@@ -1263,6 +1348,9 @@ exports
   BE_TrajText,
   BE_TrajPass,
   BE_TrajStep,
+  BE_TrajTrack,
+  BE_AimCircle,
+  BE_AimCircleHide,
   BE_TrajHide,
   BE_TrajReset,
   BE_Fx,

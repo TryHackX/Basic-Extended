@@ -1,67 +1,56 @@
 # Basic-Extended - plan rozbudowy
 
-Stan po wersji 3.3 i propozycje na kolejne wersje, od najbardziej opłacalnych. Każdy punkt ma
+Stan po wersji 3.4 i propozycje na kolejne wersje, od najbardziej opłacalnych. Każdy punkt ma
 krótkie uzasadnienie i szacunek pracy (S - godziny, M - dzień, L - kilka dni).
 
-## Co już jest (3.3)
+## Co już jest (3.4)
 
-- Geometria mapy w bibliotece: raycasty radaru (`seen`), trajektorii, aimbota, mgły wojny i teleportu
-  liczone natywnie (zgodność ze serwerem sprawdza `/be_status`).
-- Trajektoria: przeliczana tylko przy zmianie wejścia, start z prawdziwej lufy, rysowana tylko w
-  polu widzenia (także przy zoomie Barretta i śledzeniu pocisku).
-- Teleport: `/teletomouse` przy trzymaniu skręca i zawraca (kompensacja opóźnienia kamery po skoku),
-  `/flytomouse` szybszy (11 na oś, 15.5 po skosie) z mniejszą martwą strefą.
-- Aimbot: prawdziwy magazynek i przeładowanie, `/aimbot acc`, model niecelności gry, pociski z lufy.
-- Komendy adminów: `all`, drużyny, nazwy (także w cudzysłowie), `/give` z amunicją i `near`,
-  `/bonus` od razu (GiveBonus), `/statgun`, `/removestatgun`, `/infammo`, `/dmgfix`, `/dmgtaken`,
-  `/vest`.
-- Radar: pierścień kropek zamiast strzałek, osobne ustawienia każdego trybu, opcja drużyny.
-- Anty-cheat (statystyki): start-up Barretta, fire interval, teleporty, trafienia z binkiem i w ruchu,
-  headshoty, `/suspects`, `/acstats`, log i historia per komputer.
-- Tańszy snapshot graczy (jedno wywołanie DLL na gracza zamiast tablic).
+- Aimbot: poprawiony `/aimbot acc` (dzielenie całkowite dawało 0% dla wszystkiego poniżej 100),
+  tryb `radius` (tylko wrogowie w kole wokół kursora, bez przeskakiwania na dalekich graczy) z
+  edytorem `/aimbot radius edit` rysującym koło, dodatkowe strzały po utracie celu (`ExtraShots`,
+  losowo z zakresu), zasada LAW (`game` / `ground` / `anywhere`), collidery jako przeszkoda, rzucony
+  nóż znika z ręki, pauza przy własnym strzale i ochrona licznika amunicji przed nieaktualnym odczytem.
+- Trajektoria: rysowanie przed lecącym pociskiem Barretta, za którym idzie kamera, tryb
+  `/trajectory <gracz> cursor` (sam kursor), collidery kończą tor.
+- `/flytomouse` szybszy niż limit prędkości gry (brakująca część krótkimi skokami).
+- Anty-cheat 2.0: czytelne `/suspects`, `/acstats`, nowe `/acreview`, tempo magazynka i przeładowania,
+  prędkość, opcjonalne głosowanie za wyrzuceniem (bez automatycznego kicka), bez headshotów.
+- Radar: grupy (pełni użytkownicy / wszyscy) z własnymi trybami, domyślnym trybem, filtrem i limitem
+  odświeżania, `AdminsFull`, zasięg każdego trybu, kolory linii listy (drużyna/zdrowie/odległość),
+  flagi poza bazą we wszystkich trybach, zarys mapy w kole (`!radar outline`).
+- Nowe komendy: `/speed`, `/sayas`, `/sayteamas`, `/weaponmod`, `/slay`; `[Permissions]` - kto może
+  używać każdej komendy i czy przez `/`, `!` czy oba.
 
-## 1. Wydajność (najważniejsze dla serwera)
+## 1. Wydajność
 
 | Zadanie | Dlaczego | Praca |
 | :--- | :--- | :--- |
 | Skan pocisków supresji w DLL z pamięcią slotów | Dziś każdy aktywny pocisk to ~6 odczytów właściwości co 4 ticki; DLL może pamiętać właściciela i styl slotu, a skrypt czytać tylko X/Y. Ok. 40% mniej pracy w walce. | M |
 | Odpytywanie zdrowia (HUD) jednym wywołaniem na gracza | Ten sam zysk co przy snapshocie: tablice w PascalScript kosztują tyle co wywołanie DLL. | S |
-| Adaptacyjne odświeżanie radaru | Gdy nikt się nie rusza, nie ma po co liczyć; gdy dużo ruchu, najpierw najbliżsi. | M |
-| Budżet tekstów na cały serwer | Dziś limity są na gracza; wspólny limit na tick wygładzi skoki (np. `/nuke` + radar + trajektoria naraz). | S |
 | Pomiar na serwerze Windows | `/be_bench` i `/be_status` na prawdziwym 2.8.2 - koszty odczytów bywają inne niż na Linuksie. | S |
 
-## 2. Anty-cheat 2.0
+## 2. Anty-cheat
 
 | Zadanie | Jak | Praca |
 | :--- | :--- | :--- |
 | Aim-snap (aimbot u ludzi) | Dla graczy z wysokim wynikiem próbkować MouseAim co tick i szukać skoków kąta tuż przed trafieniem. Tylko dla podejrzanych, więc tanio. | M |
 | Kierunek pocisku vs celownik | Porównać kierunek trafiającego pocisku z MouseAim w chwili strzału (statystycznie, bo serwer zna kursor z dokładnością ~30 px). | M |
-| Tempo broni automatycznych | Spadek amunicji z pakietów broni (co 5-7 ticków) vs FireInterval. | M |
-| Speed hack | Średnia prędkość z kolejnych snapshotów powyżej fizyki gry przez dłuższy czas. | S |
 | Strzały "przez ściany" | Z geometrią mapy: trafienie, którego tor przechodzi przez ścianę blokującą pociski. | S |
-| Przegląd dla admina | `/acreview <gracz>` - ostatnie zdarzenia z logu; eksport historii do pliku (np. CSV) do przeglądania poza grą. | S |
-| Akcje automatyczne (opcjonalne) | Kick/ban dopiero przy wysokim wyniku i minimalnej liczbie pomiarów; domyślnie wyłączone. | S |
+| Eksport historii | Historia z `players.bdb` do pliku (np. CSV) do przeglądania poza grą. | S |
 
 ## 3. Radar i HUD
 
-- Znaczniki flag i celów na radarze (pozycje flag z `Map.RedFlag` / `BlueFlag`). S
 - "Radar dźwiękowy": kierunek niedawnych strzałów wrogów w pobliżu (dane ze skanu pocisków). M
-- Uproszczony zarys mapy w trybie `circle` (geometria jest już w DLL; trzeba ograniczyć liczbę
-  tekstów, np. kilka linii kropek). L
 
-## 4. Narzędzia admina (z ukrytego API ScriptCore 3)
+## 4. Narzędzia admina
 
 | Komenda | Na czym | Praca |
 | :--- | :--- | :--- |
-| `/record <nazwa>`, `/stoprecord` | `Game.StartRecord` / `StopRecord` (demo `demos/<nazwa>.sdm`) - nie ma ich na wiki. | S |
-| `/weaponmod <nazwa>` | `Game.LoadWeap` - wczytuje `configs/<nazwa>.ini` w locie (resetuje timery broni graczy). | S |
 | `/setspawn`, własne punkty odrodzenia | `OnBeforePlayerRespawn` zwraca `TVector` - pozycję odrodzenia (wiki podaje błędny typ). | M |
-| `/kill <gracz>` bez obrażeń | `Player.Kill()` - liczy się jako samobójstwo. | S |
-| Wiadomości drużynowe od skryptu | `Player.Say(Text, MsgType)` - drugi parametr (0-3) nie jest na wiki. | S |
 
 ## 5. Tryby gry z gotowych klocków
 
-Z `/give`, `/infammo`, `/dmgfix`, `/dmgtaken`, `/vest` i bonusów da się złożyć:
+Z `/give`, `/infammo`, `/dmgfix`, `/dmgtaken`, `/vest`, `/speed` i bonusów da się złożyć:
 Gun Game (kolejna broń za zabójstwo), Juggernaut (jeden gracz z dużą odpornością), Instagib
 (`/dmgfix all x10`), walka na noże, Zombie (drużyna z mnożnikiem obrażeń i bez broni palnej),
 rundy turniejowe z gotowością drużyn. Każdy tryb to M.
@@ -70,7 +59,14 @@ rundy turniejowe z gotowością drużyn. Każdy tryb to M.
 
 - GitHub Actions: build DLL (win32 i linux), testy jednostkowe, harness ABI PascalScript. M
 - Podział `main.pas` na pliki (moduły skryptu) dla łatwiejszego rozwoju. M
-- Wspólne dane z ZitroStats (np. wynik anty-cheatu przy statystykach gracza). M
+
+## Zablokowane w tym środowisku (do decyzji autora)
+
+- Broń zabójstwa z aimbota (Deagle zamiast prawdziwej broni, także w ZitroStats): `Map.CreateBullet`
+  daje pociskowi pierwszą broń z danym stylem pocisku. Naprawa wymaga zapisu do pamięci serwera
+  (numer broni pocisku) - to "most" do procesu serwera; narzędzie zablokowało tę zmianę.
+- Odrzut SPAS-12 i Minigun przy strzałach aimbota oraz dźwięk rzutu noża: zmiana w `be_ballistic`
+  została zablokowana razem z powyższym.
 
 ## Czego nie da się zrobić ze skryptu
 
@@ -80,6 +76,9 @@ rundy turniejowe z gotowością drużyn. Każdy tryb to M.
 - Zobaczyć pudeł - serwer daje skryptowi tylko trafienia (`OnDamage`).
 - Wysyłać własnych pakietów z DLL - połączenia prowadzi serwer (szyfrowanie, numeracja, reliable);
   obce pakiety na tym samym porcie klient odrzuci albo rozsypią stan połączenia.
+- `Game.StartRecord`, `Player.Kill` i `Player.Say(Text, MsgType)` - nie ma ich w 2.8.2 (albo działają
+  inaczej niż w nowszych wersjach): `/slay` zabija obrażeniami, `/sayas` pisze liniami konsoli w
+  formacie i kolorach czatu gry.
 
 ## Dlaczego WorldText / BigText potrafią lagować
 

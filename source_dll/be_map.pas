@@ -9,6 +9,7 @@ const
   MR_PLAYER = 1;
   MR_FLAG = 2;
   MR_BULLET = 4;
+  MR_COLLIDER = 8;
 
 var
   MapGeneration: LongInt = 0;
@@ -19,6 +20,18 @@ function MapReady: Boolean;
 function MapPolys: LongInt;
 function MapRay(AX, AY, BX, BY: Single; Flags, Team: LongInt): Boolean;
 function MapPointSolid(X, Y: Single; Flags, Team: LongInt): Boolean;
+function MapColliders: LongInt;
+function MapColliderHit(AX, AY, BX, BY: Single): Boolean;
+
+type
+  TMapEdge = record
+    X1, Y1, X2, Y2: Single;
+    K1, K2: Int64;
+  end;
+
+var
+  MapEdges: array of TMapEdge;
+  MapEdgeCount: LongInt = 0;
 
 implementation
 
@@ -69,6 +82,8 @@ var
   SecPolys: array of Word;
   Stamp: array of LongWord;
   StampNow: LongWord = 0;
+  ColX, ColY, ColR: array of Single;
+  ColN: LongInt = 0;
   Loaded: Boolean = False;
 
 function FMin(A, B: Single): Single; inline;
@@ -173,6 +188,17 @@ begin
   SetLength(SecLen, 0);
   SetLength(SecPolys, 0);
   SetLength(Stamp, 0);
+  SetLength(ColX, 0);
+  SetLength(ColY, 0);
+  SetLength(ColR, 0);
+  ColN := 0;
+  SetLength(MapEdges, 0);
+  MapEdgeCount := 0;
+end;
+
+function MapColliders: LongInt;
+begin
+  Result := ColN;
 end;
 
 function MapReady: Boolean;
@@ -183,6 +209,120 @@ end;
 function MapPolys: LongInt;
 begin
   Result := PolyN;
+end;
+
+function VKey(X, Y: Single): Int64;
+begin
+  Result := (Int64(Round(X * 4)) shl 32) xor (Int64(Round(Y * 4)) and $FFFFFFFF);
+end;
+
+function EdgeLess(const A, B: TMapEdge): Boolean;
+begin
+  Result := (A.K1 < B.K1) or ((A.K1 = B.K1) and (A.K2 < B.K2));
+end;
+
+procedure SortEdges(var E: array of TMapEdge; L, R: LongInt);
+var
+  i, j: LongInt;
+  P, T: TMapEdge;
+begin
+  while L < R do
+  begin
+    i := L;
+    j := R;
+    P := E[(L + R) div 2];
+    repeat
+      while EdgeLess(E[i], P) do
+        Inc(i);
+      while EdgeLess(P, E[j]) do
+        Dec(j);
+      if i <= j then
+      begin
+        T := E[i];
+        E[i] := E[j];
+        E[j] := T;
+        Inc(i);
+        Dec(j);
+      end;
+    until i > j;
+    if j - L < R - i then
+    begin
+      if L < j then
+        SortEdges(E, L, j);
+      L := i;
+    end
+    else
+    begin
+      if i < R then
+        SortEdges(E, i, R);
+      R := j;
+    end;
+  end;
+end;
+
+function Blocks(T: Byte; Flags, Team: LongInt): Boolean; forward;
+
+procedure BuildEdges;
+var
+  E: array of TMapEdge;
+  i, j, k, n, m: LongInt;
+  X1, Y1, X2, Y2: Single;
+  A, B: Int64;
+begin
+  SetLength(E, PolyN * 3);
+  n := 0;
+  for i := 1 to PolyN do
+    if Blocks(Polys[i].T, MR_PLAYER or MR_BULLET, 0) then
+      for j := 1 to 3 do
+      begin
+        k := j mod 3 + 1;
+        X1 := Polys[i].X[j];
+        Y1 := Polys[i].Y[j];
+        X2 := Polys[i].X[k];
+        Y2 := Polys[i].Y[k];
+        A := VKey(X1, Y1);
+        B := VKey(X2, Y2);
+        if A = B then
+          Continue;
+        if A > B then
+        begin
+          E[n].X1 := X2;
+          E[n].Y1 := Y2;
+          E[n].X2 := X1;
+          E[n].Y2 := Y1;
+          E[n].K1 := B;
+          E[n].K2 := A;
+        end
+        else
+        begin
+          E[n].X1 := X1;
+          E[n].Y1 := Y1;
+          E[n].X2 := X2;
+          E[n].Y2 := Y2;
+          E[n].K1 := A;
+          E[n].K2 := B;
+        end;
+        Inc(n);
+      end;
+  if n > 1 then
+    SortEdges(E, 0, n - 1);
+  SetLength(MapEdges, n);
+  m := 0;
+  i := 0;
+  while i < n do
+  begin
+    j := i + 1;
+    while (j < n) and (E[j].K1 = E[i].K1) and (E[j].K2 = E[i].K2) do
+      Inc(j);
+    if j = i + 1 then
+    begin
+      MapEdges[m] := E[i];
+      Inc(m);
+    end;
+    i := j;
+  end;
+  SetLength(MapEdges, m);
+  MapEdgeCount := m;
 end;
 
 function MapLoad(const Path: AnsiString): LongInt;
@@ -268,6 +408,66 @@ begin
   PolyN := n;
   Loaded := True;
   Result := n;
+  BuildEdges;
+  m := TakeInt(R);
+  if R.Bad or (m < 0) or (m > 500) then
+    Exit;
+  Skip(R, m * 44);
+  m := TakeInt(R);
+  if R.Bad or (m < 0) or (m > 500) then
+    Exit;
+  Skip(R, m * 55);
+  m := TakeInt(R);
+  if R.Bad or (m < 0) or (m > 128) then
+    Exit;
+  SetLength(ColX, m);
+  SetLength(ColY, m);
+  SetLength(ColR, m);
+  k := 0;
+  for i := 0 to m - 1 do
+  begin
+    j := TakeByte(R);
+    Skip(R, 3);
+    ColX[k] := TakeSingle(R);
+    ColY[k] := TakeSingle(R);
+    ColR[k] := TakeSingle(R) / 1.7;
+    if R.Bad then
+      Break;
+    if (j <> 0) and (ColR[k] > 0) then
+      Inc(k);
+  end;
+  ColN := k;
+end;
+
+function MapColliderHit(AX, AY, BX, BY: Single): Boolean;
+var
+  i: LongInt;
+  DX, DY, L2, T, PX, PY: Single;
+begin
+  Result := False;
+  DX := BX - AX;
+  DY := BY - AY;
+  L2 := DX * DX + DY * DY;
+  for i := 0 to ColN - 1 do
+  begin
+    if L2 > 0.0001 then
+    begin
+      T := ((ColX[i] - AX) * DX + (ColY[i] - AY) * DY) / L2;
+      if T < 0 then
+        T := 0
+      else if T > 1 then
+        T := 1;
+    end
+    else
+      T := 0;
+    PX := AX + DX * T - ColX[i];
+    PY := AY + DY * T - ColY[i];
+    if PX * PX + PY * PY <= ColR[i] * ColR[i] then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
 end;
 
 function Blocks(T: Byte; Flags, Team: LongInt): Boolean;
@@ -510,6 +710,9 @@ begin
         end;
       end;
     end;
+  if (Flags and MR_COLLIDER) <> 0 then
+    if ColN > 0 then
+      Result := MapColliderHit(AX, AY, BX, BY);
 end;
 
 function MapPointSolid(X, Y: Single; Flags, Team: LongInt): Boolean;

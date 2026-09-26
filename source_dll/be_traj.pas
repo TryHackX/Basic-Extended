@@ -14,6 +14,7 @@ const
   TJ_DISPLAY = 7;
   TJ_TICKS = 8;
   TJ_CLIP = 9;
+  TJ_COLLIDERS = 10;
   TJF_SCALE = 1;
   TJF_CURSOR_SCALE = 2;
   TJF_MOVE = 3;
@@ -33,6 +34,10 @@ procedure TrajReset(ID: LongInt);
 function TrajStep(ID, Tick, Budget, W, Flags, Team: LongInt; X, Y, VX, VY, AimX, AimY: Single;
   Cursor: LongInt): LongInt;
 function TrajRecomputed: LongInt;
+function TrajTrack(ID, Tick, Budget, Start, W, Team: LongInt; BX, BY, BVX, BVY: Single): LongInt;
+function TrajRays: LongInt;
+function AimCircle(ID, Tick, Budget, Count, First, Color: LongInt; CX, CY, R, Scale: Single): LongInt;
+function AimCircleHide(ID, Budget: LongInt): LongInt;
 
 implementation
 
@@ -81,6 +86,17 @@ var
   Gen: LongInt = 1;
   Recomputed: LongInt = 0;
   Memo: array[1..BE_PLAYERS] of TTrajMemo;
+  RayFlags: LongInt = MR_BULLET or MR_COLLIDER;
+  CircleSent: array[1..BE_PLAYERS] of TTextSet;
+  CircleOwn, NoOwn: TOwnMask;
+  CircleFirst: LongInt = -1;
+  CircleCount: LongInt = 0;
+  Track: array[1..BE_PLAYERS] of record
+    N, Step, Progress, MapGen: LongInt;
+    Hit: Boolean;
+    X, Y, Spd: array[0..MAX_PATH - 1] of Single;
+    HX, HY, Speed: Single;
+  end;
 
 procedure BuildOwned;
 var
@@ -108,6 +124,7 @@ begin
     TJ_DISPLAY: if Value > 0 then Display := Value;
     TJ_TICKS: if (Value >= 10) and (Value <= 2000) then StepTicks := Value;
     TJ_CLIP: ClipView := Value <> 0;
+    TJ_COLLIDERS: if Value <> 0 then RayFlags := MR_BULLET or MR_COLLIDER else RayFlags := MR_BULLET;
   end;
   Inc(Gen);
   BuildOwned;
@@ -195,8 +212,15 @@ begin
   if ValidID(ID) then
   begin
     SetForget(Sent[ID]);
+    SetForget(CircleSent[ID]);
     Memo[ID].Valid := False;
+    Track[ID].N := 0;
   end;
+end;
+
+function TrajRays: LongInt;
+begin
+  Result := RayFlags;
 end;
 
 function TrajRecomputed: LongInt;
@@ -249,7 +273,7 @@ begin
   for k := 1 to 7 do
   begin
     Mid := (Lo + Hi) / 2;
-    if MapRay(AX, AY, AX + (BX - AX) * Mid, AY + (BY - AY) * Mid, MR_BULLET, Team) then
+    if MapRay(AX, AY, AX + (BX - AX) * Mid, AY + (BY - AY) * Mid, RayFlags, Team) then
       Hi := Mid
     else
       Lo := Mid;
@@ -307,7 +331,7 @@ begin
   end;
   for k := 1 to n - 1 do
   begin
-    if MapRay(PathX[k - 1], PathY[k - 1], PathX[k], PathY[k], MR_BULLET, Team) then
+    if MapRay(PathX[k - 1], PathY[k - 1], PathX[k], PathY[k], RayFlags, Team) then
     begin
       Hit := True;
       HitPoint(PathX[k - 1], PathY[k - 1], PathX[k], PathY[k], Team, HX, HY);
@@ -386,6 +410,175 @@ begin
   if Cursor <> 0 then
     Mark(Layer + Dots, CursorChar, CursorColor, CursorScale, AimX, AimY, 0);
   Result := Diff(Sent[ID], OwnBig, OwnWorld, Tick, Refresh, Budget, More);
+end;
+
+procedure TrackBuild(ID, Team: LongInt; BX, BY, BVX, BVY: Single);
+var
+  VX, VY, PX, PY, G, Walk, NextAt, SegL, F: Single;
+  t, k: LongInt;
+begin
+  with Track[ID] do
+  begin
+    N := 0;
+    Hit := False;
+    Progress := 0;
+    MapGen := MapGeneration;
+    Speed := Sqrt(BVX * BVX + BVY * BVY);
+    G := BulletGravity;
+    VX := BVX;
+    VY := BVY;
+    PX := BX;
+    PY := BY;
+    X[0] := PX;
+    Y[0] := PY;
+    Spd[0] := Speed;
+    n := 1;
+    Walk := 0;
+    NextAt := StepSpacing;
+    for t := 1 to StepTicks do
+    begin
+      VY := VY + G;
+      SegL := Sqrt(VX * VX + VY * VY);
+      while (SegL > 0.0001) and (Walk + SegL >= NextAt) and (n < MAX_PATH) do
+      begin
+        F := (NextAt - Walk) / SegL;
+        X[n] := PX + VX * F;
+        Y[n] := PY + VY * F;
+        Spd[n] := SegL;
+        Inc(n);
+        NextAt := NextAt + StepSpacing;
+      end;
+      Walk := Walk + SegL;
+      PX := PX + VX;
+      PY := PY + VY;
+      VX := VX * 0.99;
+      VY := VY * 0.99;
+      if (n >= MAX_PATH) or (Walk >= StepRange) then
+        Break;
+    end;
+    N := n;
+    for k := 1 to n - 1 do
+      if MapRay(X[k - 1], Y[k - 1], X[k], Y[k], RayFlags, Team) then
+      begin
+        HitPoint(X[k - 1], Y[k - 1], X[k], Y[k], Team, HX, HY);
+        X[k] := HX;
+        Y[k] := HY;
+        N := k + 1;
+        Hit := True;
+        Break;
+      end;
+    Step := 1;
+    while ((N + Step - 2) div Step > Dots - 1) and (Step < N) do
+      Inc(Step);
+  end;
+end;
+
+function TrajTrack(ID, Tick, Budget, Start, W, Team: LongInt; BX, BY, BVX, BVY: Single): LongInt;
+var
+  k, j, Last, NearK: LongInt;
+  D, Best, V: Single;
+  More, Rebuild: Boolean;
+begin
+  Result := 0;
+  if not ValidID(ID) then
+    Exit;
+  Rebuild := (Start <> 0) or (Track[ID].N < 2) or (Track[ID].MapGen <> MapGeneration);
+  if not Rebuild then
+    with Track[ID] do
+    begin
+      V := Sqrt(BVX * BVX + BVY * BVY);
+      while (Progress < N - 1) and ((X[Progress] - BX) * BVX + (Y[Progress] - BY) * BVY < 0) do
+        Inc(Progress);
+      Best := 1E9;
+      NearK := Progress;
+      for k := Progress - 1 to Progress + 1 do
+        if (k >= 0) and (k < N) then
+        begin
+          D := Sqr(X[k] - BX) + Sqr(Y[k] - BY);
+          if D < Best then
+          begin
+            Best := D;
+            NearK := k;
+          end;
+        end;
+      if (Best > Sqr(StepSpacing + 30)) or (Abs(V - Spd[NearK]) > Spd[NearK] * 0.15 + 0.5) then
+        Rebuild := True;
+    end;
+  if Rebuild then
+    TrackBuild(ID, Team, BX, BY, BVX, BVY);
+  WantClear;
+  with Track[ID] do
+  begin
+    Last := N - 1;
+    j := 0;
+    k := 0;
+    while k < Last do
+    begin
+      if k >= Progress then
+        Mark(Layer + j, DotChar, DotColor, DotScale, X[k], Y[k], 1);
+      Inc(j);
+      Inc(k, Step);
+    end;
+    if Last >= Progress then
+    begin
+      if Hit then
+        Mark(Layer + Dots - 1, HitChar, HitColor, DotScale, X[Last], Y[Last], 1)
+      else
+        Mark(Layer + Dots - 1, DotChar, DotColor, DotScale, X[Last], Y[Last], 1);
+    end;
+  end;
+  Result := Diff(Sent[ID], OwnBig, OwnWorld, Tick, Refresh, Budget, More);
+end;
+
+procedure CircleOwned(First, Count: LongInt);
+var
+  i: LongInt;
+begin
+  if (First = CircleFirst) and (Count = CircleCount) then
+    Exit;
+  CircleFirst := First;
+  CircleCount := Count;
+  for i := 0 to 255 do
+  begin
+    CircleOwn[i] := (i >= First) and (i < First + Count);
+    NoOwn[i] := False;
+  end;
+end;
+
+function AimCircle(ID, Tick, Budget, Count, First, Color: LongInt; CX, CY, R, Scale: Single): LongInt;
+var
+  k: LongInt;
+  A: Single;
+  More: Boolean;
+begin
+  Result := 0;
+  if not ValidID(ID) then
+    Exit;
+  if Count < 3 then
+    Count := 3;
+  if Count > 64 then
+    Count := 64;
+  if First < 0 then
+    First := 0;
+  if First + Count > 256 then
+    First := 256 - Count;
+  CircleOwned(First, Count);
+  WantClear;
+  for k := 0 to Count - 1 do
+  begin
+    A := 2 * Pi * k / Count;
+    Mark(First + k, DotChar, Color, Scale, CX + Cos(A) * R, CY + Sin(A) * R, 0);
+  end;
+  Result := Diff(CircleSent[ID], NoOwn, CircleOwn, Tick, Refresh, Budget, More);
+end;
+
+function AimCircleHide(ID, Budget: LongInt): LongInt;
+var
+  More: Boolean;
+begin
+  Result := 0;
+  if ValidID(ID) and (CircleCount > 0) then
+    Result := HideAll(CircleSent[ID], NoOwn, CircleOwn, Budget, More);
 end;
 
 initialization

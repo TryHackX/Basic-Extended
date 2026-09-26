@@ -30,8 +30,15 @@ type
     Name: AnsiString;
   end;
 
+  TWFlag = record
+    Active, InBase: Boolean;
+    Team: LongInt;
+    X, Y: Single;
+  end;
+
 var
   WP: array[1..BE_PLAYERS] of TWPlayer;
+  WFlags: array[0..2] of TWFlag;
   WTick: LongInt = 0;
   WTeamGame: Boolean = False;
   VisMine: array[1..BE_PLAYERS, 1..BE_PLAYERS] of Boolean;
@@ -47,6 +54,7 @@ procedure WorldVel(ID: LongInt; VX, VY: Single);
 procedure WorldExtra(ID, Pct, Tag, Ping: LongInt);
 procedure WorldEnd;
 procedure WorldMeta(ID, Team, Human: LongInt);
+procedure WorldFlag(Index, Team, State: LongInt; X, Y: Single);
 procedure WorldName(ID: LongInt; const Name: AnsiString);
 function ValidID(ID: LongInt): Boolean;
 function Enemies(A, B: LongInt): Boolean;
@@ -177,6 +185,17 @@ begin
       WP[k].Active := False;
       WP[k].Alive := False;
     end;
+end;
+
+procedure WorldFlag(Index, Team, State: LongInt; X, Y: Single);
+begin
+  if (Index < 0) or (Index > 2) then
+    Exit;
+  WFlags[Index].Active := State > 0;
+  WFlags[Index].InBase := State = 1;
+  WFlags[Index].Team := Team;
+  WFlags[Index].X := X;
+  WFlags[Index].Y := Y;
 end;
 
 procedure WorldMeta(ID, Team, Human: LongInt);

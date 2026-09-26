@@ -7,12 +7,13 @@ interface
 const
   TM_CURSOR = 0;
   TM_NEAREST = 1;
+  TM_RADIUS = 2;
 
 function GunTick(ID, Tick, W, Trigger, Infinite: LongInt): LongInt;
 procedure GunFired(ID, Tick: LongInt);
 procedure GunReset(ID: LongInt);
 function GunAmmo(ID: LongInt): LongInt;
-function GunTargets(Shooter, Mode: LongInt; MaxDist, MaxAngle: Single): LongInt;
+function GunTargets(Shooter, Mode: LongInt; MaxDist, Limit: Single): LongInt;
 function GunTarget(Index: LongInt): LongInt;
 
 implementation
@@ -105,10 +106,10 @@ begin
   Dec(G^.Ammo);
 end;
 
-function GunTargets(Shooter, Mode: LongInt; MaxDist, MaxAngle: Single): LongInt;
+function GunTargets(Shooter, Mode: LongInt; MaxDist, Limit: Single): LongInt;
 var
   b, i, j, t: LongInt;
-  SX, SY, AX, AY, AL, DX, DY, D, Cs, MinCos: Single;
+  SX, SY, AX, AY, AL, DX, DY, D, Cs, MinCos, CD: Single;
   Key: array[0..BE_PLAYERS - 1] of Single;
   kv: Single;
 begin
@@ -121,7 +122,7 @@ begin
   AX := WP[Shooter].AimX - SX;
   AY := WP[Shooter].AimY - SY;
   AL := Sqrt(AX * AX + AY * AY);
-  MinCos := Cos(MaxAngle * Pi / 180);
+  MinCos := Cos(Limit * Pi / 180);
   for b := 1 to BE_PLAYERS do
   begin
     if (b = Shooter) or not WP[b].Alive or (WP[b].Team = TEAM_SPEC) then
@@ -136,9 +137,16 @@ begin
     Cs := 1;
     if (AL > 0.5) and (D > 0.5) then
       Cs := (DX * AX + DY * AY) / (D * AL);
-    if (Mode = TM_CURSOR) and (MaxAngle < 180) and (Cs < MinCos) then
+    if (Mode = TM_CURSOR) and (Limit < 180) and (Cs < MinCos) then
       Continue;
-    if Mode = TM_CURSOR then
+    if Mode = TM_RADIUS then
+    begin
+      CD := Sqrt(Sqr(WP[b].X - WP[Shooter].AimX) + Sqr(WP[b].Y - 10 - WP[Shooter].AimY));
+      if CD > Limit then
+        Continue;
+      kv := CD;
+    end
+    else if Mode = TM_CURSOR then
       kv := (1 - Cs) * 1000 + D * 0.05
     else
       kv := D;

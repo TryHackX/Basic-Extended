@@ -81,8 +81,8 @@ begin
   Check(Assigned(Init) and Assigned(Shutdown) and Assigned(Status) and Assigned(Count) and Assigned(Get) and
     Assigned(PBegin) and Assigned(Add) and Assigned(Commit) and Assigned(Log), 'every export found');
 
-  Check(Init(PChar(Dir), 99) = -3, 'another API version is refused');
-  Check(Init(PChar(Dir), 3) = 3, 'started');
+  Check(Init(PChar(Dir), 99) = -4, 'another API version is refused');
+  Check(Init(PChar(Dir), 4) = 4, 'started');
   Check(Count('S777') = 6, 'players.txt taken over');
   Check(FileExists(Dir + 'players.txt.imported'), 'players.txt moved aside');
   Check(Get('S777', 2) = 300, 'a value of players.txt');
@@ -106,7 +106,7 @@ begin
   Check((L.Count = 2) and (L[1] = 'second line'), 'the log lines are in their file');
   L.Free;
 
-  Check(Init(PChar(Dir), 3) = 3, 'started again');
+  Check(Init(PChar(Dir), 4) = 4, 'started again');
   Check(Get('S888', 2) = 42, 'the value came back from players.bdb');
   Check(Count('S777') = 6, 'and the taken-over one');
   Shutdown();

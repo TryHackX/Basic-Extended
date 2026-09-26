@@ -20,6 +20,10 @@ ____________________________________Admin Commands______________________________
 /dmgfix <player> <+20%|-10%|150%|x2|off>, /dmgtaken <player> <...>                   |
 /tele, /teletomouse [inherit|fixed], /flytomouse (reload key: tap = jump, hold =     |
   fly where the cursor points, inherit = faster the longer you hold)                 |
-/trajectory [player|off], /aimbot [on|off|cursor|nearest|acc <0-100>]                |
-/suspects [all], /acstats <player>, /acclear <player|all> [forever]                  |
+/trajectory [player|off], /trajectory <player> cursor (only the cursor, only for you)|
+/aimbot [on|off|cursor|nearest|radius [px]|acc <0-100>|extra <min-max>|law <rule>]   |
+  /aimbot colliders on|off, /aimbot radius edit|save|cancel (circle at the cursor)   |
+/speed <player> [1.1-5|off], /slay <player>, /weaponmod <name>                       |
+/sayas <player> <text>, /sayteamas <player> <text> (as that player's chat)           |
+/suspects [all], /acstats <player>, /acreview <player>, /acclear <player|all>        |
 _____________________________________________________________________________________|

@@ -34,10 +34,12 @@ const
   MF_FLY_DEAD = 15;
   MF_FLY_SMOOTH = 16;
   MF_GRAVITY = 17;
-  MF_HOP_TIMEOUT = 18;
   MF_ACCEL = 19;
   MF_STEER = 20;
   MF_HOP_MAX = 21;
+  MF_FLY_HOP_TICKS = 22;
+  MF_FLY_HOP_MAX = 23;
+  MF_FLY_VEL_MAX = 24;
 
 procedure MoveSet(Key: LongInt; Value: Single);
 function MoveStep(ID, Tick, Mode, Variant, Key, Alive, Ping, Team, Opts: LongInt; X, Y, VX, VY: Single;
@@ -66,7 +68,8 @@ type
     Mode, Variant: LongInt;
     KeyWas, Continuous, Started: Boolean;
     Hold, LastHop, NextPush, NextFly, HopNext: LongInt;
-    DirX, DirY, Speed, CmdX, CmdY: Single;
+    DirX, DirY, Speed, CmdX, CmdY, PredX, PredY, Owed: Single;
+    PredTick: LongInt;
     Hops: array[0..HOP_SLOTS - 1] of THop;
   end;
 
@@ -89,10 +92,12 @@ var
   FlyDead: Single = 8;
   FlySmooth: Single = 0.5;
   Gravity: Single = 0.06;
-  HopTimeout: Single = 20;
   Accel: Single = 4;
   Steer: Single = 0.3;
   HopMax: Single = 600;
+  FlyHopTicks: Single = 4;
+  FlyHopMax: Single = 160;
+  FlyVelMax: Single = 11;
 
 procedure MoveSet(Key: LongInt; Value: Single);
 begin
@@ -114,10 +119,12 @@ begin
     MF_FLY_DEAD: FlyDead := Value;
     MF_FLY_SMOOTH: FlySmooth := Value;
     MF_GRAVITY: Gravity := Value;
-    MF_HOP_TIMEOUT: HopTimeout := Value;
     MF_ACCEL: Accel := Value;
     MF_STEER: Steer := Value;
     MF_HOP_MAX: HopMax := Value;
+    MF_FLY_HOP_TICKS: FlyHopTicks := Value;
+    MF_FLY_HOP_MAX: FlyHopMax := Value;
+    MF_FLY_VEL_MAX: FlyVelMax := Value;
   end;
 end;
 
@@ -386,33 +393,80 @@ begin
           M^.CmdX := VX;
           M^.CmdY := VY;
           M^.NextFly := Tick;
+          M^.Owed := 0;
+          M^.LastHop := Tick;
+          M^.PredTick := -100000;
         end;
         if not Down then
           Exit;
         if Tick < M^.NextFly then
           Exit;
-        M^.NextFly := Tick + Round(Clamp(FlyEvery, 1, 60));
+        Sp := Clamp(FlyEvery, 1, 60);
+        M^.NextFly := Tick + Round(Sp);
+        HopLag(M^, Tick, Lag, LX, LY);
         TX := 0;
         TY := 0;
-        DX := AimX - X;
-        DY := AimY - Y;
+        DX := AimX - X + LX;
+        DY := AimY - Y + LY;
         D := Sqrt(DX * DX + DY * DY);
         if D > FlyDead then
         begin
-          Sp := FlyBase + (D - FlyDead) * FlyPerPixel;
-          if Sp > FlyMax then
-            Sp := FlyMax;
-          TX := DX / D * Sp;
-          TY := DY / D * Sp;
+          L := FlyBase + (D - FlyDead) * FlyPerPixel;
+          if L > FlyMax then
+            L := FlyMax;
+          TX := DX / D * L;
+          TY := DY / D * L;
         end;
         M^.CmdX := M^.CmdX + (TX - M^.CmdX) * Clamp(FlySmooth, 0.05, 1);
         M^.CmdY := M^.CmdY + (TY - M^.CmdY) * Clamp(FlySmooth, 0.05, 1);
         LimitSpeed(M^.CmdX, M^.CmdY, FlyMax);
-        Comp := Gravity * (Clamp(FlyEvery, 1, 60) + 1) / 2;
         OVX := M^.CmdX;
-        OVY := M^.CmdY - Comp;
+        OVY := M^.CmdY;
+        LimitSpeed(OVX, OVY, Clamp(FlyVelMax, 1, 15.5));
         ClampAxes(OVX, OVY);
+        HX := M^.CmdX - OVX;
+        HY := M^.CmdY - OVY;
+        L := Sqrt(HX * HX + HY * HY);
+        if L > 0.05 then
+          M^.Owed := M^.Owed + L * Sp
+        else
+          M^.Owed := 0;
+        Comp := Gravity * (Sp + 1) / 2;
+        OVY := OVY - Comp;
         Result := MA_VELOCITY;
+        if (M^.Owed >= 2) and (L > 0.05) and (Tick - M^.LastHop >= FlyHopTicks) and (Tick - M^.LastHop >= Lag + 2) then
+        begin
+          D := M^.Owed;
+          if D > FlyHopMax then
+            D := FlyHopMax;
+          IX := X;
+          IY := Y;
+          if Tick - M^.PredTick <= Lag + 4 then
+          begin
+            IX := M^.PredX + OVX * (Tick - M^.PredTick);
+            IY := M^.PredY + (OVY + Comp) * (Tick - M^.PredTick);
+          end;
+          OX := IX + HX / L * D;
+          OY := IY + HY / L * D;
+          if ((Opts and MO_NO_WALLS) <> 0) and MapReady and
+            (MapRay(IX, IY - 10, OX, OY - 10, MR_PLAYER, Team) or MapPointSolid(OX, OY - 10, MR_PLAYER, Team)) then
+          begin
+            M^.Owed := 0;
+            M^.LastHop := Tick;
+          end
+          else
+          begin
+            AddHop(M^, Tick, OX - IX, OY - IY);
+            M^.PredX := OX;
+            M^.PredY := OY;
+            M^.PredTick := Tick;
+            M^.LastHop := Tick;
+            M^.Owed := M^.Owed - D;
+            if M^.Owed > FlyHopMax then
+              M^.Owed := FlyHopMax;
+            Result := MA_MOVE or MA_VELOCITY;
+          end;
+        end;
       end;
   end;
 end;

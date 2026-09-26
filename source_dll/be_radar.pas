@@ -21,7 +21,6 @@ const
   TAG_FLAG = 1;
   TAG_BOW = 2;
   RING_MAX = 32;
-  ARROW_DOTS_MAX = 8;
   ARROWS_MAX = 8;
 
   RI_LIST_LINES = 1;
@@ -36,7 +35,6 @@ const
   RI_SHOW_FAR = 10;
   RI_LABEL_LAYER = 12;
   RI_ARROWS_MAX = 13;
-  RI_ARROW_DOTS = 14;
   RI_ARROW_LAYER = 15;
   RI_ARROW_NEAR = 16;
   RI_ARROW_MID = 17;
@@ -53,6 +51,23 @@ const
   RI_TEAMGAME = 28;
   RI_ARROW_STEPS = 29;
   RI_RING_COLOR_BY = 30;
+  RI_LIST_COLOR_BY = 31;
+  RI_LIST_LINE_LAYER = 32;
+  RI_FLAGS = 33;
+  RI_OUTLINE = 34;
+  RI_OUTLINE_DOTS = 35;
+  RI_OUTLINE_LAYER = 36;
+  RI_OUTLINE_COLOR = 37;
+  RI_FLAG_RED = 38;
+  RI_FLAG_BLUE = 39;
+  RI_FLAG_OTHER = 40;
+  RI_LABEL_COLOR_BY = 41;
+  LC_NONE = 0;
+  LC_TEAM = 1;
+  LC_HEALTH = 2;
+  LC_DISTANCE = 3;
+  RO_OUTLINE = 2;
+  OUTLINE_MAX = 64;
 
   RF_RANGE = 1;
   RF_LIST_SCALE = 2;
@@ -61,11 +76,7 @@ const
   RF_LABEL_SCALE = 5;
   RF_LABEL_OFFSET = 6;
   RF_SIZE_RANGE = 7;
-  RF_ARROW_INNER = 8;
   RF_ARROW_OUTER = 9;
-  RF_ARROW_HEAD = 10;
-  RF_ARROW_WIDTH = 11;
-  RF_ARROW_SCALE = 12;
   RF_ARROW_MOVE = 13;
   RF_ARROW_LEAD = 14;
   RF_LABEL_MOVE = 15;
@@ -73,6 +84,14 @@ const
   RF_CIRCLE_MOVE = 17;
   RF_RING_NEAR_SCALE = 18;
   RF_RING_FAR_SCALE = 19;
+  RF_RANGE_LIST = 20;
+  RF_RANGE_LABELS = 21;
+  RF_RANGE_CIRCLE = 22;
+  RF_RANGE_RING = 23;
+  RF_LIST_SPACING = 24;
+  RF_OUTLINE_STEP = 25;
+  RF_OUTLINE_MOVE = 26;
+  RF_OUTLINE_GRID = 27;
 
   RT_RING = 1;
   RT_SELF = 2;
@@ -86,6 +105,12 @@ const
   RT_LIST_LINE = 10;
   RT_EDIT = 11;
   RT_NOBODY = 12;
+  RT_FLAG_RED = 13;
+  RT_FLAG_BLUE = 14;
+  RT_FLAG_OTHER = 15;
+  RT_FLAG_MARK = 16;
+  RT_OUTLINE = 17;
+  RT_LIST_FLAG = 18;
 
 procedure RadarInt(Key, Value: LongInt);
 procedure RadarFloat(Key: LongInt; Value: Single);
@@ -104,16 +129,19 @@ function HealthColor(Pct: LongInt): LongInt;
 implementation
 
 uses
-  SysUtils;
+  SysUtils, be_map;
 
 type
   TRadarUser = record
     On, Editing, Pending: Boolean;
     Mode, Show, PX, PY: LongInt;
     Size, Zoom, MarkSize: Single;
-    Friends: Boolean;
+    Friends, Outline: Boolean;
     Sent: TTextSet;
     RingBand: array[1..BE_PLAYERS] of LongInt;
+    OGen, OCount: LongInt;
+    OQX, OQY, OSize, OZoom, OPX, OPY: Single;
+    OX, OY: array[0..OUTLINE_MAX - 1] of Single;
   end;
 
 var
@@ -131,7 +159,6 @@ var
   ShowFar: Boolean = True;
   LabelLayer: LongInt = 150;
   ArrowsMax: LongInt = 6;
-  ArrowDots: LongInt = 2;
   ArrowSteps: LongInt = 4;
   RingColorBy: LongInt = RC_TEAM;
   RingNearScale: Single = 0.16;
@@ -154,11 +181,7 @@ var
   LabelScale: Single = 0.02;
   LabelOffset: Single = 25;
   SizeRange: Single = 0.25;
-  ArrowInner: Single = 16;
   ArrowOuter: Single = 32;
-  ArrowHead: Single = 6;
-  ArrowWidth: Single = 5;
-  ArrowScale: Single = 0.085;
   ArrowMove: Single = 1.5;
   ArrowLead: Single = 1;
   LabelMove: Single = 2;
@@ -178,6 +201,31 @@ var
   NobodyText: AnsiString = '(nobody within {range})';
   HealthAt: array[0..100] of LongInt;
   HealthReady: Boolean = False;
+  ListColorBy: LongInt = LC_TEAM;
+  LabelColorBy: LongInt = LC_HEALTH;
+  ListLineLayer: LongInt = 180;
+  ListSpacing: Single = 1.2;
+  ShowFlags: Boolean = True;
+  OutlineAllowed: Boolean = True;
+  OutlineDots: LongInt = 24;
+  OutlineLayer: LongInt = 40;
+  OutlineColor: LongInt = $707070;
+  OutlineStep: Single = 40;
+  OutlineMove: Single = 2;
+  OutlineGrid: Single = 24;
+  OutlineChar: AnsiString = '.';
+  FlagRed: LongInt = $FF4040;
+  FlagBlue: LongInt = $4080FF;
+  FlagOther: LongInt = $FFFF40;
+  FlagNameRed: AnsiString = 'Red flag';
+  FlagNameBlue: AnsiString = 'Blue flag';
+  FlagNameOther: AnsiString = 'Flag';
+  FlagMark: AnsiString = 'F';
+  ListFlagLine: AnsiString = '{dir} {flag} {m}';
+  RangeList: Single = 0;
+  RangeLabels: Single = 0;
+  RangeCircle: Single = 0;
+  RangeRing: Single = 0;
 
 function FloatText(V: Double; Decimals: LongInt): AnsiString;
 var
@@ -244,13 +292,19 @@ begin
   end;
   if (ListLayer >= 0) and (ListLayer <= 255) then
     OwnBig[ListLayer] := True;
-  for i := CircleLayer to CircleLayer + RING_MAX + BE_PLAYERS do
+  for i := ListLineLayer to ListLineLayer + ListLines + 2 do
+    if (i >= 1) and (i <= 255) then
+      OwnBig[i] := True;
+  for i := CircleLayer to CircleLayer + RING_MAX + BE_PLAYERS + 3 do
     if (i >= 0) and (i <= 255) then
       OwnBig[i] := True;
-  for i := LabelLayer to LabelLayer + BE_PLAYERS - 1 do
+  for i := OutlineLayer to OutlineLayer + OutlineDots - 1 do
+    if (i >= 1) and (i <= 255) then
+      OwnBig[i] := True;
+  for i := LabelLayer to LabelLayer + BE_PLAYERS + 2 do
     if (i >= 0) and (i <= 255) then
       OwnWorld[i] := True;
-  for i := ArrowLayer to ArrowLayer + BE_PLAYERS - 1 do
+  for i := ArrowLayer to ArrowLayer + BE_PLAYERS + 2 do
     if (i >= 0) and (i <= 255) then
       OwnWorld[i] := True;
 end;
@@ -270,7 +324,6 @@ begin
     RI_SHOW_FAR: ShowFar := Value <> 0;
     RI_LABEL_LAYER: LabelLayer := Value;
     RI_ARROWS_MAX: if (Value >= 1) and (Value <= BE_PLAYERS) then ArrowsMax := Value;
-    RI_ARROW_DOTS: if (Value >= 1) and (Value <= ARROW_DOTS_MAX - 2) then ArrowDots := Value;
     RI_ARROW_LAYER: ArrowLayer := Value;
     RI_ARROW_NEAR: ArrowNear := Value;
     RI_ARROW_MID: ArrowMid := Value;
@@ -287,6 +340,17 @@ begin
     RI_TEAMGAME: WTeamGame := Value <> 0;
     RI_ARROW_STEPS: if (Value >= 1) and (Value <= 16) then ArrowSteps := Value;
     RI_RING_COLOR_BY: if (Value >= RC_TEAM) and (Value <= RC_HEALTH) then RingColorBy := Value;
+    RI_LIST_COLOR_BY: if (Value >= LC_NONE) and (Value <= LC_DISTANCE) then ListColorBy := Value;
+    RI_LABEL_COLOR_BY: if (Value >= LC_NONE) and (Value <= LC_DISTANCE) then LabelColorBy := Value;
+    RI_LIST_LINE_LAYER: ListLineLayer := Value;
+    RI_FLAGS: ShowFlags := Value <> 0;
+    RI_OUTLINE: OutlineAllowed := Value <> 0;
+    RI_OUTLINE_DOTS: if (Value >= 1) and (Value <= OUTLINE_MAX) then OutlineDots := Value;
+    RI_OUTLINE_LAYER: OutlineLayer := Value;
+    RI_OUTLINE_COLOR: OutlineColor := Value;
+    RI_FLAG_RED: FlagRed := Value;
+    RI_FLAG_BLUE: FlagBlue := Value;
+    RI_FLAG_OTHER: FlagOther := Value;
   end;
   HealthReady := False;
   BuildOwned;
@@ -302,11 +366,7 @@ begin
     RF_LABEL_SCALE: LabelScale := Value;
     RF_LABEL_OFFSET: LabelOffset := Value;
     RF_SIZE_RANGE: SizeRange := Value;
-    RF_ARROW_INNER: ArrowInner := Value;
     RF_ARROW_OUTER: ArrowOuter := Value;
-    RF_ARROW_HEAD: ArrowHead := Value;
-    RF_ARROW_WIDTH: ArrowWidth := Value;
-    RF_ARROW_SCALE: ArrowScale := Value;
     RF_ARROW_MOVE: ArrowMove := Value;
     RF_ARROW_LEAD: ArrowLead := Value;
     RF_LABEL_MOVE: LabelMove := Value;
@@ -314,6 +374,14 @@ begin
     RF_CIRCLE_MOVE: CircleMove := Value;
     RF_RING_NEAR_SCALE: if Value > 0 then RingNearScale := Value;
     RF_RING_FAR_SCALE: if Value > 0 then RingFarScale := Value;
+    RF_RANGE_LIST: RangeList := Value;
+    RF_RANGE_LABELS: RangeLabels := Value;
+    RF_RANGE_CIRCLE: RangeCircle := Value;
+    RF_RANGE_RING: RangeRing := Value;
+    RF_LIST_SPACING: if Value > 0.5 then ListSpacing := Value;
+    RF_OUTLINE_STEP: if Value >= 5 then OutlineStep := Value;
+    RF_OUTLINE_MOVE: if Value >= 0 then OutlineMove := Value;
+    RF_OUTLINE_GRID: if Value >= 1 then OutlineGrid := Value;
   end;
 end;
 
@@ -332,6 +400,12 @@ begin
     RT_LIST_LINE: ListLine := Value;
     RT_EDIT: EditMark := Value;
     RT_NOBODY: NobodyText := Value;
+    RT_FLAG_RED: FlagNameRed := Value;
+    RT_FLAG_BLUE: FlagNameBlue := Value;
+    RT_FLAG_OTHER: FlagNameOther := Value;
+    RT_FLAG_MARK: if Value <> '' then FlagMark := Value;
+    RT_OUTLINE: if Value <> '' then OutlineChar := Value;
+    RT_LIST_FLAG: ListFlagLine := Value;
   end;
 end;
 
@@ -366,6 +440,7 @@ begin
     Exit;
   case Key of
     RO_FRIENDS: Users[ID].Friends := Value <> 0;
+    RO_OUTLINE: Users[ID].Outline := Value <> 0;
   end;
 end;
 
@@ -377,14 +452,88 @@ begin
       Result := Users[A].Friends;
 end;
 
+function RangeOf(Mode: LongInt): Single;
+begin
+  case Mode of
+    OVL_LIST: Result := RangeList;
+    OVL_LABELS: Result := RangeLabels;
+    OVL_CIRCLE: Result := RangeCircle;
+  else
+    Result := RangeRing;
+  end;
+  if Result <= 0 then
+    Result := Range;
+end;
+
 function RadarRange(ID: LongInt): Single;
 begin
   Result := 50;
   if not ValidID(ID) then
     Exit;
-  Result := Range * (1 + (Users[ID].Size - 1) * SizeRange) * Users[ID].Zoom;
+  Result := RangeOf(Users[ID].Mode) * (1 + (Users[ID].Size - 1) * SizeRange) * Users[ID].Zoom;
   if Result < 50 then
     Result := 50;
+end;
+
+function FlagShown(f: LongInt): Boolean;
+var
+  b: LongInt;
+begin
+  Result := False;
+  if not ShowFlags then
+    Exit;
+  if not WFlags[f].Active or WFlags[f].InBase then
+    Exit;
+  for b := 1 to BE_PLAYERS do
+    if WP[b].Active and WP[b].Alive and (WP[b].Tag = TAG_FLAG) then
+      if Sqr(WP[b].X - WFlags[f].X) + Sqr(WP[b].Y - WFlags[f].Y) < 3600 then
+        Exit;
+  Result := True;
+end;
+
+function FlagColorOf(f: LongInt): LongInt;
+begin
+  case WFlags[f].Team of
+    1: Result := FlagRed;
+    2: Result := FlagBlue;
+  else
+    Result := FlagOther;
+  end;
+end;
+
+function FlagNameOf(f: LongInt): AnsiString;
+begin
+  case WFlags[f].Team of
+    1: Result := FlagNameRed;
+    2: Result := FlagNameBlue;
+  else
+    Result := FlagNameOther;
+  end;
+end;
+
+function DistColor(Frac: Single): LongInt;
+begin
+  if Frac < 0.34 then
+    Result := ArrowNear
+  else if Frac < 0.67 then
+    Result := ArrowMid
+  else
+    Result := ArrowFar;
+end;
+
+function MarkColorOf(A, b, By: LongInt; Frac: Single; Def: LongInt): LongInt;
+begin
+  case By of
+    LC_TEAM:
+      if WTeamGame and (WP[b].Team = WP[A].Team) then
+        Result := FriendColor
+      else
+        Result := EnemyColor;
+    LC_HEALTH: Result := HealthColor(WP[b].Pct);
+    LC_DISTANCE: Result := DistColor(Frac);
+  else
+    Result := Def;
+  end;
 end;
 
 function TagText(T: LongInt): AnsiString;
@@ -414,6 +563,95 @@ end;
 function Replace(const S, Find, Repl: AnsiString): AnsiString;
 begin
   Result := StringReplace(S, Find, Repl, [rfReplaceAll]);
+end;
+
+function PlayerLine(b: LongInt; Ref: Boolean; D2, ax, ay: Single): AnsiString;
+var
+  L, Tg: AnsiString;
+begin
+  Tg := TagText(WP[b].Tag);
+  if Tg <> '' then
+    Tg := Tg + ' ';
+  L := Replace(ListLine, '{name}', WP[b].Name);
+  L := Replace(L, '{pct}', IntToStr(WP[b].Pct));
+  L := Replace(L, '{tag}', Tg);
+  if Ref then
+  begin
+    L := Replace(L, '{dist}', IntToStr(Round(Sqrt(D2) / 10) * 10));
+    L := Replace(L, '{m}', FloatText(Sqrt(D2) / 14, MeterDecimals) + 'm');
+    L := Replace(L, '{dir}', DirText(WP[b].X - ax, WP[b].Y - ay));
+  end
+  else
+  begin
+    L := Replace(L, '{dist}', '');
+    L := Replace(L, '{m}', '');
+    L := Replace(L, '{dir}', '');
+  end;
+  Result := Trim(L);
+end;
+
+function FlagLine(f: LongInt; Ref: Boolean; ax, ay: Single): AnsiString;
+var
+  L: AnsiString;
+  D: Single;
+begin
+  L := Replace(ListFlagLine, '{flag}', FlagNameOf(f));
+  if Ref then
+  begin
+    D := Sqrt(Sqr(WFlags[f].X - ax) + Sqr(WFlags[f].Y - ay));
+    L := Replace(L, '{dist}', IntToStr(Round(D / 10) * 10));
+    L := Replace(L, '{m}', FloatText(D / 14, MeterDecimals) + 'm');
+    L := Replace(L, '{dir}', DirText(WFlags[f].X - ax, WFlags[f].Y - ay));
+  end
+  else
+  begin
+    L := Replace(L, '{dist}', '');
+    L := Replace(L, '{m}', '');
+    L := Replace(L, '{dir}', '');
+  end;
+  Result := Trim(L);
+end;
+
+procedure ListLines2(A: LongInt; const Pick: array of Boolean; const D2: array of Single; Ref: Boolean; R2: Single);
+var
+  b, n: LongInt;
+  Sc, LineH, Y, Rng: Single;
+  T: AnsiString;
+  U: ^TRadarUser;
+begin
+  U := @Users[A];
+  Sc := QScale(ListScale * U^.Size);
+  LineH := Sc * BIG_EM * ListSpacing;
+  Y := U^.PY;
+  Rng := Sqrt(R2);
+  T := ListTitle;
+  if U^.Editing then
+    T := T + EditMark;
+  if T <> '' then
+  begin
+    WantText(KIND_BIG, ListLayer, T, U^.PX, Y, Sc, ListColor, ListDisplay, 0);
+    Y := Y + LineH;
+  end;
+  n := 0;
+  for b := 1 to BE_PLAYERS do
+    if Pick[b - 1] then
+    begin
+      WantText(KIND_BIG, ListLineLayer + n, PlayerLine(b, Ref, D2[b - 1], WP[A].X, WP[A].Y), U^.PX, Y, Sc,
+        MarkColorOf(A, b, ListColorBy, Sqrt(D2[b - 1]) / Rng, ListColor), ListDisplay, 0);
+      Y := Y + LineH;
+      Inc(n);
+    end;
+  for b := 0 to 2 do
+    if FlagShown(b) and (n < ListLines + 3) then
+    begin
+      WantText(KIND_BIG, ListLineLayer + n, FlagLine(b, Ref, WP[A].X, WP[A].Y), U^.PX, Y, Sc, FlagColorOf(b),
+        ListDisplay, 0);
+      Y := Y + LineH;
+      Inc(n);
+    end;
+  if n = 0 then
+    WantText(KIND_BIG, ListLineLayer, Replace(Replace(NobodyText, '{range}', IntToStr(Round(Rng))), '{m}',
+      FloatText(Rng / 14, 0) + 'm'), U^.PX, Y, Sc, ListColor, ListDisplay, 0);
 end;
 
 procedure LayoutList(A: LongInt);
@@ -466,6 +704,11 @@ begin
     Pick[Best] := True;
     Inc(k);
   end;
+  if ListColorBy <> LC_NONE then
+  begin
+    ListLines2(A, Pick, D2, Ref, R2);
+    Exit;
+  end;
   T := ListTitle;
   if U^.Editing then
     T := T + EditMark;
@@ -496,6 +739,16 @@ begin
       else
         T := T + #13#10 + L;
     end;
+  for b := 0 to 2 do
+    if FlagShown(b) then
+    begin
+      L := Trim(FlagLine(b, Ref, ax, ay));
+      Inc(k);
+      if T = '' then
+        T := L
+      else
+        T := T + #13#10 + L;
+    end;
   if k = 0 then
   begin
     L := Replace(Replace(NobodyText, '{range}', IntToStr(Round(Sqrt(R2)))), '{m}',
@@ -513,9 +766,7 @@ var
   b: LongInt;
   ax, ay, bx, by, R2, Em, X, Y: Single;
   T, Tg: AnsiString;
-  U: ^TRadarUser;
 begin
-  U := @Users[A];
   ax := WP[A].X;
   ay := WP[A].Y;
   R2 := RadarRange(A);
@@ -534,8 +785,21 @@ begin
         T := T + ' [' + Tg + ']';
       X := WP[b].X - TextAdvance(T) * Em / 2;
       Y := WP[b].Y - LabelOffset;
-      WantText(KIND_WORLD, LabelLayer + b - 1, T, X, Y, LabelScale, HealthColor(WP[b].Pct), MarkDisplay, LabelMove,
-        16 + b);
+      WantText(KIND_WORLD, LabelLayer + b - 1, T, X, Y, LabelScale, MarkColorOf(A, b, LabelColorBy,
+        Sqrt(bx * bx + by * by) / Sqrt(R2), HealthColor(WP[b].Pct)), MarkDisplay, LabelMove, 16 + b);
+    end;
+  for b := 0 to 2 do
+    if FlagShown(b) then
+    begin
+      bx := WFlags[b].X - ax;
+      by := WFlags[b].Y - ay;
+      if bx * bx + by * by > R2 then
+        Continue;
+      T := FlagNameOf(b);
+      X := WFlags[b].X - TextAdvance(T) * Em / 2;
+      Y := WFlags[b].Y - LabelOffset;
+      WantText(KIND_WORLD, LabelLayer + BE_PLAYERS + b, T, X, Y, LabelScale, FlagColorOf(b), MarkDisplay, LabelMove,
+        60 + b);
     end;
 end;
 
@@ -588,6 +852,94 @@ begin
   Result := Trunc(T * ArrowSteps);
   if Result >= ArrowSteps then
     Result := ArrowSteps - 1;
+end;
+
+procedure LayoutOutline(A: LongInt; CX, CY, R, Rng, Sc: Single);
+var
+  QX, QY, S, MinX, MaxX, MinY, MaxY, L, T, PX, PY, DX, DY, Step, Lim: Single;
+  i, k, n, Cnt, j, Cell: LongInt;
+  CandX, CandY: array[0..511] of Single;
+  Cells: array[0..511] of LongInt;
+  Dup: Boolean;
+  U: ^TRadarUser;
+begin
+  U := @Users[A];
+  QX := Round(WP[A].X / OutlineGrid) * OutlineGrid;
+  QY := Round(WP[A].Y / OutlineGrid) * OutlineGrid;
+  if (U^.OGen <> MapGeneration) or (U^.OQX <> QX) or (U^.OQY <> QY) or (U^.OSize <> R) or (U^.OZoom <> Rng) or
+    (U^.OPX <> CX) or (U^.OPY <> CY) then
+  begin
+    U^.OGen := MapGeneration;
+    U^.OQX := QX;
+    U^.OQY := QY;
+    U^.OSize := R;
+    U^.OZoom := Rng;
+    U^.OPX := CX;
+    U^.OPY := CY;
+    S := R / Rng;
+    MinX := QX - Rng;
+    MaxX := QX + Rng;
+    MinY := QY - Rng;
+    MaxY := QY + Rng;
+    Lim := Rng * Rng * 0.94;
+    Cnt := 0;
+    for i := 0 to MapEdgeCount - 1 do
+    begin
+      if Cnt >= 512 then
+        Break;
+      with MapEdges[i] do
+      begin
+        if ((X1 < MinX) and (X2 < MinX)) or ((X1 > MaxX) and (X2 > MaxX)) or ((Y1 < MinY) and (Y2 < MinY)) or
+          ((Y1 > MaxY) and (Y2 > MaxY)) then
+          Continue;
+        L := Sqrt(Sqr(X2 - X1) + Sqr(Y2 - Y1));
+        n := Trunc(L / OutlineStep) + 1;
+        for k := 0 to n do
+        begin
+          T := k / n;
+          PX := X1 + (X2 - X1) * T;
+          PY := Y1 + (Y2 - Y1) * T;
+          DX := PX - QX;
+          DY := PY - QY;
+          if DX * DX + DY * DY > Lim then
+            Continue;
+          Cell := (Round((CX + DX * S) / 3) and $FFFF) shl 16 or (Round((CY + DY * S) / 3) and $FFFF);
+          Dup := False;
+          for j := 0 to Cnt - 1 do
+            if Cells[j] = Cell then
+            begin
+              Dup := True;
+              Break;
+            end;
+          if Dup then
+            Continue;
+          if Cnt >= 512 then
+            Break;
+          Cells[Cnt] := Cell;
+          CandX[Cnt] := CX + DX * S;
+          CandY[Cnt] := CY + DY * S;
+          Inc(Cnt);
+        end;
+      end;
+    end;
+    U^.OCount := 0;
+    if Cnt > 0 then
+    begin
+      Step := Cnt / OutlineDots;
+      if Step < 1 then
+        Step := 1;
+      j := 0;
+      while (j < OutlineDots) and (Round(j * Step) < Cnt) do
+      begin
+        U^.OX[j] := CandX[Round(j * Step)];
+        U^.OY[j] := CandY[Round(j * Step)];
+        Inc(j);
+      end;
+      U^.OCount := j;
+    end;
+  end;
+  for j := 0 to U^.OCount - 1 do
+    BigMark(OutlineLayer + j, OutlineChar, OutlineColor, QScale(Sc * 0.7), U^.OX[j], U^.OY[j], OutlineMove);
 end;
 
 procedure LayoutCircle(A: LongInt);
@@ -643,6 +995,21 @@ begin
         BigMark(CircleLayer + RING_MAX + b, Ch, C, Sc, CX + DX / D * R, CY + DY / D * R, CircleMove);
       end;
     end;
+  for k := 0 to 2 do
+    if FlagShown(k) then
+    begin
+      DX := WFlags[k].X - ax;
+      DY := WFlags[k].Y - ay;
+      D := Sqrt(DX * DX + DY * DY);
+      if D <= Rng then
+        BigMark(CircleLayer + RING_MAX + BE_PLAYERS + 1 + k, FlagMark, FlagColorOf(k), Sc, CX + DX / Rng * R,
+          CY + DY / Rng * R, CircleMove)
+      else if D > 0.001 then
+        BigMark(CircleLayer + RING_MAX + BE_PLAYERS + 1 + k, FlagMark, FlagColorOf(k), Sc, CX + DX / D * R,
+          CY + DY / D * R, CircleMove);
+    end;
+  if U^.Outline and OutlineAllowed and MapReady then
+    LayoutOutline(A, CX, CY, R, Rng, Sc);
 end;
 
 procedure LayoutRing(A: LongInt);
@@ -743,6 +1110,21 @@ begin
     k := ArrowLayer + b - 1;
     WorldMark(k, Ch, C, Sc, cx + Ux * ArrowOuter, cy + Uy * ArrowOuter, ArrowMove, 0);
   end;
+  for k := 0 to 2 do
+    if FlagShown(k) then
+    begin
+      DX := WFlags[k].X - WP[A].X;
+      DY := WFlags[k].Y - WP[A].Y;
+      D := Sqrt(DX * DX + DY * DY);
+      if D < 1 then
+        Continue;
+      T := D / Rng;
+      if T > 1 then
+        T := 1;
+      Sc := QScale(RingNearScale + (RingFarScale - RingNearScale) * T);
+      WorldMark(ArrowLayer + BE_PLAYERS + k, FlagMark, FlagColorOf(k), Sc, cx + DX / D * ArrowOuter,
+        cy + DY / D * ArrowOuter, ArrowMove, 0);
+    end;
 end;
 
 function RadarPass(ID, Tick, Budget: LongInt): LongInt;
