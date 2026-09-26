@@ -40,6 +40,13 @@ var
   VisRoundTicks: LongInt = 15;
 
 procedure WorldLoad(Tick, Count: LongInt; I: PLongArr; F: PSingleArr);
+procedure WorldBegin(Tick: LongInt);
+procedure WorldPos(ID, Alive: LongInt; X, Y: Single);
+procedure WorldAim(ID, AimX, AimY: LongInt);
+procedure WorldVel(ID: LongInt; VX, VY: Single);
+procedure WorldExtra(ID, Pct, Tag, Ping: LongInt);
+procedure WorldEnd;
+procedure WorldMeta(ID, Team, Human: LongInt);
 procedure WorldName(ID: LongInt; const Name: AnsiString);
 function ValidID(ID: LongInt): Boolean;
 function Enemies(A, B: LongInt): Boolean;
@@ -105,6 +112,81 @@ begin
       WP[k].Active := False;
       WP[k].Alive := False;
     end;
+end;
+
+var
+  SnapSeen: array[1..BE_PLAYERS] of Boolean;
+
+procedure WorldBegin(Tick: LongInt);
+var
+  k: LongInt;
+begin
+  WTick := Tick;
+  for k := 1 to BE_PLAYERS do
+    SnapSeen[k] := False;
+end;
+
+procedure WorldPos(ID, Alive: LongInt; X, Y: Single);
+begin
+  if not ValidID(ID) then
+    Exit;
+  SnapSeen[ID] := True;
+  WP[ID].Active := True;
+  WP[ID].Alive := Alive <> 0;
+  WP[ID].X := X;
+  WP[ID].Y := Y;
+  if Alive = 0 then
+  begin
+    WP[ID].VX := 0;
+    WP[ID].VY := 0;
+  end;
+end;
+
+procedure WorldAim(ID, AimX, AimY: LongInt);
+begin
+  if not ValidID(ID) then
+    Exit;
+  WP[ID].AimX := AimX;
+  WP[ID].AimY := AimY;
+end;
+
+procedure WorldVel(ID: LongInt; VX, VY: Single);
+begin
+  if not ValidID(ID) then
+    Exit;
+  WP[ID].VX := VX;
+  WP[ID].VY := VY;
+end;
+
+procedure WorldExtra(ID, Pct, Tag, Ping: LongInt);
+begin
+  if not ValidID(ID) then
+    Exit;
+  WP[ID].Pct := Pct;
+  WP[ID].Tag := Tag;
+  WP[ID].Ping := Ping;
+end;
+
+procedure WorldEnd;
+var
+  k: LongInt;
+begin
+  for k := 1 to BE_PLAYERS do
+    if not SnapSeen[k] then
+    begin
+      WP[k].Active := False;
+      WP[k].Alive := False;
+    end;
+end;
+
+procedure WorldMeta(ID, Team, Human: LongInt);
+begin
+  if not ValidID(ID) then
+    Exit;
+  if Team > -100 then
+    WP[ID].Team := Team;
+  if Human >= 0 then
+    WP[ID].Human := Human <> 0;
 end;
 
 procedure WorldName(ID: LongInt; const Name: AnsiString);

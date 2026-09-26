@@ -173,6 +173,27 @@ external {$IFDEF WIN32} 'BE_TrajStep@scripts/Basic-Extended/basicext_dll.dll cde
 function BE_GunPick(Shooter, Mode: Integer; MaxDist, MaxAngle, SX, SY, BodyH: Single; MaxCheck: Integer): Integer;
 external {$IFDEF WIN32} 'BE_GunPick@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunPick@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+procedure BE_SnapBegin(Tick: Integer);
+external {$IFDEF WIN32} 'BE_SnapBegin@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SnapBegin@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_SnapPos(ID, Alive: Integer; X, Y: Single);
+external {$IFDEF WIN32} 'BE_SnapPos@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SnapPos@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_SnapAim(ID, AimX, AimY: Integer);
+external {$IFDEF WIN32} 'BE_SnapAim@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SnapAim@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_SnapVel(ID: Integer; VX, VY: Single);
+external {$IFDEF WIN32} 'BE_SnapVel@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SnapVel@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_SnapExtra(ID, Pct, Tag, Ping: Integer);
+external {$IFDEF WIN32} 'BE_SnapExtra@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SnapExtra@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_SnapEnd(Tick: Integer);
+external {$IFDEF WIN32} 'BE_SnapEnd@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SnapEnd@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_Human(ID, Human: Integer);
+external {$IFDEF WIN32} 'BE_Human@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Human@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 procedure BE_AcSet(Key: Integer; Value: Single);
 external {$IFDEF WIN32} 'BE_AcSet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcSet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
@@ -451,6 +472,7 @@ const
   PREF_OFF = 2;
   RADAR_TEXTS_PER_TICK = 20;
   OVL_EXTRA_TICKS = 20;
+  OVL_SNAP_AGE = 2;
   SNAP_POS = 0;
   SNAP_AIM = 1;
   SNAP_FULL = 2;
@@ -907,6 +929,7 @@ var
   SlotBit: array[1..32] of Integer;
   SnapTick, SnapExtraTick, SnapLevel: Integer;
   SnapIdx: array[1..32] of Integer;
+  SnapNew: Integer;
   OvlUsers: array[0..31] of Integer;
   OvlNextTick: Integer;
   TpVariant: array[1..32] of Integer;
@@ -4066,9 +4089,9 @@ end;
 
 procedure WorldSnap(Tick, Level: Integer; Extra: Boolean);
 var
-  b, n, k, f, W: Integer;
+  b, W, Tg, Pg: Integer;
   Q: TActivePlayer;
-  Aims, Vels, All, Alive: Boolean;
+  Aims, Vels, All, Alive, Fresh: Boolean;
 begin
   if SnapTick = Tick then
     if SnapLevel >= Level then
@@ -4080,77 +4103,58 @@ begin
     SnapExtraTick := Tick;
   Aims := Level >= SNAP_AIM;
   Vels := Level >= SNAP_FULL;
-  n := 0;
+  Fresh := SnapNew > 0;
+  SnapNew := 0;
+  BE_SnapBegin(Tick);
   for b := 1 to TopSlot do
     if ActiveSlot[b] then
     begin
       Q := PL[b];
-      k := n * 8;
-      f := n * 4;
-      All := SnapIdx[b] <> n;
-      if All then
-      begin
-        SnapIdx[b] := n;
-        WI[k] := b;
-      end;
-      Alive := Q.Alive;
-      W := 0;
-      if Alive then
-        W := 1;
-      if HumanOf[b] then
-        W := W + 2;
-      WI[k + 1] := W;
-      WI[k + 2] := TeamOf[b];
-      WF[f] := Q.X;
-      WF[f + 1] := Q.Y;
-      if All or Aims or OvlAdmin[b] then
-      begin
-        WI[k + 6] := Q.MouseAimX;
-        WI[k + 7] := Q.MouseAimY;
-      end;
-      if All or Vels or OvlAdmin[b] then
-      begin
-        if Alive then
+      All := False;
+      if Fresh then
+        if SnapIdx[b] < 0 then
         begin
-          WF[f + 2] := Q.VelX;
-          WF[f + 3] := Q.VelY;
-        end
-        else
-        begin
-          WF[f + 2] := 0;
-          WF[f + 3] := 0;
+          SnapIdx[b] := 0;
+          All := True;
         end;
-      end;
+      Alive := Q.Alive;
+      if Alive then
+        BE_SnapPos(b, 1, Q.X, Q.Y)
+      else
+        BE_SnapPos(b, 0, Q.X, Q.Y);
+      if All or Aims then
+        BE_SnapAim(b, Q.MouseAimX, Q.MouseAimY);
+      if Alive then
+        if All or Vels or OvlAdmin[b] then
+          BE_SnapVel(b, Q.VelX, Q.VelY);
       if All or Extra then
       begin
         W := 0;
+        Tg := TAG_NONE;
+        Pg := 0;
         if Alive then
+        begin
           W := HealthPct(Q.Health);
-        WI[k + 3] := W;
-        W := TAG_NONE;
-        if Alive then
           if OvlTags then
           begin
             if Q.Flagger then
-              W := TAG_FLAG
+              Tg := TAG_FLAG
             else
             begin
-              W := Q.Primary.WType;
-              if (W = WEP_BOW) or (W = WEP_BOW_FIRE) then
-                W := TAG_BOW
+              Tg := Q.Primary.WType;
+              if (Tg = WEP_BOW) or (Tg = WEP_BOW_FIRE) then
+                Tg := TAG_BOW
               else
-                W := TAG_NONE;
+                Tg := TAG_NONE;
             end;
           end;
-        WI[k + 4] := W;
-        W := 0;
+        end;
         if OvlAdmin[b] then
-          W := Q.Ping;
-        WI[k + 5] := W;
+          Pg := Q.Ping;
+        BE_SnapExtra(b, W, Tg, Pg);
       end;
-      n := n + 1;
     end;
-  BE_World(Tick, n, WI, WF);
+  BE_SnapEnd(Tick);
 end;
 
 procedure OpsSend(A, n: Integer);
@@ -4274,7 +4278,8 @@ begin
     begin
       if Fresh then
       begin
-        WorldSnap(Tick, SNAP_POS, Extra);
+        if Extra or (Tick - SnapTick > OVL_SNAP_AGE) or (SnapTick > Tick) then
+          WorldSnap(Tick, SNAP_POS, Extra);
         Extra := False;
         if RdRedraw[i] then
         begin
@@ -6600,6 +6605,42 @@ begin
       H := PL[k].Health;
   Ms := (Now() - T0) * 86400000;
   Say(ID, 'reading PL[i].Health: ' + FloatStr(Ms / 32, 3) + ' us per read', ColorGood);
+  if BeOk then
+  begin
+    T0 := Now();
+    for i := 1 to 1000 do
+    begin
+      SnapTick := -1;
+      WorldSnap(Tick, SNAP_POS, False);
+    end;
+    Ms := (Now() - T0) * 86400000;
+    Say(ID, 'positions for the library (' + IntToStr(TopSlot) + ' slots): ' + FloatStr(Ms, 1) + ' us', ColorGood);
+    T0 := Now();
+    for i := 1 to 1000 do
+    begin
+      SnapTick := -1;
+      WorldSnap(Tick, SNAP_FULL, True);
+    end;
+    Ms := (Now() - T0) * 86400000;
+    Say(ID, 'everything for the library: ' + FloatStr(Ms, 1) + ' us', ColorGood);
+    T0 := Now();
+    for i := 1 to 1000 do
+      BE_World(Tick, 0, WI, WF);
+    Ms := (Now() - T0) * 86400000;
+    Say(ID, 'one call with the arrays: ' + FloatStr(Ms, 2) + ' us', ColorGood);
+    T0 := Now();
+    for i := 1 to 1000 do
+      BE_VisNeeded();
+    Ms := (Now() - T0) * 86400000;
+    Say(ID, 'one call without arguments: ' + FloatStr(Ms, 2) + ' us', ColorGood);
+    T0 := Now();
+    for i := 1 to 1000 do
+      for k := 0 to 31 do
+        WI[k] := k;
+    Ms := (Now() - T0) * 86400000;
+    Say(ID, 'writing an array element: ' + FloatStr(Ms / 32, 3) + ' us', ColorGood);
+    WorldSnap(Tick, SNAP_FULL, True);
+  end;
 end;
 
 { [CommandList] Source = auto: the player commands switched on in this script (the first word of
@@ -9845,9 +9886,11 @@ begin
   HumanOf[ID] := PL[ID].Human;
   SnapExtraTick := -1000000;
   SnapIdx[ID] := -1;
+  SnapNew := SnapNew + 1;
   if BeOk then
   begin
     BE_Name(ID, PL[ID].Name);
+    BE_Human(ID, BoolInt(HumanOf[ID]));
     BE_RadarReset(ID);
     BE_TrajReset(ID);
     BE_MoveReset(ID);

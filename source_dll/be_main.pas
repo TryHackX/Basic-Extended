@@ -287,6 +287,64 @@ begin
   end;
 end;
 
+procedure BE_SnapBegin(Tick: LongInt); cdecl;
+begin
+  try
+    WorldBegin(Tick);
+  except
+  end;
+end;
+
+procedure BE_SnapPos(ID, Alive: LongInt; X, Y: Single); cdecl;
+begin
+  try
+    WorldPos(ID, Alive, X, Y);
+  except
+  end;
+end;
+
+procedure BE_SnapAim(ID, AimX, AimY: LongInt); cdecl;
+begin
+  try
+    WorldAim(ID, AimX, AimY);
+  except
+  end;
+end;
+
+procedure BE_SnapVel(ID: LongInt; VX, VY: Single); cdecl;
+begin
+  try
+    WorldVel(ID, VX, VY);
+  except
+  end;
+end;
+
+procedure BE_SnapExtra(ID, Pct, Tag, Ping: LongInt); cdecl;
+begin
+  try
+    WorldExtra(ID, Pct, Tag, Ping);
+  except
+  end;
+end;
+
+procedure BE_SnapEnd(Tick: LongInt); cdecl;
+begin
+  try
+    WorldEnd;
+    if AcEnabled then
+      AcWorld(Tick);
+  except
+  end;
+end;
+
+procedure BE_Human(ID, Human: LongInt); cdecl;
+begin
+  try
+    WorldMeta(ID, -100, Human);
+  except
+  end;
+end;
+
 procedure BE_AcSet(Key: LongInt; Value: Single); cdecl;
 begin
   try
@@ -740,6 +798,7 @@ procedure BE_Team(ID, Team: LongInt); cdecl;
 begin
   try
     TeamSet(ID, Team);
+    WorldMeta(ID, Team, -1);
   except
   end;
 end;
@@ -1133,6 +1192,13 @@ exports
   BE_Pref_Commit,
   BE_Log,
   BE_World,
+  BE_SnapBegin,
+  BE_SnapPos,
+  BE_SnapAim,
+  BE_SnapVel,
+  BE_SnapExtra,
+  BE_SnapEnd,
+  BE_Human,
   BE_AcSet,
   BE_AcReset,
   BE_AcKeys,
