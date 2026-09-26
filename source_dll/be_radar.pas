@@ -12,6 +12,11 @@ const
   OVL_LABELS = 1;
   OVL_CIRCLE = 2;
   OVL_ARROWS = 3;
+  OVL_RING = 3;
+  RC_TEAM = 0;
+  RC_DISTANCE = 1;
+  RC_HEALTH = 2;
+  RO_FRIENDS = 1;
   TAG_NONE = 0;
   TAG_FLAG = 1;
   TAG_BOW = 2;
@@ -47,6 +52,7 @@ const
   RI_VIS_ROUND = 27;
   RI_TEAMGAME = 28;
   RI_ARROW_STEPS = 29;
+  RI_RING_COLOR_BY = 30;
 
   RF_RANGE = 1;
   RF_LIST_SCALE = 2;
@@ -65,6 +71,8 @@ const
   RF_LABEL_MOVE = 15;
   RF_TAG_SCALE = 16;
   RF_CIRCLE_MOVE = 17;
+  RF_RING_NEAR_SCALE = 18;
+  RF_RING_FAR_SCALE = 19;
 
   RT_RING = 1;
   RT_SELF = 2;
@@ -83,6 +91,7 @@ procedure RadarInt(Key, Value: LongInt);
 procedure RadarFloat(Key: LongInt; Value: Single);
 procedure RadarText(Key: LongInt; const Value: AnsiString);
 procedure RadarUser(ID, On, Mode, Show, PX, PY: LongInt; Size, Zoom, MarkSize: Single; Editing: LongInt);
+procedure RadarOpt(ID, Key, Value: LongInt);
 function RadarPass(ID, Tick, Budget: LongInt): LongInt;
 function RadarHide(ID, Budget: LongInt): LongInt;
 function RadarPending(ID: LongInt): LongInt;
@@ -102,8 +111,9 @@ type
     On, Editing, Pending: Boolean;
     Mode, Show, PX, PY: LongInt;
     Size, Zoom, MarkSize: Single;
+    Friends: Boolean;
     Sent: TTextSet;
-    ArrowOf, ArrowBand: array[0..ARROWS_MAX - 1] of LongInt;
+    RingBand: array[1..BE_PLAYERS] of LongInt;
   end;
 
 var
@@ -120,9 +130,12 @@ var
   FriendColor: LongInt = $40FF40;
   ShowFar: Boolean = True;
   LabelLayer: LongInt = 150;
-  ArrowsMax: LongInt = 4;
+  ArrowsMax: LongInt = 6;
   ArrowDots: LongInt = 2;
   ArrowSteps: LongInt = 4;
+  RingColorBy: LongInt = RC_TEAM;
+  RingNearScale: Single = 0.16;
+  RingFarScale: Single = 0.07;
   ArrowLayer: LongInt = 210;
   ArrowNear: LongInt = $FF2020;
   ArrowMid: LongInt = $FFFF20;
@@ -237,7 +250,7 @@ begin
   for i := LabelLayer to LabelLayer + BE_PLAYERS - 1 do
     if (i >= 0) and (i <= 255) then
       OwnWorld[i] := True;
-  for i := ArrowLayer to ArrowLayer + ArrowsMax * ARROW_DOTS_MAX - 1 do
+  for i := ArrowLayer to ArrowLayer + BE_PLAYERS - 1 do
     if (i >= 0) and (i <= 255) then
       OwnWorld[i] := True;
 end;
@@ -256,7 +269,7 @@ begin
     RI_FRIEND_COLOR: FriendColor := Value;
     RI_SHOW_FAR: ShowFar := Value <> 0;
     RI_LABEL_LAYER: LabelLayer := Value;
-    RI_ARROWS_MAX: if (Value >= 1) and (Value <= ARROWS_MAX) then ArrowsMax := Value;
+    RI_ARROWS_MAX: if (Value >= 1) and (Value <= BE_PLAYERS) then ArrowsMax := Value;
     RI_ARROW_DOTS: if (Value >= 1) and (Value <= ARROW_DOTS_MAX - 2) then ArrowDots := Value;
     RI_ARROW_LAYER: ArrowLayer := Value;
     RI_ARROW_NEAR: ArrowNear := Value;
@@ -273,6 +286,7 @@ begin
     RI_VIS_ROUND: if Value > 0 then VisRoundTicks := Value;
     RI_TEAMGAME: WTeamGame := Value <> 0;
     RI_ARROW_STEPS: if (Value >= 1) and (Value <= 16) then ArrowSteps := Value;
+    RI_RING_COLOR_BY: if (Value >= RC_TEAM) and (Value <= RC_HEALTH) then RingColorBy := Value;
   end;
   HealthReady := False;
   BuildOwned;
@@ -298,6 +312,8 @@ begin
     RF_LABEL_MOVE: LabelMove := Value;
     RF_TAG_SCALE: TagScale := Value;
     RF_CIRCLE_MOVE: CircleMove := Value;
+    RF_RING_NEAR_SCALE: if Value > 0 then RingNearScale := Value;
+    RF_RING_FAR_SCALE: if Value > 0 then RingFarScale := Value;
   end;
 end;
 
@@ -342,6 +358,23 @@ begin
     VisShow[ID] := Show
   else
     VisShow[ID] := SHOW_ALL;
+end;
+
+procedure RadarOpt(ID, Key, Value: LongInt);
+begin
+  if not ValidID(ID) then
+    Exit;
+  case Key of
+    RO_FRIENDS: Users[ID].Friends := Value <> 0;
+  end;
+end;
+
+function Wanted(A, b: LongInt): Boolean;
+begin
+  Result := (b <> A) and WP[b].Alive and Shows(A, b, Users[A].Show);
+  if Result then
+    if WTeamGame and (WP[b].Team = WP[A].Team) then
+      Result := Users[A].Friends;
 end;
 
 function RadarRange(ID: LongInt): Single;
@@ -403,7 +436,7 @@ begin
   begin
     Pick[b] := False;
     D2[b] := -1;
-    if (b <> A) and WP[b].Alive and Shows(A, b, U^.Show) then
+    if Wanted(A, b) then
     begin
       D2[b] := 0;
       if Ref then
@@ -489,13 +522,11 @@ begin
   R2 := R2 * R2;
   Em := LabelScale * WORLD_EM;
   for b := 1 to BE_PLAYERS do
-    if (b <> A) and WP[b].Alive then
+    if Wanted(A, b) then
     begin
       bx := WP[b].X - ax;
       by := WP[b].Y - ay;
       if bx * bx + by * by > R2 then
-        Continue;
-      if not Shows(A, b, U^.Show) then
         Continue;
       T := WP[b].Name + ' ' + IntToStr(WP[b].Pct) + '%';
       Tg := TagText(WP[b].Tag);
@@ -585,7 +616,7 @@ begin
   ax := WP[A].X;
   ay := WP[A].Y;
   for b := 1 to BE_PLAYERS do
-    if (b <> A) and WP[b].Alive and Shows(A, b, U^.Show) then
+    if Wanted(A, b) then
     begin
       DX := WP[b].X - ax;
       DY := WP[b].Y - ay;
@@ -614,15 +645,13 @@ begin
     end;
 end;
 
-procedure LayoutArrows(A: LongInt);
+procedure LayoutRing(A: LongInt);
 var
-  b, k, n, i, j, Best, Cnt, Layer, Dots: LongInt;
-  cx, cy, DX, DY, D, Ux, Uy, R, Rng, BestD, T, Lead, Sc: Single;
-  C, CBase: LongInt;
+  b, k, Best, Cnt, Band: LongInt;
+  cx, cy, DX, DY, D, Ux, Uy, Rng, BestD, Lead, Sc, T: Single;
+  C: LongInt;
   D2: array[1..BE_PLAYERS] of Single;
-  Sel: array[0..ARROWS_MAX - 1] of LongInt;
   Picked: array[1..BE_PLAYERS] of Boolean;
-  Taken: Boolean;
   Ch: AnsiString;
   U: ^TRadarUser;
 begin
@@ -637,12 +666,11 @@ begin
   cx := WP[A].X + WP[A].VX * Lead;
   cy := WP[A].Y + WP[A].VY * Lead - LOS_HEIGHT;
   Rng := RadarRange(A);
-  Dots := ArrowDots;
   for b := 1 to BE_PLAYERS do
   begin
     D2[b] := -1;
     Picked[b] := False;
-    if (b <> A) and WP[b].Alive and Shows(A, b, U^.Show) then
+    if Wanted(A, b) then
     begin
       DX := WP[b].X - WP[A].X;
       DY := WP[b].Y - WP[A].Y;
@@ -650,6 +678,8 @@ begin
       if D2[b] > Rng * Rng then
         D2[b] := -1;
     end;
+    if D2[b] < 0 then
+      U^.RingBand[b] := -1;
   end;
   Cnt := 0;
   while Cnt < ArrowsMax do
@@ -666,35 +696,15 @@ begin
     if Best = 0 then
       Break;
     Picked[Best] := True;
-    Sel[Cnt] := Best;
     Inc(Cnt);
   end;
-  for n := 0 to ArrowsMax - 1 do
-    if (U^.ArrowOf[n] <> 0) and not Picked[U^.ArrowOf[n]] then
+  for b := 1 to BE_PLAYERS do
+  begin
+    if not Picked[b] then
     begin
-      U^.ArrowOf[n] := 0;
-      U^.ArrowBand[n] := -1;
-    end;
-  for k := 0 to Cnt - 1 do
-  begin
-    Taken := False;
-    for n := 0 to ArrowsMax - 1 do
-      if U^.ArrowOf[n] = Sel[k] then
-        Taken := True;
-    if not Taken then
-      for n := 0 to ArrowsMax - 1 do
-        if U^.ArrowOf[n] = 0 then
-        begin
-          U^.ArrowOf[n] := Sel[k];
-          U^.ArrowBand[n] := -1;
-          Break;
-        end;
-  end;
-  for n := 0 to ArrowsMax - 1 do
-  begin
-    b := U^.ArrowOf[n];
-    if b = 0 then
+      U^.RingBand[b] := -1;
       Continue;
+    end;
     DX := WP[b].X - WP[A].X;
     DY := WP[b].Y - WP[A].Y;
     D := Sqrt(DX * DX + DY * DY);
@@ -708,36 +718,30 @@ begin
       Ux := DX / D;
       Uy := DY / D;
     end;
-    U^.ArrowBand[n] := BandOf(D / Rng, U^.ArrowBand[n]);
-    CBase := ArrowColor(U^.ArrowBand[n]);
-    for i := 0 to Dots - 1 do
-    begin
-      if Dots > 1 then
-        R := ArrowInner + (ArrowOuter - ArrowInner) * i / (Dots - 1)
+    Band := BandOf(D / Rng, U^.RingBand[b]);
+    U^.RingBand[b] := Band;
+    if ArrowSteps > 1 then
+      T := Band / (ArrowSteps - 1)
+    else
+      T := 0;
+    Sc := QScale(RingNearScale + (RingFarScale - RingNearScale) * T);
+    case RingColorBy of
+      RC_DISTANCE: C := ArrowColor(Band);
+      RC_HEALTH: C := HealthColor(WP[b].Pct);
+    else
+      if WTeamGame and (WP[b].Team = WP[A].Team) then
+        C := FriendColor
       else
-        R := ArrowOuter;
-      C := MixColor(MixColor(CBase, 0, 0.55), CBase, (i + 1) / Dots);
-      Ch := ArrowChar;
-      Sc := ArrowScale;
-      if (i = Dots - 1) and (WP[b].Tag <> TAG_NONE) then
-      begin
-        Ch := TagText(WP[b].Tag);
-        Sc := QScale(ArrowScale * TagScale);
-      end;
-      Layer := ArrowLayer + n * ARROW_DOTS_MAX + i;
-      WorldMark(Layer, Ch, C, Sc, cx + Ux * R, cy + Uy * R, ArrowMove, n + 1);
+        C := EnemyColor;
     end;
-    for j := 0 to 1 do
+    Ch := ArrowChar;
+    if WP[b].Tag <> TAG_NONE then
     begin
-      if j = 0 then
-        WorldMark(ArrowLayer + n * ARROW_DOTS_MAX + Dots + j, ArrowChar, CBase, ArrowScale,
-          cx + Ux * (ArrowOuter - ArrowHead) - Uy * ArrowWidth, cy + Uy * (ArrowOuter - ArrowHead) + Ux * ArrowWidth,
-          ArrowMove, n + 1)
-      else
-        WorldMark(ArrowLayer + n * ARROW_DOTS_MAX + Dots + j, ArrowChar, CBase, ArrowScale,
-          cx + Ux * (ArrowOuter - ArrowHead) + Uy * ArrowWidth, cy + Uy * (ArrowOuter - ArrowHead) - Ux * ArrowWidth,
-          ArrowMove, n + 1);
+      Ch := TagText(WP[b].Tag);
+      Sc := QScale(Sc * TagScale);
     end;
+    k := ArrowLayer + b - 1;
+    WorldMark(k, Ch, C, Sc, cx + Ux * ArrowOuter, cy + Uy * ArrowOuter, ArrowMove, 0);
   end;
 end;
 
@@ -754,7 +758,7 @@ begin
       OVL_LIST: LayoutList(ID);
       OVL_LABELS: LayoutLabels(ID);
       OVL_CIRCLE: LayoutCircle(ID);
-      OVL_ARROWS: LayoutArrows(ID);
+      OVL_RING: LayoutRing(ID);
     end;
   Result := Diff(Users[ID].Sent, OwnBig, OwnWorld, Tick, RefreshTicks, Budget, More);
   Users[ID].Pending := More;
@@ -770,11 +774,8 @@ begin
     Exit;
   Result := HideAll(Users[ID].Sent, OwnBig, OwnWorld, Budget, More);
   Users[ID].Pending := More;
-  for n := 0 to ARROWS_MAX - 1 do
-  begin
-    Users[ID].ArrowOf[n] := 0;
-    Users[ID].ArrowBand[n] := -1;
-  end;
+  for n := 1 to BE_PLAYERS do
+    Users[ID].RingBand[n] := -1;
 end;
 
 function RadarPending(ID: LongInt): LongInt;
@@ -795,11 +796,9 @@ begin
   Users[ID].Pending := False;
   Users[ID].On := False;
   VisShow[ID] := SHOW_ALL;
-  for n := 0 to ARROWS_MAX - 1 do
-  begin
-    Users[ID].ArrowOf[n] := 0;
-    Users[ID].ArrowBand[n] := -1;
-  end;
+  Users[ID].Friends := True;
+  for n := 1 to BE_PLAYERS do
+    Users[ID].RingBand[n] := -1;
 end;
 
 procedure RadarRedraw(ID: LongInt);
@@ -808,6 +807,19 @@ begin
     SetStale(Users[ID].Sent);
 end;
 
+procedure InitUsers;
+var
+  i, n: LongInt;
+begin
+  for i := 1 to BE_PLAYERS do
+  begin
+    Users[i].Friends := True;
+    for n := 1 to BE_PLAYERS do
+      Users[i].RingBand[n] := -1;
+  end;
+end;
+
 initialization
   BuildOwned;
+  InitUsers;
 end.

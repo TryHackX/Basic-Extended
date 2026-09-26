@@ -23,12 +23,17 @@ const
   FLAME_LIFE = 30;
   MAX_PATH = 256;
   MAX_SHOT = 16;
+  MAX_INACCURACY = 0.5;
+  SF_CROUCH = 1;
+  SF_PRONE = 2;
+  SF_AIRBORNE = 4;
+  SF_RUNNING = 8;
 
 type
   TWeaponStat = record
     Name: AnsiString;
-    Damage, Speed, Spread, Inherit: Single;
-    Style, Interval, Ammo, Reload, StartUp: LongInt;
+    Damage, Speed, Spread, Inherit, MoveAcc: Single;
+    Style, Interval, Ammo, Reload, StartUp, Bink: LongInt;
     Sound: AnsiString;
   end;
 
@@ -47,9 +52,12 @@ function ShotSpeed(W: LongInt): Single;
 function ShotStyle(W: LongInt): LongInt;
 function ShotDamage(W: LongInt): Single;
 function BuildPath(W: LongInt; X, Y, VX, VY, AimX, AimY: Single; MaxTicks: LongInt; Spacing, MaxRange: Single): LongInt;
+function BuildPathDir(W: LongInt; X, Y, DX, DY, VX, VY: Single; MaxTicks: LongInt; Spacing, MaxRange: Single): LongInt;
+procedure Muzzle(X, Y, AimX, AimY: Single; Flags: LongInt; out OX, OY, DX, DY: Single);
+function PathClip(CX, CY, HW, HH: Single): LongInt;
 function Solve(W: LongInt; SX, SY, SVX, SVY, TX, TY, TVX, TVY, TGrav: Single; out DX, DY: Single;
   out Ticks: LongInt): Boolean;
-function BuildShot(W: LongInt; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed: LongInt): LongInt;
+function BuildShot(W: LongInt; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed, Flags: LongInt): LongInt;
 
 implementation
 
@@ -85,6 +93,12 @@ const
   RSpeed: array[0..WEAPONS - 1] of Single = (18, 19, 18.9, 24, 26, 13.2, 33, 11.4, 55, 27, 29, 6, 7.6, 23, 12.5, 21, 18);
   RStartUp: array[0..WEAPONS - 1] of LongInt = (0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 33, 0, 0, 12, 0, 0, 0);
   RSpread: array[0..WEAPONS - 1] of Single = (0, 0.1, 0.03, 0, 0, 0.8, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0, 0);
+  NMoveAcc: array[0..WEAPONS - 1] of Single = (0, 0.009, 0, 0.011, 0, 0, 0.03, 0, 0.05, 0.013, 0.0625, 0, 0, 0, 0, 0,
+    0);
+  RMoveAcc: array[0..WEAPONS - 1] of Single = (0.02, 0.02, 0.01, 0.02, 0.01, 0.01, 0.03, 0.03, 0.07, 0.02, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01);
+  NBink: array[0..WEAPONS - 1] of LongInt = (0, 0, 0, -12, 0, 0, 0, 0, 65, 0, 0, 0, 0, 0, 0, 0, 0);
+  RBink: array[0..WEAPONS - 1] of LongInt = (0, 0, -10, -10, -9, 0, 14, 45, 80, -8, -2, 0, 0, 0, 0, 0, 0);
 
 var
   RandState: LongWord = 12345;
@@ -119,6 +133,8 @@ begin
       Weapon[i].Ammo := RAmmo[i];
       Weapon[i].Reload := RReload[i];
       Weapon[i].StartUp := RStartUp[i];
+      Weapon[i].MoveAcc := RMoveAcc[i];
+      Weapon[i].Bink := RBink[i];
     end
     else
     begin
@@ -129,6 +145,8 @@ begin
       Weapon[i].Ammo := NAmmo[i];
       Weapon[i].Reload := NReload[i];
       Weapon[i].StartUp := NStartUp[i];
+      Weapon[i].MoveAcc := NMoveAcc[i];
+      Weapon[i].Bink := NBink[i];
     end;
   end;
 end;
@@ -241,6 +259,13 @@ begin
         Weapon[W].Style := Round(V);
       if ReadNum(Keys[W].Values['startuptime'], V) then
         Weapon[W].StartUp := Round(V);
+      if ReadNum(Keys[W].Values['movementacc'], V) then
+        if Old and (V >= 1) then
+          Weapon[W].MoveAcc := V / 1000
+        else
+          Weapon[W].MoveAcc := V;
+      if ReadNum(Keys[W].Values['bink'], V) then
+        Weapon[W].Bink := Round(V);
     end;
     Result := Found;
   finally
@@ -289,9 +314,62 @@ begin
     Result := 0.15;
 end;
 
-function BuildPath(W: LongInt; X, Y, VX, VY, AimX, AimY: Single; MaxTicks: LongInt; Spacing, MaxRange: Single): LongInt;
+procedure Muzzle(X, Y, AimX, AimY: Single; Flags: LongInt; out OX, OY, DX, DY: Single);
 var
-  DX, DY, D, Sp, BX, BY, BVX, BVY, G, Walk, NextAt, SegL, F: Single;
+  Dir, SX, SY, BX, BY, D, HX, HY: Single;
+begin
+  if AimX >= X then
+    Dir := 1
+  else
+    Dir := -1;
+  if (Flags and SF_PRONE) <> 0 then
+  begin
+    SX := 2.5;
+    SY := -1.6;
+  end
+  else if (Flags and SF_CROUCH) <> 0 then
+  begin
+    SX := -2.1;
+    SY := -5.9;
+  end
+  else
+  begin
+    SX := -1.7;
+    SY := -11.4;
+  end;
+  SX := X + Dir * SX;
+  SY := Y + SY;
+  BX := AimX - SX;
+  BY := AimY - SY;
+  D := Sqrt(BX * BX + BY * BY);
+  if D < 0.001 then
+  begin
+    BX := Dir;
+    BY := 0;
+    D := 1;
+  end;
+  HX := SX + 7 * BX / D;
+  HY := SY + 7 * BY / D;
+  BX := AimX - HX;
+  BY := AimY - HY;
+  D := Sqrt(BX * BX + BY * BY);
+  if D < 0.001 then
+  begin
+    DX := Dir;
+    DY := 0;
+  end
+  else
+  begin
+    DX := BX / D;
+    DY := BY / D;
+  end;
+  OX := HX - 4 * DX;
+  OY := HY - 4 * DY - 2;
+end;
+
+function BuildPathDir(W: LongInt; X, Y, DX, DY, VX, VY: Single; MaxTicks: LongInt; Spacing, MaxRange: Single): LongInt;
+var
+  Sp, BX, BY, BVX, BVY, G, Walk, NextAt, SegL, F: Single;
   t: LongInt;
 begin
   PathCount := 0;
@@ -300,18 +378,9 @@ begin
     Exit;
   if Spacing < 2 then
     Spacing := 2;
-  DX := AimX - X;
-  DY := AimY - Y;
-  D := Sqrt(DX * DX + DY * DY);
-  if D < 0.001 then
-  begin
-    DX := 1;
-    DY := 0;
-    D := 1;
-  end;
   Sp := ShotSpeed(W);
-  BVX := DX / D * Sp + VX * Weapon[W].Inherit;
-  BVY := DY / D * Sp + VY * Weapon[W].Inherit;
+  BVX := DX * Sp + VX * Weapon[W].Inherit;
+  BVY := DY * Sp + VY * Weapon[W].Inherit;
   BX := X;
   BY := Y;
   G := BulletGravity - StyleLift(Weapon[W].Style);
@@ -344,6 +413,52 @@ begin
       Break;
   end;
   Result := PathCount;
+end;
+
+function BuildPath(W: LongInt; X, Y, VX, VY, AimX, AimY: Single; MaxTicks: LongInt; Spacing, MaxRange: Single): LongInt;
+var
+  DX, DY, D: Single;
+begin
+  PathCount := 0;
+  Result := 0;
+  if not ValidWeapon(W) then
+    Exit;
+  DX := AimX - X;
+  DY := AimY - Y;
+  D := Sqrt(DX * DX + DY * DY);
+  if D < 0.001 then
+  begin
+    DX := 1;
+    DY := 0;
+    D := 1;
+  end;
+  Result := BuildPathDir(W, X, Y, DX / D, DY / D, VX, VY, MaxTicks, Spacing, MaxRange);
+end;
+
+function PathClip(CX, CY, HW, HH: Single): LongInt;
+var
+  i: LongInt;
+  Inside: Boolean;
+begin
+  Result := PathCount;
+  if (HW <= 0) or (HH <= 0) then
+    Exit;
+  Inside := False;
+  for i := 0 to PathCount - 1 do
+    if (Abs(PathX[i] - CX) <= HW) and (Abs(PathY[i] - CY) <= HH) then
+      Inside := True
+    else if Inside then
+    begin
+      PathCount := i + 1;
+      Result := PathCount;
+      Exit;
+    end;
+  if not Inside then
+  begin
+    if PathCount > 1 then
+      PathCount := 1;
+    Result := PathCount;
+  end;
 end;
 
 procedure Simulate(W: LongInt; SX, SY, BVX, BVY, TX, TY, TVX, TVY, TGrav: Single; MaxT: LongInt;
@@ -457,16 +572,19 @@ begin
   Result := EX * EX + EY * EY < 9;
 end;
 
-function BuildShot(W: LongInt; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed: LongInt): LongInt;
+function BuildShot(W: LongInt; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed, Flags: LongInt): LongInt;
 var
   i, n: LongInt;
-  Sp, Inh, BX, BY, L, SpreadW: Single;
+  Sp, Inh, BX, BY, L, SpreadW, Inacc, MaxDev: Single;
+  Pellets: Boolean;
 begin
   ShotCount := 0;
   Result := 0;
   if not ValidWeapon(W) then
     Exit;
   RandState := LongWord(Seed) * 2654435761 + 1;
+  if Spread < 0 then
+    Spread := 0;
   Sp := ShotSpeed(W);
   Inh := Weapon[W].Inherit;
   L := Sqrt(DX * DX + DY * DY);
@@ -474,6 +592,37 @@ begin
     Exit;
   DX := DX / L;
   DY := DY / L;
+  Pellets := (Weapon[W].Style = STYLE_SHOTGUN) or (W = 1);
+  Inacc := 0;
+  if (Flags and SF_RUNNING) <> 0 then
+    Inacc := Weapon[W].MoveAcc * 7
+  else if (Flags and SF_AIRBORNE) <> 0 then
+    Inacc := Weapon[W].MoveAcc * 3;
+  if not Pellets then
+    if Weapon[W].Spread > 0 then
+    begin
+      if (Flags and SF_PRONE) <> 0 then
+        Inacc := Inacc + Weapon[W].Spread / 1.625
+      else if (Flags and SF_CROUCH) <> 0 then
+        Inacc := Inacc + Weapon[W].Spread / 1.3
+      else
+        Inacc := Inacc + Weapon[W].Spread;
+    end;
+  Inacc := Inacc * 0.25 * Spread;
+  if Inacc > MAX_INACCURACY then
+    Inacc := MAX_INACCURACY;
+  if Inacc > 0 then
+  begin
+    MaxDev := MAX_INACCURACY * Sin(Inacc / MAX_INACCURACY * Pi / 2);
+    DX := DX + (Rnd * 2 - 1) * MaxDev;
+    DY := DY + (Rnd * 2 - 1) * MaxDev;
+    L := Sqrt(DX * DX + DY * DY);
+    if L > 0.0001 then
+    begin
+      DX := DX / L;
+      DY := DY / L;
+    end;
+  end;
   BX := DX * Sp + SVX * Inh;
   BY := DY * Sp + SVY * Inh;
   n := 1;
@@ -481,14 +630,13 @@ begin
   if Weapon[W].Style = STYLE_SHOTGUN then
   begin
     n := 6;
-    SpreadW := Weapon[W].Spread;
+    SpreadW := Weapon[W].Spread * Spread;
   end
   else if W = 1 then
   begin
     n := 2;
-    SpreadW := Weapon[W].Spread;
+    SpreadW := Weapon[W].Spread * Spread;
   end;
-  SpreadW := SpreadW * Spread;
   for i := 0 to n - 1 do
   begin
     ShotX[i] := SX;

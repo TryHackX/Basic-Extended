@@ -82,6 +82,8 @@ external {$IFDEF WIN32} 'BE_RadarText@scripts/Basic-Extended/basicext_dll.dll cd
 
 procedure BE_RadarUser(ID, IsOn, Mode, Show, PX, PY: Integer; Size, Zoom, MarkSize: Single; Editing: Integer);
 external {$IFDEF WIN32} 'BE_RadarUser@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarUser@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_RadarOpt(ID, Key, Value: Integer);
+external {$IFDEF WIN32} 'BE_RadarOpt@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarOpt@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
 function BE_RadarPass(ID, Tick, Budget: Integer): Integer;
 external {$IFDEF WIN32} 'BE_RadarPass@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_RadarPass@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
@@ -104,6 +106,16 @@ external {$IFDEF WIN32} 'BE_RadarRange@scripts/Basic-Extended/basicext_dll.dll c
 function BE_Op(Index: Integer; var Kind, Layer, Delay, Color: Integer; var Scale, X, Y: Single): PChar;
 external {$IFDEF WIN32} 'BE_Op@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Op@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+function BE_Replace(Text, Find, Repl: PChar): PChar;
+external {$IFDEF WIN32} 'BE_Replace@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Replace@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_SupConfig(Radius, RadiusBig: Single; ScanTicks, TeamBullets, FriendlyFire, TeamGame: Integer);
+external {$IFDEF WIN32} 'BE_SupConfig@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SupConfig@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_SupPlayers(n: Integer; var I: TBEInts; var F: TBEFloats);
+external {$IFDEF WIN32} 'BE_SupPlayers@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SupPlayers@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SupBullet(Owner, Style: Integer; X, Y, VX, VY: Single): Integer;
+external {$IFDEF WIN32} 'BE_SupBullet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SupBullet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_Team(ID, Team: Integer);
+external {$IFDEF WIN32} 'BE_Team@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Team@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 function BE_TextWidth(Text: PChar; Scale: Single): Single;
 external {$IFDEF WIN32} 'BE_TextWidth@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TextWidth@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
@@ -139,11 +151,33 @@ external {$IFDEF WIN32} 'BE_Path@scripts/Basic-Extended/basicext_dll.dll cdecl' 
 function BE_PathPoint(Index: Integer; var X, Y: Single): Integer;
 external {$IFDEF WIN32} 'BE_PathPoint@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_PathPoint@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+function BE_PathClip(CX, CY, HW, HH: Single): Integer;
+external {$IFDEF WIN32} 'BE_PathClip@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_PathClip@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_Muzzle(X, Y, AimX, AimY: Single; Flags: Integer; var OX, OY: Single): Integer;
+external {$IFDEF WIN32} 'BE_Muzzle@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Muzzle@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_MapLoad(Path: PChar): Integer;
+external {$IFDEF WIN32} 'BE_MapLoad@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_MapLoad@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_MapRay(X1, Y1, X2, Y2: Single; Flags, Team: Integer): Integer;
+external {$IFDEF WIN32} 'BE_MapRay@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_MapRay@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_VisRun(Tick: Integer): Integer;
+external {$IFDEF WIN32} 'BE_VisRun@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_VisRun@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_TrajStep(ID, Tick, Budget, W, Flags, Team: Integer; X, Y, VX, VY, AimX, AimY: Single;
+  Cursor: Integer): Integer;
+external {$IFDEF WIN32} 'BE_TrajStep@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_TrajStep@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_GunPick(Shooter, Mode: Integer; MaxDist, MaxAngle, SX, SY, BodyH: Single; MaxCheck: Integer): Integer;
+external {$IFDEF WIN32} 'BE_GunPick@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunPick@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 function BE_Solve(W: Integer; SX, SY, SVX, SVY, TX, TY, TVX, TVY, TGrav: Single; var DX, DY: Single;
   var Ticks: Integer): Integer;
 external {$IFDEF WIN32} 'BE_Solve@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Solve@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
-function BE_Shot(W: Integer; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed: Integer; var Style: Integer;
+function BE_Shot(W: Integer; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed, Flags: Integer; var Style: Integer;
   var HitM: Single): Integer;
 external {$IFDEF WIN32} 'BE_Shot@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Shot@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
@@ -194,7 +228,7 @@ implementation
 const
   VERSION = '3.2';
   { the library this main.pas was written for (source_dll/be_main.pas BE_API_VERSION) }
-  BE_API = 2;
+  BE_API = 3;
   TAG = '[Basic-Extended] ';
   TEAM_SPECTATOR = 5;
   MAX_BULLET_ID = 254;
@@ -304,6 +338,12 @@ const
   C_AIMBOT = 70;
   C_BIGEXPLODE = 71;
   C_NUKE = 72;
+  C_STATGUN = 73;
+  C_STATGUN_DEL = 74;
+  C_INFAMMO = 75;
+  C_DMGFIX = 76;
+  C_DMGTAKEN = 77;
+  C_VEST = 78;
   { damage number modes }
   DM_SUM = 0;
   DM_COLUMN = 1;
@@ -325,8 +365,8 @@ const
   WEP_BOW = 15;
   WEP_BOW_FIRE = 16;
   WEP_NONE = 255;
-  { arrows: dots of one arrow at most (shaft + head) }
-  ARROW_DOTS_MAX = 8;
+  WEP_KNIFE = 11;
+  OBJ_KEEP_TICKS = 3600;
   { the radar list stays on the screen for a minute and is sent again after 5 seconds without a
     change (texts are plain UDP packets in 2.8.2) }
   OVL_LIST_DISPLAY = 3600;
@@ -389,7 +429,6 @@ const
   RI_SHOW_FAR = 10;
   RI_LABEL_LAYER = 12;
   RI_ARROWS_MAX = 13;
-  RI_ARROW_DOTS = 14;
   RI_ARROW_LAYER = 15;
   RI_ARROW_NEAR = 16;
   RI_ARROW_MID = 17;
@@ -405,6 +444,13 @@ const
   RI_VIS_ROUND = 27;
   RI_TEAMGAME = 28;
   RI_ARROW_STEPS = 29;
+  RI_RING_COLOR_BY = 30;
+  RC_TEAM = 0;
+  RC_DISTANCE = 1;
+  RC_HEALTH = 2;
+  RO_FRIENDS = 1;
+  RF_RING_NEAR_SCALE = 18;
+  RF_RING_FAR_SCALE = 19;
   RF_RANGE = 1;
   RF_LIST_SCALE = 2;
   RF_CIRCLE_R = 3;
@@ -412,11 +458,7 @@ const
   RF_LABEL_SCALE = 5;
   RF_LABEL_OFFSET = 6;
   RF_SIZE_RANGE = 7;
-  RF_ARROW_INNER = 8;
   RF_ARROW_OUTER = 9;
-  RF_ARROW_HEAD = 10;
-  RF_ARROW_WIDTH = 11;
-  RF_ARROW_SCALE = 12;
   RF_ARROW_MOVE = 13;
   RF_ARROW_LEAD = 14;
   RF_LABEL_MOVE = 15;
@@ -465,6 +507,10 @@ const
   TJF_SCALE = 1;
   TJF_CURSOR_SCALE = 2;
   TJF_MOVE = 3;
+  TJF_SPACING = 4;
+  TJF_RANGE = 5;
+  TJF_MARGIN = 6;
+  TJ_CLIP = 9;
   FX_PLAIN = 0;
   FX_BIG = 1;
   FX_NUKE = 2;
@@ -483,6 +529,8 @@ const
   FX_KINDS = 'plain, big, nuke, law, m79, arrows, firearrows, bullets, spas, flame, cluster, nades, knives, rain';
   FX_QUEUE = 1024;
   FX_PER_TICK = 48;
+  BULLET_MARGIN = 32;
+  OBJECT_MARGIN = 4;
   AK_CROUCH = 0;
   AK_JET = 1;
   AK_PRONE = 2;
@@ -490,6 +538,11 @@ const
   AT_CURSOR = 0;
   AT_NEAREST = 1;
   MUZZLE_HEIGHT = 11;
+  SF_CROUCH = 1;
+  SF_PRONE = 2;
+  SF_AIRBORNE = 4;
+  SF_RUNNING = 8;
+  MR_BULLET = 4;
   BODY_HEIGHT = 10;
 
 var
@@ -548,10 +601,11 @@ var
   OvlCircleR, OvlCircleScale: Single;
   OvlRingColor, OvlSelfColor, OvlEnemyColor, OvlFriendColor: Longint;
   OvlRingChar, OvlSelfChar, OvlEnemyChar, OvlFriendChar, OvlFarChar: string;
-  OvlSizeRange, OvlArrowInner, OvlArrowOuter, OvlArrowHead, OvlArrowScale: Single;
-  OvlArrowWidth, OvlArrowMove, OvlArrowLead, OvlLabelMove, OvlTagScale, OvlCircleMove: Single;
-  OvlShow, OvlPublicShow, OvlVisionRays, OvlVisionRound, OvlArrowTicks, OvlArrowsMax, OvlArrowDots: Integer;
-  OvlArrowLayer, OvlListMeters, OvlTextsPerTick, OvlArrowSteps: Integer;
+  OvlSizeRange, OvlArrowOuter, OvlRingNearSc, OvlRingFarSc: Single;
+  OvlArrowMove, OvlArrowLead, OvlLabelMove, OvlTagScale, OvlCircleMove: Single;
+  OvlShow, OvlPublicShow, OvlVisionRays, OvlVisionRound, OvlArrowTicks, OvlArrowsMax: Integer;
+  OvlArrowLayer, OvlListMeters, OvlTextsPerTick, OvlArrowSteps, OvlRingColorBy: Integer;
+  OvlShowTeam: Boolean;
   OvlRate, OvlRateTick, OvlBurst: Single;
   OvlTags: Boolean;
   OvlFlagChar, OvlBowChar, OvlArrowChar: string;
@@ -573,7 +627,8 @@ var
   TrSpacing, TrRange, TrScale, TrCursorScale, TrMove: Single;
   AbEnabled, AbInfinite, AbSound: Boolean;
   AbKey, AbTarget: Integer;
-  AbRange, AbAngle, AbSpread, AbSoundRange: Single;
+  AbRange, AbAngle, AbSoundRange: Single;
+  AbSpreadPct: Integer;
   WpFile, WpRealFile: string;
   FxPower: Single;
 
@@ -582,7 +637,13 @@ var
   AfText: string;
 
   { the extras of the older scripts }
-  AsEnabled, McEnabled, FbEnabled, SvEnabled, SkEnabled, PhEnabled, TkEnabled, MdEnabled: Boolean;
+  AsEnabled, McEnabled, FbEnabled, SvEnabled, SkEnabled, PhEnabled, TkEnabled, MdEnabled, SrEnabled: Boolean;
+  SrColor: Longint;
+  SrCount, SrEndMin: Integer;
+  SrKills: array[1..10] of Integer;
+  SrText: array[1..10] of string;
+  SrEndText: string;
+  SrRun: array[1..32] of Integer;
   RsEnabled, LgEnabled, MdCall, PhGround, RsAdmins: Boolean;
   LgJoins, LgChat, LgCommands, LgAdmins, LgMaps, LgKills: Boolean;
   AsMinPct, AsPerPoint, AsPoints, AsLayer, AsTicks, AsX, AsY: Integer;
@@ -598,7 +659,7 @@ var
   RsList, LgWatch: TStringList;
   { admin commands }
   AdSlapDamage: Integer;
-  AdKickSkipAdmins, AdKillSkipAdmins: Boolean;
+  AdKickSkipAdmins, AdKillSkipAdmins, AdGiveFlamer: Boolean;
 
   TgEnabled: Boolean;
 
@@ -713,8 +774,10 @@ var
   HudPScale: array[1..32] of Single;
   { the radar (on/off, mode + 1, update ticks, position, size) and the hit markers: 0 or -1 = the
     server default }
-  RdPOn, RdPMode, RdPTicks, RdPX, RdPY, RdPShow: array[1..32] of Integer;
-  RdPSize, RdPZoom: array[1..32] of Single;
+  RdPOn, RdPMode, RdPShow, RdPTeam: array[1..32] of Integer;
+  RdPZoom: array[1..32] of Single;
+  RdMX, RdMY, RdMTicks: array[1..32] of array[0..3] of Integer;
+  RdMSize: array[1..32] of array[0..3] of Single;
 
   { health display }
   HudShown, HudDirty, HudForce: array[1..32] of Boolean;
@@ -741,7 +804,7 @@ var
 
   { the editor of the health display or the radar }
   EdOn, EdProne, EdMoved, EdNade: array[1..32] of Boolean;
-  EdUntil, EdHold, EdKind, EdShowAt, EdPinAt: array[1..32] of Integer;
+  EdUntil, EdHold, EdKind, EdShowAt, EdPinAt, EdMode: array[1..32] of Integer;
   EdPinX, EdPinY, EdX, EdY, EdScale: array[1..32] of Single;
   EdCount: Integer;
 
@@ -787,17 +850,23 @@ var
   RdRetry, RdTokTick, RdEvery, RdNeed: array[1..32] of Integer;
   OvlCount: Integer;
   VisNeeded: Boolean;
-  WI: TBEInts;
-  WF: TBEFloats;
+  WI, SupI: TBEInts;
+  WF, SupF: TBEFloats;
+  SlotBit: array[1..32] of Integer;
   SnapTick, SnapExtraTick, SnapLevel: Integer;
   SnapIdx: array[1..32] of Integer;
   OvlUsers: array[0..31] of Integer;
   OvlNextTick: Integer;
   TpVariant: array[1..32] of Integer;
   TrWatch, TrDue: array[1..32] of Integer;
+  TrView, MapOk, MgOn: Boolean;
+  TrMargin: Single;
+  MgFolder, MgName: string;
+  MgRays, MgPolys: Integer;
   TrCount: Integer;
   AbOn, AbHeld: array[1..32] of Boolean;
-  AbMode, AbW, AbSoundAt: array[1..32] of Integer;
+  AbMode, AbW, AbSoundAt, AbAcc: array[1..32] of Integer;
+  AbBulletTick, AbBulletOwner: array[0..255] of Integer;
   AbCount: Integer;
   FxQTick, FxQTarget, FxQStyle: array[0..1023] of Integer;
   FxQX, FxQY, FxQVX, FxQVY, FxQHit: array[0..1023] of Single;
@@ -816,9 +885,16 @@ var
   { away from the keyboard: seconds alive without a key or a cursor move, the cursor last seen }
   AfIdle, AfAimX, AfAimY: array[1..32] of Integer;
   { godmode, frozen players (where) }
-  GodOn, FrOn: array[1..32] of Boolean;
-  FrX, FrY: array[1..32] of Single;
-  FrCount: Integer;
+  GodOn, FrOn, InfOn: array[1..32] of Boolean;
+  FrX, FrY, DmOut, DmIn: array[1..32] of Single;
+  FrCount, InfCount: Integer;
+  InfLastW, FrAt: array[1..32] of Integer;
+  DmAny: Boolean;
+  TgtList: array[0..31] of Integer;
+  ObjKeep: array[1..90] of Integer;
+  TgtCount: Integer;
+  TgtMany: Boolean;
+  WpAmmo: array[0..16] of Integer;
   { extras: assists, kill combos, the last hit on a team mate (savior), a kill of the server itself
     (no suicide penalty), the medics of the teams, players waiting for their Steam id (reservation),
     watched players (logger) }
@@ -966,6 +1042,17 @@ function ReplaceAll(S, Find, Repl: string): string;
 var
   p, L: Integer;
 begin
+  if BeOk then
+    if Pos(Find, S) = 0 then
+    begin
+      Result := S;
+      Exit;
+    end
+    else if Find <> '' then
+    begin
+      Result := BE_Replace(S, Find, Repl);
+      Exit;
+    end;
   Result := '';
   L := Length(Find);
   if L = 0 then
@@ -1707,7 +1794,7 @@ begin
     Result := OVL_LABELS
   else if S = 'circle' then
     Result := OVL_CIRCLE
-  else if (S = 'arrows') or (S = 'arrow') then
+  else if (S = 'ring') or (S = 'arrows') or (S = 'arrow') or (S = 'dots') then
     Result := OVL_ARROWS;
 end;
 
@@ -1719,7 +1806,7 @@ begin
   else if M = OVL_CIRCLE then
     Result := 'circle'
   else if M = OVL_ARROWS then
-    Result := 'arrows';
+    Result := 'ring';
 end;
 
 function ShowName(S: Integer): string;
@@ -2018,25 +2105,29 @@ begin
   OvlBurst := OvlRate / 5;
   if OvlBurst < OvlTextsPerTick then
     OvlBurst := OvlTextsPerTick;
-  OvlArrowTicks := CfgInt('Radar', 'ArrowUpdateTicks', 5, 1, 600);
-  OvlArrowsMax := CfgInt('Radar', 'ArrowsMax', 4, 1, 8);
-  OvlArrowDots := CfgInt('Radar', 'ArrowDots', 2, 1, ARROW_DOTS_MAX - 2);
-  OvlArrowSteps := CfgInt('Radar', 'ArrowColorSteps', 4, 1, 16);
-  OvlArrowInner := CfgFloat('Radar', 'ArrowInner', 16, 5, 300);
-  OvlArrowOuter := CfgFloat('Radar', 'ArrowOuter', 32, 10, 400);
-  if OvlArrowOuter < OvlArrowInner + 5 then
-    OvlArrowOuter := OvlArrowInner + 5;
-  OvlArrowHead := CfgFloat('Radar', 'ArrowHead', 6, 1, 60);
-  OvlArrowWidth := CfgFloat('Radar', 'ArrowWidth', 5, 1, 60);
-  OvlArrowScale := CfgFloat('Radar', 'ArrowScale', 0.085, 0.005, 0.5);
-  OvlArrowMove := CfgFloat('Radar', 'ArrowMove', 1.5, 0, 50);
-  OvlArrowLead := CfgFloat('Radar', 'ArrowLead', 1, 0, 3);
-  OvlTagScale := CfgFloat('Radar', 'ArrowTagScale', 0.5, 0.1, 3);
-  OvlArrowChar := MarkChar(CfgStr('Radar', 'ArrowChar', '.'), '.');
-  OvlArrowNear := CfgColor('Radar', 'ArrowColorNear', $FF2020);
-  OvlArrowMid := CfgColor('Radar', 'ArrowColorMid', $FFFF20);
-  OvlArrowFar := CfgColor('Radar', 'ArrowColorFar', $20FF20);
-  OvlArrowLayer := CfgInt('Radar', 'ArrowLayerFirst', 210, 0, 256 - OvlArrowsMax * ARROW_DOTS_MAX);
+  OvlArrowTicks := CfgInt('Radar', 'RingUpdateTicks', 5, 1, 600);
+  OvlArrowsMax := CfgInt('Radar', 'RingPlayers', 6, 1, 32);
+  OvlArrowSteps := CfgInt('Radar', 'RingSizeSteps', 4, 1, 16);
+  OvlArrowOuter := CfgFloat('Radar', 'RingRadius', 30, 10, 400);
+  OvlRingNearSc := CfgFloat('Radar', 'RingDotNear', 0.16, 0.005, 1);
+  OvlRingFarSc := CfgFloat('Radar', 'RingDotFar', 0.07, 0.005, 1);
+  S := LowerCase(Trim(CfgStr('Radar', 'RingColorBy', 'team')));
+  OvlRingColorBy := RC_TEAM;
+  if S = 'distance' then
+    OvlRingColorBy := RC_DISTANCE
+  else if S = 'health' then
+    OvlRingColorBy := RC_HEALTH
+  else if S <> 'team' then
+    CfgWarn('Radar', 'RingColorBy', S, 'team, distance or health; team used');
+  OvlArrowMove := CfgFloat('Radar', 'RingMove', 1.5, 0, 50);
+  OvlArrowLead := CfgFloat('Radar', 'RingLead', 1, 0, 3);
+  OvlTagScale := CfgFloat('Radar', 'RingTagScale', 0.5, 0.1, 3);
+  OvlArrowChar := MarkChar(CfgStr('Radar', 'RingDotChar', '.'), '.');
+  OvlArrowNear := CfgColor('Radar', 'RingColorNear', $FF2020);
+  OvlArrowMid := CfgColor('Radar', 'RingColorMid', $FFFF20);
+  OvlArrowFar := CfgColor('Radar', 'RingColorFar', $20FF20);
+  OvlArrowLayer := CfgInt('Radar', 'RingLayerFirst', 210, 0, 224);
+  OvlShowTeam := CfgBool('Radar', 'ShowTeam', True);
 
   { ---- the hit flash ---- }
   HfEnabled := CfgBool('HitFlash', 'Enabled', False);
@@ -2102,12 +2193,14 @@ begin
     TrBudget := TrDots + 1;
   TrLayer := CfgInt('Trajectory', 'LayerFirst', 100, 0, 255 - TrDots);
   TrSpacing := CfgFloat('Trajectory', 'Spacing', 16, 4, 200);
-  TrRange := CfgFloat('Trajectory', 'Range', 900, 50, 5000);
+  TrRange := CfgFloat('Trajectory', 'Range', 2500, 50, 5000);
   TrScale := CfgFloat('Trajectory', 'Scale', 0.08, 0.005, 0.5);
   TrCursorScale := CfgFloat('Trajectory', 'CursorScale', 0.1, 0.005, 0.5);
   TrColor := CfgColor('Trajectory', 'Color', $FF3030);
   TrHitColor := CfgColor('Trajectory', 'HitColor', $33CC00);
   TrCursorColor := CfgColor('Trajectory', 'CursorColor', $DCB201);
+  TrView := CfgBool('Trajectory', 'ViewOnly', True);
+  TrMargin := CfgFloat('Trajectory', 'ViewMargin', 25, 0, 1000);
 
   AbEnabled := CfgBool('Aimbot', 'Enabled', True);
   if AbEnabled then
@@ -2132,11 +2225,17 @@ begin
     CfgWarn('Aimbot', 'Target', S, 'cursor or nearest; cursor used');
   AbAngle := CfgFloat('Aimbot', 'MaxAngle', 70, 1, 180);
   AbRange := CfgFloat('Aimbot', 'Range', 900, 50, 5000);
-  AbSpread := CfgFloat('Aimbot', 'Spread', 1, 0, 5);
+  AbSpreadPct := CfgInt('Aimbot', 'Spread', 0, 0, 100);
   AbInfinite := CfgBool('Aimbot', 'InfiniteAmmo', False);
   AbSound := CfgBool('Aimbot', 'Sound', True);
   AbSoundRange := CfgFloat('Aimbot', 'SoundRange', 900, 0, 10000);
 
+  MgOn := CfgBool('MapGeometry', 'Enabled', True);
+  MgFolder := Trim(CfgStr('MapGeometry', 'MapFolder', 'maps/'));
+  if MgFolder <> '' then
+    if (Copy(MgFolder, Length(MgFolder), 1) <> '/') and (Copy(MgFolder, Length(MgFolder), 1) <> '\') then
+      MgFolder := MgFolder + '/';
+  MgRays := CfgInt('MapGeometry', 'VisionRaysPerTick', 120, 1, 2000);
   WpFile := Trim(CfgStr('Weapons', 'File', 'auto'));
   WpRealFile := Trim(CfgStr('Weapons', 'RealisticFile', 'auto'));
   S := LowerCase(Trim(CfgStr('Teleport', 'Key', 'reload')));
@@ -2159,18 +2258,18 @@ begin
         Log('settings.ini: the WorldText layers of [Radar] labels (' + IntToStr(OvlLayerFirst) + '-' +
           IntToStr(OvlLayerFirst + 31) + ') and [DamageNumbers] (' + IntToStr(DmgLayerFirst) + '-' +
           IntToStr(DmgLayerLast) + ') overlap');
-    if (OvlLayerFirst + 31 >= OvlArrowLayer) and (OvlLayerFirst <= OvlArrowLayer + OvlArrowsMax * ARROW_DOTS_MAX - 1) then
-      Log('settings.ini: the WorldText layers of [Radar] labels and arrows overlap');
+    if (OvlLayerFirst + 31 >= OvlArrowLayer) and (OvlLayerFirst <= OvlArrowLayer + 31) then
+      Log('settings.ini: the WorldText layers of [Radar] labels and ring overlap');
     if DmgEnabled then
-      if (OvlArrowLayer + OvlArrowsMax * ARROW_DOTS_MAX - 1 >= DmgLayerFirst) and (OvlArrowLayer <= DmgLayerLast) then
-        Log('settings.ini: the WorldText layers of [Radar] arrows and [DamageNumbers] overlap');
+      if (OvlArrowLayer + 31 >= DmgLayerFirst) and (OvlArrowLayer <= DmgLayerLast) then
+        Log('settings.ini: the WorldText layers of [Radar] ring and [DamageNumbers] overlap');
     if (OvlListLayer = HudLayer) or ((OvlListLayer >= OvlCircleLayer) and (OvlListLayer < OvlCircleLayer + CIRCLE_LAYERS)) then
       Log('settings.ini: [Radar] ListLayer is used by the health display or the circle radar too');
     if (HudLayer >= OvlCircleLayer) and (HudLayer < OvlCircleLayer + CIRCLE_LAYERS) then
       Log('settings.ini: [HealthHud] Layer is one of the circle radar layers ([Radar] CircleLayerFirst)');
     if TrEnabled then
       if ((TrLayer + TrDots >= OvlLayerFirst) and (TrLayer <= OvlLayerFirst + 31)) or
-        ((TrLayer + TrDots >= OvlArrowLayer) and (TrLayer <= OvlArrowLayer + OvlArrowsMax * ARROW_DOTS_MAX - 1)) then
+        ((TrLayer + TrDots >= OvlArrowLayer) and (TrLayer <= OvlArrowLayer + 31)) then
         Log('settings.ini: the WorldText layers of [Trajectory] and [Radar] overlap');
   end;
   if TrEnabled and DmgEnabled then
@@ -2440,6 +2539,39 @@ begin
       McText[i] := S;
   end;
 
+  SrEnabled := CfgBool('Spree', 'Enabled', False);
+  SrColor := CfgColor('Spree', 'Color', $FF8800);
+  SrCount := 0;
+  for i := 1 to 10 do
+  begin
+    S := '';
+    if i = 1 then
+      S := '5|{player} is on a killing spree! ({count} kills)'
+    else if i = 2 then
+      S := '10|{player} is on a rampage! ({count} kills)'
+    else if i = 3 then
+      S := '15|{player} is dominating! ({count} kills)'
+    else if i = 4 then
+      S := '20|{player} is unstoppable! ({count} kills)'
+    else if i = 5 then
+      S := '25|{player} is godlike! ({count} kills)'
+    else if i = 6 then
+      S := '30|{player} is wicked sick! ({count} kills)';
+    S := CfgStr('Spree', 'Step' + IntToStr(i), S);
+    k := Pos('|', S);
+    if k > 1 then
+    begin
+      n := StrToIntDef(Trim(Copy(S, 1, k - 1)), 0);
+      if n >= 2 then
+      begin
+        SrCount := SrCount + 1;
+        SrKills[SrCount] := n;
+        SrText[SrCount] := Trim(Copy(S, k + 1, Length(S)));
+      end;
+    end;
+  end;
+  SrEndMin := CfgInt('Spree', 'EndMin', 5, 2, 1000);
+  SrEndText := CfgStr('Spree', 'EndText', '{killer} ended the killing spree of {victim} ({count} kills)');
   FbEnabled := CfgBool('FirstBlood', 'Enabled', False);
   FbPoints := CfgInt('FirstBlood', 'Points', 10, -1000, 1000);
   FbText := CfgStr('FirstBlood', 'Text', 'FIRST BLOOD: {killer} killed {victim}');
@@ -2583,6 +2715,13 @@ begin
   AddWords(CfgStr('Admin', 'DisarmCommands', 'disarm'), C_DISARM, True);
   AddWords(CfgStr('Admin', 'GiveCommands', 'give'), C_GIVE, True);
   AddWords(CfgStr('Admin', 'BonusCommands', 'bonus'), C_BONUS, True);
+  AdGiveFlamer := CfgBool('Admin', 'GiveFlamer', False);
+  AddWords(CfgStr('Admin', 'StatgunCommands', 'statgun|sg'), C_STATGUN, True);
+  AddWords(CfgStr('Admin', 'StatgunRemoveCommands', 'removestatgun|delstatgun'), C_STATGUN_DEL, True);
+  AddWords(CfgStr('Admin', 'InfAmmoCommands', 'infammo|infiniteammo'), C_INFAMMO, True);
+  AddWords(CfgStr('Admin', 'DamageCommands', 'dmgfix|dmgmod'), C_DMGFIX, True);
+  AddWords(CfgStr('Admin', 'DamageTakenCommands', 'dmgtaken'), C_DMGTAKEN, True);
+  AddWords(CfgStr('Admin', 'VestCommands', 'vest'), C_VEST, True);
   AddWords(CfgStr('Admin', 'RandomizeCommands', 'randomize'), C_RANDOMIZE, True);
   AddWords(CfgStr('Admin', 'ReloadCommands', 'reloadsettings|be_reload'), C_RELOAD, True);
   AddWords(CfgStr('Admin', 'StatusCommands', 'be_status'), C_STATUS, True);
@@ -2634,6 +2773,8 @@ begin
 end;
 
 procedure PrefsClear(ID: Integer);
+var
+  m: Integer;
 begin
   HudPOn[ID] := PREF_DEFAULT;
   DmgPOn[ID] := PREF_DEFAULT;
@@ -2643,17 +2784,22 @@ begin
   HudPScale[ID] := 0;
   RdPOn[ID] := PREF_DEFAULT;
   RdPMode[ID] := 0;
-  RdPTicks[ID] := 0;
-  RdPX[ID] := -1;
-  RdPY[ID] := -1;
-  RdPSize[ID] := 0;
   RdPZoom[ID] := 0;
   RdPShow[ID] := 0;
+  RdPTeam[ID] := PREF_DEFAULT;
+  for m := 0 to 3 do
+  begin
+    RdMX[ID][m] := -1;
+    RdMY[ID][m] := -1;
+    RdMSize[ID][m] := 0;
+    RdMTicks[ID][m] := 0;
+  end;
 end;
 
 procedure PrefsSave(ID: Integer);
 var
   AllDefault: Boolean;
+  m: Integer;
 begin
   if not HudSave then
     Exit;
@@ -2663,9 +2809,10 @@ begin
     Exit;
   AllDefault := (HudPOn[ID] = PREF_DEFAULT) and (DmgPOn[ID] = PREF_DEFAULT) and (HudPX[ID] < 0) and
     (HudPY[ID] < 0) and (HudPStyle[ID] = 0) and (HudPScale[ID] <= 0) and (RdPOn[ID] = PREF_DEFAULT) and
-    (RdPMode[ID] = 0) and (RdPTicks[ID] = 0) and (RdPX[ID] < 0) and (RdPY[ID] < 0) and (RdPSize[ID] <= 0) and
-    (RdPZoom[ID] <= 0) and (RdPShow[ID] = 0);
-  { the values in the order of PrefsLoad; nothing at all removes the player from the store }
+    (RdPMode[ID] = 0) and (RdPZoom[ID] <= 0) and (RdPShow[ID] = 0) and (RdPTeam[ID] = PREF_DEFAULT);
+  for m := 0 to 3 do
+    if (RdMX[ID][m] >= 0) or (RdMY[ID][m] >= 0) or (RdMSize[ID][m] > 0) or (RdMTicks[ID][m] > 0) then
+      AllDefault := False;
   BE_Pref_Begin(PChar(PrefKey[ID]));
   if not AllDefault then
   begin
@@ -2677,25 +2824,32 @@ begin
     BE_Pref_Add(DmgPOn[ID]);
     BE_Pref_Add(RdPOn[ID]);
     BE_Pref_Add(RdPMode[ID]);
-    BE_Pref_Add(RdPTicks[ID]);
-    BE_Pref_Add(RdPX[ID]);
-    BE_Pref_Add(RdPY[ID]);
-    BE_Pref_Add(Round(RdPSize[ID] * 1000));
+    BE_Pref_Add(0);
+    BE_Pref_Add(RdMX[ID][OVL_LIST]);
+    BE_Pref_Add(RdMY[ID][OVL_LIST]);
+    BE_Pref_Add(Round(RdMSize[ID][OVL_LIST] * 1000));
     BE_Pref_Add(0);
     BE_Pref_Add(Round(RdPZoom[ID] * 1000));
     BE_Pref_Add(RdPShow[ID]);
+    BE_Pref_Add(RdMX[ID][OVL_CIRCLE]);
+    BE_Pref_Add(RdMY[ID][OVL_CIRCLE]);
+    BE_Pref_Add(Round(RdMSize[ID][OVL_CIRCLE] * 1000));
+    BE_Pref_Add(RdPTeam[ID]);
+    for m := 0 to 3 do
+      BE_Pref_Add(RdMTicks[ID][m]);
   end;
   BE_Pref_Commit();
 end;
 
 { The values of a player in the store (data/players.bdb): hud, x, y, scale*10000, style, dmg, radar,
-  radar mode+1, radar ticks, radar x, radar y, radar size*1000, 0 (was the hit markers), radar
-  zoom*1000, radar show+1; 0 or -1 = the server default, older players have fewer. }
+  radar mode+1, the radar ticks of older releases, list x, list y, list size*1000, 0 (was the hit
+  markers), radar zoom*1000, radar show+1, circle x, circle y, circle size*1000, team mates shown,
+  the ticks of list, labels, circle and ring; 0 or -1 = the server default, older players have fewer. }
 procedure PrefsLoad(ID: Integer);
 var
-  n, Cnt: Integer;
+  n, m, Cnt: Integer;
   S, Key: string;
-  V: array[0..14] of Integer;
+  V: array[0..22] of Integer;
   Copied: Boolean;
 begin
   PrefsClear(ID);
@@ -2722,13 +2876,23 @@ begin
     end;
   if Cnt = 0 then
     Exit;
-  for n := 0 to 14 do
+  for n := 0 to 22 do
     V[n] := 0;
   V[9] := -1;
   V[10] := -1;
-  for n := 0 to 14 do
+  V[15] := -1;
+  V[16] := -1;
+  for n := 0 to 22 do
     if n < Cnt then
       V[n] := BE_Pref_Get(PChar(Key), n);
+  if Cnt <= 15 then
+  begin
+    V[15] := V[9];
+    V[16] := V[10];
+    V[17] := V[11];
+    for m := 0 to 3 do
+      V[19 + m] := V[8];
+  end;
   if (V[0] >= 0) and (V[0] <= 2) then
     HudPOn[ID] := V[0];
   HudPX[ID] := V[1];
@@ -2743,16 +2907,23 @@ begin
     RdPOn[ID] := V[6];
   if (V[7] >= 1) and (V[7] <= 4) then
     RdPMode[ID] := V[7];
-  if (V[8] >= 1) and (V[8] <= 600) then
-    RdPTicks[ID] := V[8];
-  RdPX[ID] := V[9];
-  RdPY[ID] := V[10];
+  RdMX[ID][OVL_LIST] := V[9];
+  RdMY[ID][OVL_LIST] := V[10];
   if V[11] > 0 then
-    RdPSize[ID] := V[11] * 0.001;
+    RdMSize[ID][OVL_LIST] := V[11] * 0.001;
+  RdMX[ID][OVL_CIRCLE] := V[15];
+  RdMY[ID][OVL_CIRCLE] := V[16];
+  if V[17] > 0 then
+    RdMSize[ID][OVL_CIRCLE] := V[17] * 0.001;
   if (V[13] >= 100) and (V[13] <= 4000) then
     RdPZoom[ID] := V[13] * 0.001;
   if (V[14] >= 1) and (V[14] <= 3) then
     RdPShow[ID] := V[14];
+  if (V[18] >= 0) and (V[18] <= 2) then
+    RdPTeam[ID] := V[18];
+  for m := 0 to 3 do
+    if (V[19 + m] >= 1) and (V[19 + m] <= 600) then
+      RdMTicks[ID][m] := V[19 + m];
   if Copied then
     PrefsSave(ID);
 end;
@@ -3143,18 +3314,11 @@ end;
   the highest one in use (plus a margin for new ones) are empty and not looked at. }
 procedure SuppressionScan(Tick: Integer);
 var
-  b, k, n, o, Top: Integer;
+  b, k, n, o, Top, M: Integer;
   Bul: TActiveMapBullet;
   List: array[1..32] of Integer;
-  PX, PY: array[1..32] of Single;
-  PTeam: array[1..32] of Integer;
-  bx, by, dx, dy, x0, x1, y0, y1, R, R2, L2, t, cx, cy: Single;
-  Style: Integer;
-  Teams, FF, Enemy: Boolean;
   P: TActivePlayer;
 begin
-  { Hurt is set only for living players and cleared at a death or a leave; the teams come from the
-    team events: only the positions are read }
   n := 0;
   for k := 1 to TopSlot do
     if Hurt[k] then
@@ -3162,15 +3326,15 @@ begin
       P := PL[k];
       n := n + 1;
       List[n] := k;
-      PX[n] := P.X;
-      PY[n] := P.Y - 10;
-      PTeam[n] := TeamOf[k];
+      SupI[(n - 1) * 2] := k;
+      SupI[(n - 1) * 2 + 1] := TeamOf[k];
+      SupF[(n - 1) * 2] := P.X;
+      SupF[(n - 1) * 2 + 1] := P.Y - 10;
     end;
   if n = 0 then
     Exit;
+  BE_SupPlayers(n, SupI, SupF);
   StatScans := StatScans + 1;
-  Teams := TeamGame();
-  FF := Game.FriendlyFire;
   Top := 0;
   if ScanTop > MAX_BULLET_ID then
     ScanTop := MAX_BULLET_ID;
@@ -3184,64 +3348,11 @@ begin
       o := Bul.Owner;
       if (o >= 1) and (o <= 32) then
       begin
-        Style := Bul.Style;
-        R := SupRadius;
-        if (Style = 2) or (Style = 4) or (Style = 8) or (Style = 9) or (Style = 10) or (Style = 12) then
-          R := SupRadiusBig;
-        R2 := R * R;
-        bx := Bul.X;
-        by := Bul.Y;
-        dx := Bul.VelX * SupScanTicks;
-        dy := Bul.VelY * SupScanTicks;
-        if dx >= 0 then
-        begin
-          x0 := bx - R;
-          x1 := bx + dx + R;
-        end
-        else
-        begin
-          x0 := bx + dx - R;
-          x1 := bx + R;
-        end;
-        if dy >= 0 then
-        begin
-          y0 := by - R;
-          y1 := by + dy + R;
-        end
-        else
-        begin
-          y0 := by + dy - R;
-          y1 := by + R;
-        end;
-        L2 := dx * dx + dy * dy;
-        for k := 1 to n do
-          if List[k] <> o then
-            if PX[k] >= x0 then
-              if PX[k] <= x1 then
-                if PY[k] >= y0 then
-                  if PY[k] <= y1 then
-                  begin
-                    Enemy := True;
-                    if Teams then
-                      if PTeam[k] = TeamOf[o] then
-                        Enemy := FF and SupTeamBullets;
-                    if Enemy then
-                    begin
-                      t := 0;
-                      if L2 > 0.0001 then
-                      begin
-                        t := ((PX[k] - bx) * dx + (PY[k] - by) * dy) / L2;
-                        if t < 0 then
-                          t := 0;
-                        if t > 1 then
-                          t := 1;
-                      end;
-                      cx := bx + t * dx - PX[k];
-                      cy := by + t * dy - PY[k];
-                      if cx * cx + cy * cy <= R2 then
-                        LastSupp[List[k]] := Tick;
-                    end;
-                  end;
+        M := BE_SupBullet(o, Bul.Style, Bul.X, Bul.Y, Bul.VelX, Bul.VelY);
+        if M <> 0 then
+          for k := 1 to n do
+            if (M and SlotBit[List[k]]) <> 0 then
+              LastSupp[List[k]] := Tick;
       end;
     end;
   end;
@@ -3276,6 +3387,7 @@ begin
       k := OB[i].Style;
       if (k >= 0) and (k <= 31) then
         if KitObj[k] then
+          if Game.TickCount >= ObjKeep[i] then
         begin
           OB[i].Kill;
           StatKits := StatKits + 1;
@@ -3414,6 +3526,25 @@ begin
     Result := Realistic;
 end;
 
+function Ray(X1, Y1, X2, Y2: Single; Bullet: Boolean): Boolean;
+var
+  n: Integer;
+begin
+  if MapOk then
+  begin
+    if Bullet then
+      n := BE_MapRay(X1, Y1, X2, Y2, MR_BULLET, 0)
+    else
+      n := BE_MapRay(X1, Y1, X2, Y2, 0, 0);
+    if n >= 0 then
+    begin
+      Result := n = 1;
+      Exit;
+    end;
+  end;
+  Result := Map.RayCast(X1, Y1, X2, Y2, False, False, Bullet, False, 0);
+end;
+
 { Could Viewer see Target now? The fog of war of realistic mode: team mates always, everybody for a
   dead player, the others only in front of the aim, up to LOS_RANGE away and with no wall between
   the upper bodies. A damage number over a player the shooter cannot see would show where he is. }
@@ -3444,7 +3575,7 @@ begin
     Exit;
   if DX * DX + DY * DY > LOS_RANGE * LOS_RANGE then
     Exit;
-  Result := not Map.RayCast(VX, VY, TX, TY, False, False, False, False, 0);
+  Result := not Ray(VX, VY, TX, TY, False);
 end;
 
 procedure DmgPlace(S, V: Integer; Widest: string; var X, Y: Single);
@@ -3719,8 +3850,8 @@ begin
     Result := OvlArrowTicks
   else
     Result := OvlUpdateTicks;
-  if RdPTicks[ID] > 0 then
-    Result := RdPTicks[ID];
+  if RdMTicks[ID][M] > 0 then
+    Result := RdMTicks[ID][M];
   if not OvlAllowed[ID] then
     if Result < OvlPublicMinTicks then
       Result := OvlPublicMinTicks;
@@ -3735,12 +3866,15 @@ end;
 
 { the size factor of the list and the circle (1 = the settings) }
 function RadarSize(ID: Integer): Single;
+var
+  M: Integer;
 begin
   if RadarEditing(ID) then
     Result := EdScale[ID]
   else
   begin
-    Result := RdPSize[ID];
+    M := RadarMode(ID);
+    Result := RdMSize[ID][M];
     if Result <= 0 then
       Result := 1;
   end;
@@ -3787,10 +3921,13 @@ begin
     Exit;
   end;
   RadarDefPos(Mode, X, Y);
-  if RdPX[ID] >= 0 then
-    X := RdPX[ID];
-  if RdPY[ID] >= 0 then
-    Y := RdPY[ID];
+  if (Mode >= 0) and (Mode <= 3) then
+  begin
+    if RdMX[ID][Mode] >= 0 then
+      X := RdMX[ID][Mode];
+    if RdMY[ID][Mode] >= 0 then
+      Y := RdMY[ID][Mode];
+  end;
 end;
 
 { on or off: the player's own choice, else the default of his kind of user }
@@ -3804,6 +3941,15 @@ begin
     OvlOn[ID] := OvlDefaultOn
   else
     OvlOn[ID] := OvlPublicOn;
+end;
+
+function RadarTeamOf(ID: Integer): Boolean;
+begin
+  Result := OvlShowTeam;
+  if RdPTeam[ID] = PREF_ON then
+    Result := True
+  else if RdPTeam[ID] = PREF_OFF then
+    Result := False;
 end;
 
 { which players the radar shows: all, those seen by the user or a team mate (seenall: dead team
@@ -3958,10 +4104,9 @@ begin
       Mk := RdMark[A];
   end;
   BE_RadarUser(A, IsOn, M, RadarShowOf(A), X, Y, RadarSize(A), RadarZoom(A), Mk, Ed);
+  BE_RadarOpt(A, RO_FRIENDS, BoolInt(RadarTeamOf(A)));
   RdEvery[A] := RadarTicks(A);
   RdNeed[A] := 4;
-  if M = OVL_ARROWS then
-    RdNeed[A] := OvlArrowDots + 2;
 end;
 
 procedure OverlayHide(ID: Integer);
@@ -4085,6 +4230,15 @@ var
 begin
   if (Tick - SnapTick >= 3) or (SnapLevel < SNAP_AIM) then
     WorldSnap(Tick, SNAP_AIM, False);
+  if MapOk then
+  begin
+    n := BE_VisRun(Tick);
+    if n >= 0 then
+    begin
+      StatRays := StatRays + n;
+      Exit;
+    end;
+  end;
   n := 0;
   while BE_VisNext(Tick, S, B, X1, Y1, X2, Y2) = 1 do
   begin
@@ -4153,6 +4307,25 @@ begin
     end;
 end;
 
+function BulletsFree(Want: Integer): Integer;
+var
+  b: Integer;
+begin
+  Result := 0;
+  for b := MAX_BULLET_ID downto 1 do
+    if not BL[b].Active then
+    begin
+      Result := Result + 1;
+      if Result >= Want then
+        Exit;
+    end;
+end;
+
+function BulletRoom(Need: Integer): Boolean;
+begin
+  Result := BulletsFree(Need + BULLET_MARGIN) >= Need + BULLET_MARGIN;
+end;
+
 procedure FxAdd(T, Kind: Integer);
 var
   n, k, Tick, Style, Delay: Integer;
@@ -4183,23 +4356,29 @@ procedure FxStart(T, Kind: Integer);
 begin
   AdminHit[T] := Game.TickCount;
   if (Kind = FX_PLAIN) or (not BeOk) then
-    Map.CreateBullet(PL[T].X, PL[T].Y, 0, 0, 1000 * FxPower, 4, PL[T])
+  begin
+    if BulletRoom(1) then
+      Map.CreateBullet(PL[T].X, PL[T].Y, 0, 0, 1000 * FxPower, 4, PL[T]);
+  end
   else
     FxAdd(T, Kind);
 end;
 
 procedure FxTick(Tick: Integer);
 var
-  k, n, Fired, T, LastT: Integer;
+  k, n, Fired, T, LastT, Allowed: Integer;
   X, Y: Single;
 begin
+  Allowed := BulletsFree(FX_PER_TICK + BULLET_MARGIN) - BULLET_MARGIN;
+  if Allowed <= 0 then
+    Exit;
   n := 0;
   Fired := 0;
   LastT := 0;
   X := 0;
   Y := 0;
   for k := 0 to FxQCount - 1 do
-    if (FxQTick[k] <= Tick) and (Fired < FX_PER_TICK) then
+    if (FxQTick[k] <= Tick) and (Fired < Allowed) then
     begin
       T := FxQTarget[k];
       if ActiveSlot[T] then
@@ -4252,7 +4431,7 @@ end;
 
 procedure TrTick(Tick: Integer);
 var
-  i, T, W, n, k, Vis, Hit, m, Cur, AX, AY: Integer;
+  i, T, W, n, k, Vis, Hit, m, Cur, AX, AY, Fl: Integer;
   P: TActivePlayer;
   PX, PY, QX, QY: Single;
 begin
@@ -4268,11 +4447,10 @@ begin
           Continue;
         end;
         P := PL[T];
-        Vis := 0;
-        Hit := -1;
         Cur := 0;
         AX := 0;
         AY := 0;
+        W := -1;
         if P.Alive then
         begin
           AX := P.MouseAimX;
@@ -4280,9 +4458,31 @@ begin
           if T <> i then
             Cur := 1;
           W := P.Primary.WType;
-          if (W >= 0) and (W <= 16) and (W <> 12) then
+          if (W < 0) or (W > 16) or (W = 12) then
+            W := -1;
+        end;
+        m := -1;
+        if MapOk then
+          if W >= 0 then
+          begin
+            Fl := 0;
+            if P.IsProne then
+              Fl := SF_PRONE
+            else if P.KeyCrouch then
+              Fl := SF_CROUCH;
+            m := BE_TrajStep(i, Tick, TrBudget, W, Fl, TeamOf[T], P.X, P.Y, P.VelX, P.VelY, AX, AY, Cur);
+          end
+          else
+            m := BE_TrajStep(i, Tick, TrBudget, -1, 0, 0, 0, 0, 0, 0, AX, AY, Cur);
+        if m < 0 then
+        begin
+          Vis := 0;
+          Hit := -1;
+          if W >= 0 then
           begin
             n := BE_Path(W, P.X, P.Y - MUZZLE_HEIGHT, P.VelX, P.VelY, AX, AY, 600, TrSpacing, TrRange);
+            if TrView then
+              n := BE_PathClip(P.X + (AX - P.X) * 0.5, P.Y + (AY - P.Y) * 0.5, 560, 380);
             if n > 0 then
               if BE_PathPoint(0, PX, PY) = 1 then
               begin
@@ -4304,8 +4504,8 @@ begin
                 end;
               end;
           end;
+          m := BE_TrajPass(i, Tick, TrBudget, Vis, Hit, AX, AY, Cur);
         end;
-        m := BE_TrajPass(i, Tick, TrBudget, Vis, Hit, AX, AY, Cur);
         OpsSend(i, m);
         StatTraj := StatTraj + m;
       end;
@@ -4347,9 +4547,10 @@ end;
 
 procedure AimbotTick(Tick: Integer);
 var
-  i, W, G, c, n, k, T, Style, Ticks: Integer;
+  i, W, G, c, n, k, T, Style, Ticks, A, Flags, B: Integer;
   P, Q: TActivePlayer;
   SX, SY, SVX, SVY, TX, TY, TG, DX, DY, HitM, X, Y, VX, VY: Single;
+  Inf: Boolean;
 begin
   for i := 1 to TopSlot do
     if AbOn[i] then
@@ -4368,7 +4569,7 @@ begin
         if AbHeld[i] then
         begin
           AbHeld[i] := False;
-          BE_GunTick(i, Tick, AbW[i], 0, 0);
+          BE_GunTick(i, Tick, AbW[i], 0, 1);
         end;
         Continue;
       end;
@@ -4377,9 +4578,17 @@ begin
         Continue;
       AbW[i] := W;
       AbHeld[i] := True;
-      G := BE_GunTick(i, Tick, W, 1, BoolInt(AbInfinite));
+      G := BE_GunTick(i, Tick, W, 1, 1);
       if G <> 1 then
         Continue;
+      Inf := AbInfinite or InfOn[i];
+      A := 1;
+      if not Inf then
+      begin
+        A := P.Primary.Ammo;
+        if A <= 0 then
+          Continue;
+      end;
       if not P.IsAdmin then
       begin
         AbOn[i] := False;
@@ -4392,19 +4601,25 @@ begin
       SY := P.Y - MUZZLE_HEIGHT;
       SVX := P.VelX;
       SVY := P.VelY;
-      c := BE_GunTargets(i, AbMode[i], AbRange, AbAngle);
-      T := 0;
-      k := 0;
-      while (k < c) and (k < 4) do
+      T := -1;
+      if MapOk then
+        T := BE_GunPick(i, AbMode[i], AbRange, AbAngle, SX, SY, BODY_HEIGHT, 4);
+      if T < 0 then
       begin
-        n := BE_GunTarget(k);
-        if (n >= 1) and (n <= 32) then
-          if not Map.RayCast(SX, SY, PL[n].X, PL[n].Y - BODY_HEIGHT, False, False, True, False, 0) then
-          begin
-            T := n;
-            Break;
-          end;
-        k := k + 1;
+        c := BE_GunTargets(i, AbMode[i], AbRange, AbAngle);
+        T := 0;
+        k := 0;
+        while (k < c) and (k < 4) do
+        begin
+          n := BE_GunTarget(k);
+          if (n >= 1) and (n <= 32) then
+            if not Map.RayCast(SX, SY, PL[n].X, PL[n].Y - BODY_HEIGHT, False, False, True, False, 0) then
+            begin
+              T := n;
+              Break;
+            end;
+          k := k + 1;
+        end;
       end;
       if T = 0 then
         Continue;
@@ -4414,13 +4629,38 @@ begin
       TG := 0;
       if not Q.OnGround then
         TG := Game.Gravity;
+      Flags := 0;
+      if P.IsProne then
+        Flags := SF_PRONE
+      else if P.KeyCrouch then
+        Flags := SF_CROUCH;
+      BE_Muzzle(SX, P.Y, TX, TY, Flags, SX, SY);
       BE_Solve(W, SX, SY, SVX, SVY, TX, TY, Q.VelX, Q.VelY, TG, DX, DY, Ticks);
-      n := BE_Shot(W, SX, SY, SVX, SVY, DX, DY, AbSpread, Tick * 17 + i * 131, Style, HitM);
+      if AbAcc[i] > 0 then
+      begin
+        if not P.OnGround then
+          Flags := Flags + SF_AIRBORNE;
+        if P.KeyJetpack or ((P.KeyLeft or P.KeyRight) and P.OnGround) then
+          Flags := Flags + SF_RUNNING;
+      end;
+      n := BE_Shot(W, SX, SY, SVX, SVY, DX, DY, AbAcc[i] / 100, Tick * 17 + i * 131, Flags, Style, HitM);
+      if not BulletRoom(n) then
+        Continue;
       for k := 0 to n - 1 do
         if BE_ShotGet(k, X, Y, VX, VY) = 1 then
-          Map.CreateBullet(X, Y, VX, VY, HitM, Style, P);
+        begin
+          B := Map.CreateBullet(X, Y, VX, VY, HitM, Style, P);
+          if (B >= 0) and (B <= 255) then
+          begin
+            AbBulletTick[B] := Tick;
+            AbBulletOwner[B] := i;
+          end;
+        end;
       BE_GunFired(i, Tick);
       StatShots := StatShots + n;
+      if not Inf then
+        if AbKey <> AK_FIRE then
+          P.Primary.Ammo := A - 1;
       if AbSound then
         AbPlay(i, W, Tick);
     end;
@@ -4441,7 +4681,7 @@ end;
 
 procedure EditorStop(ID: Integer; Save: Boolean);
 var
-  X, Y: Integer;
+  X, Y, M: Integer;
 begin
   if not EdOn[ID] then
     Exit;
@@ -4453,21 +4693,22 @@ begin
   begin
     if Save then
     begin
-      RdPX[ID] := Round(EdX[ID]);
-      RdPY[ID] := Round(EdY[ID]);
-      RdPSize[ID] := EdScale[ID];
-      RadarDefPos(RadarMode(ID), X, Y);
-      if RdPX[ID] = X then
-        if RdPY[ID] = Y then
+      M := EdMode[ID];
+      RdMX[ID][M] := Round(EdX[ID]);
+      RdMY[ID][M] := Round(EdY[ID]);
+      RdMSize[ID][M] := EdScale[ID];
+      RadarDefPos(M, X, Y);
+      if RdMX[ID][M] = X then
+        if RdMY[ID][M] = Y then
         begin
-          RdPX[ID] := -1;
-          RdPY[ID] := -1;
+          RdMX[ID][M] := -1;
+          RdMY[ID][M] := -1;
         end;
-      if Abs(RdPSize[ID] - 1) < 0.001 then
-        RdPSize[ID] := 0;
+      if Abs(RdMSize[ID][M] - 1) < 0.001 then
+        RdMSize[ID][M] := 0;
       PrefsSave(ID);
-      Say(ID, 'Radar saved: position ' + IntToStr(Round(EdX[ID])) + ' ' + IntToStr(Round(EdY[ID])) + ', size ' +
-        FloatStr(EdScale[ID], 2) + '.', ColorGood);
+      Say(ID, 'Radar (' + RadarModeName(M) + ') saved: position ' + IntToStr(Round(EdX[ID])) + ' ' +
+        IntToStr(Round(EdY[ID])) + ', size ' + FloatStr(EdScale[ID], 2) + '.', ColorGood);
     end
     else
       Say(ID, 'Radar editor closed without saving.', ColorGood);
@@ -4517,7 +4758,8 @@ begin
   end;
   if Kind = ED_RADAR then
   begin
-    RadarPos(ID, RadarMode(ID), X, Y);
+    EdMode[ID] := RadarMode(ID);
+    RadarPos(ID, EdMode[ID], X, Y);
     S := RadarSize(ID);
   end;
   EdOn[ID] := True;
@@ -4942,6 +5184,27 @@ begin
   SayAll(ExText(McText[n], PL[K].Name, '', Pts, 0, n, 0), McColor);
 end;
 
+procedure SpreeKill(K, V: Integer; Counts: Boolean);
+var
+  i, n: Integer;
+begin
+  n := SrRun[V];
+  SrRun[V] := 0;
+  if n >= SrEndMin then
+    if K <> V then
+      SayAll(ExText(SrEndText, PL[K].Name, PL[V].Name, 0, 0, n, 0), SrColor)
+    else
+      SayAll(ExText(SrEndText, PL[V].Name, PL[V].Name, 0, 0, n, 0), SrColor);
+  if not Counts then
+    Exit;
+  SrRun[K] := SrRun[K] + 1;
+  n := SrRun[K];
+  for i := 1 to SrCount do
+    if SrKills[i] = n then
+      if SrText[i] <> '' then
+        SayAll(ExText(SrText[i], PL[K].Name, PL[V].Name, 0, 0, n, 0), SrColor);
+end;
+
 { [FirstBlood]: the first kill of the map }
 procedure FirstBloodKill(K, V: Integer);
 begin
@@ -5010,7 +5273,8 @@ begin
       Say(V, PhNoText, PhColor);
     Exit;
   end;
-  Map.CreateBullet(P.X, P.Y - 30, 0, 0, PhPower, PhStyle, P);
+  if BulletRoom(1) then
+    Map.CreateBullet(P.X, P.Y - 30, 0, 0, PhPower, PhStyle, P);
   if PhText <> '' then
     Say(V, PhText, PhColor);
 end;
@@ -5948,6 +6212,47 @@ begin
   L.Free;
 end;
 
+procedure MapGeoCheck(ID: Integer);
+var
+  i, k, Tried, Same: Integer;
+  X1, Y1, X2, Y2: Single;
+  A, B: Boolean;
+begin
+  if not MapOk then
+  begin
+    Say(ID, 'map geometry: not in the library (' + MgFolder + Game.CurrentMap + '.pms), the script casts the rays',
+      ColorBad);
+    Exit;
+  end;
+  Tried := 0;
+  Same := 0;
+  for i := 1 to TopSlot do
+    if PL[i].Active then
+      if PL[i].Alive then
+        for k := 0 to 11 do
+        begin
+          X1 := PL[i].X;
+          Y1 := PL[i].Y - LOS_HEIGHT;
+          if (k < 8) and (k + 1 <> i) and (k + 1 <= TopSlot) and PL[k + 1].Active and PL[k + 1].Alive then
+          begin
+            X2 := PL[k + 1].X;
+            Y2 := PL[k + 1].Y - LOS_HEIGHT;
+          end
+          else
+          begin
+            X2 := X1 + Random(-700, 701);
+            Y2 := Y1 + Random(-400, 401);
+          end;
+          A := BE_MapRay(X1, Y1, X2, Y2, MR_BULLET, 0) = 1;
+          B := Map.RayCast(X1, Y1, X2, Y2, False, False, True, False, 0);
+          Tried := Tried + 1;
+          if A = B then
+            Same := Same + 1;
+        end;
+  Say(ID, 'map geometry: ' + IntToStr(MgPolys) + ' polygons in the library, rays that agree with the server: ' +
+    IntToStr(Same) + ' of ' + IntToStr(Tried), ColorGood);
+end;
+
 procedure CmdStatus(ID: Integer);
 var
   Secs, i, k, Kits, Spawns, Shown, Pairs, Seen: Integer;
@@ -6017,6 +6322,8 @@ begin
   Say(ID, 'aimbot on for ' + IntToStr(AbCount) + ' (bullets ' + IntToStr(StatShots) + '), trajectory for ' +
     IntToStr(TrCount) + ' (texts ' + IntToStr(StatTraj) + '), explosion bullets waiting ' + IntToStr(FxQCount),
     ColorGood);
+  if BeOk then
+    MapGeoCheck(ID);
   StatHud := 0;
   StatDmg := 0;
   StatOvl := 0;
@@ -6155,7 +6462,8 @@ end;
 procedure EngineWeapons();
 var
   F: string;
-  R, n: Integer;
+  R, n, W, St, Iv, Am, Rl, Su: Integer;
+  Sp, Dm, Spr, Inh: Single;
 begin
   R := 0;
   F := WpFile;
@@ -6188,6 +6496,44 @@ begin
   end;
   BE_Gravity(Game.Gravity);
   BE_MoveSet(MF_GRAVITY, Game.Gravity);
+  BE_SupConfig(SupRadius, SupRadiusBig, SupScanTicks, BoolInt(SupTeamBullets), BoolInt(Game.FriendlyFire),
+    BoolInt(TeamGame()));
+  for W := 0 to 16 do
+  begin
+    WpAmmo[W] := 1;
+    if BE_Weapon(W, Sp, Dm, Spr, Inh, St, Iv, Am, Rl, Su) = 1 then
+      if Am > 0 then
+        WpAmmo[W] := Am;
+  end;
+end;
+
+procedure MapGeoLoad();
+var
+  n: Integer;
+  Name: string;
+begin
+  MapOk := False;
+  MgPolys := 0;
+  if not BeOk then
+    Exit;
+  Name := Game.CurrentMap;
+  if MgOn then
+  begin
+    n := BE_MapLoad(PChar(MgFolder + Name + '.pms'));
+    MapOk := n > 0;
+    if MapOk then
+      MgPolys := n
+    else if Name <> MgName then
+      Log('map ' + Name + ': ' + MgFolder + Name + '.pms not read by basicext_dll (' + IntToStr(n) +
+        '), the script casts the rays');
+  end
+  else
+    BE_MapLoad('');
+  MgName := Name;
+  if MapOk then
+    BE_RadarInt(RI_VIS_RAYS, MgRays)
+  else
+    BE_RadarInt(RI_VIS_RAYS, OvlVisionRays);
 end;
 
 procedure EngineConfigure();
@@ -6206,8 +6552,8 @@ begin
   BE_RadarInt(RI_SHOW_FAR, BoolInt(OvlShowFar));
   BE_RadarInt(RI_LABEL_LAYER, OvlLayerFirst);
   BE_RadarInt(RI_ARROWS_MAX, OvlArrowsMax);
-  BE_RadarInt(RI_ARROW_DOTS, OvlArrowDots);
   BE_RadarInt(RI_ARROW_LAYER, OvlArrowLayer);
+  BE_RadarInt(RI_RING_COLOR_BY, OvlRingColorBy);
   BE_RadarInt(RI_ARROW_NEAR, OvlArrowNear);
   BE_RadarInt(RI_ARROW_MID, OvlArrowMid);
   BE_RadarInt(RI_ARROW_FAR, OvlArrowFar);
@@ -6229,11 +6575,9 @@ begin
   BE_RadarFloat(RF_LABEL_SCALE, OvlScale);
   BE_RadarFloat(RF_LABEL_OFFSET, OvlOffsetY);
   BE_RadarFloat(RF_SIZE_RANGE, OvlSizeRange);
-  BE_RadarFloat(RF_ARROW_INNER, OvlArrowInner);
   BE_RadarFloat(RF_ARROW_OUTER, OvlArrowOuter);
-  BE_RadarFloat(RF_ARROW_HEAD, OvlArrowHead);
-  BE_RadarFloat(RF_ARROW_WIDTH, OvlArrowWidth);
-  BE_RadarFloat(RF_ARROW_SCALE, OvlArrowScale);
+  BE_RadarFloat(RF_RING_NEAR_SCALE, OvlRingNearSc);
+  BE_RadarFloat(RF_RING_FAR_SCALE, OvlRingFarSc);
   BE_RadarFloat(RF_ARROW_MOVE, OvlArrowMove);
   BE_RadarFloat(RF_ARROW_LEAD, OvlArrowLead);
   BE_RadarFloat(RF_LABEL_MOVE, OvlLabelMove);
@@ -6276,13 +6620,40 @@ begin
   BE_TrajFloat(TJF_SCALE, TrScale);
   BE_TrajFloat(TJF_CURSOR_SCALE, TrCursorScale);
   BE_TrajFloat(TJF_MOVE, TrMove);
+  BE_TrajInt(TJ_CLIP, BoolInt(TrView));
+  BE_TrajFloat(TJF_SPACING, TrSpacing);
+  BE_TrajFloat(TJF_RANGE, TrRange);
+  BE_TrajFloat(TJF_MARGIN, TrMargin);
   EngineWeapons();
+  MapGeoLoad();
+end;
+
+procedure WpDefaults();
+begin
+  WpAmmo[0] := 14;
+  WpAmmo[1] := 7;
+  WpAmmo[2] := 30;
+  WpAmmo[3] := 40;
+  WpAmmo[4] := 25;
+  WpAmmo[5] := 7;
+  WpAmmo[6] := 4;
+  WpAmmo[7] := 1;
+  WpAmmo[8] := 10;
+  WpAmmo[9] := 50;
+  WpAmmo[10] := 100;
+  WpAmmo[11] := 1;
+  WpAmmo[12] := 200;
+  WpAmmo[13] := 1;
+  WpAmmo[14] := 200;
+  WpAmmo[15] := 1;
+  WpAmmo[16] := 1;
 end;
 
 procedure LoadAll();
 begin
   LoadSettings();
   BuildCommandList();
+  WpDefaults();
   EngineConfigure();
   if RegEnabled then
     if not HudEnabled then
@@ -6455,7 +6826,7 @@ begin
     W := 'size';
   Modes := 'list, circle';
   if OvlAllowed[ID] then
-    Modes := Modes + ', labels, arrows';
+    Modes := Modes + ', labels, ring';
   if (W = '') or (W = 'on') or (W = 'off') then
   begin
     if W = '' then
@@ -6529,10 +6900,11 @@ begin
           N := OvlPublicMinTicks;
           Say(ID, 'Not faster than every ' + IntToStr(N) + ' ticks on this server.', ColorBad);
         end;
-    RdPTicks[ID] := N;
+    RdMTicks[ID][RadarMode(ID)] := N;
     RadarDirty(ID);
     PrefsSave(ID);
-    Say(ID, 'The radar is updated every ' + IntToStr(RadarTicks(ID)) + ' ticks.', ColorGood);
+    Say(ID, 'The radar (' + RadarModeName(RadarMode(ID)) + ') is updated every ' + IntToStr(RadarTicks(ID)) +
+      ' ticks.', ColorGood);
   end
   else if W = 'zoom' then
   begin
@@ -6582,10 +6954,33 @@ begin
     PrefsSave(ID);
     Say(ID, 'The radar shows: ' + ShowName(RadarShowOf(ID)) + '.', ColorGood);
   end
+  else if (W = 'team') or (W = 'friends') or (W = 'mates') then
+  begin
+    W := LowerCase(Trim(Rest));
+    if (W = 'on') or (W = '1') then
+      RdPTeam[ID] := PREF_ON
+    else if (W = 'off') or (W = '0') then
+      RdPTeam[ID] := PREF_OFF
+    else if W = 'default' then
+      RdPTeam[ID] := PREF_DEFAULT
+    else
+    begin
+      Say(ID, 'Team mates on the radar: ' + BoolText(RadarTeamOf(ID)) + '. Use: ' + Cmd + ' team on|off|default',
+        ColorGood);
+      Exit;
+    end;
+    if (RdPTeam[ID] = PREF_ON) and OvlShowTeam then
+      RdPTeam[ID] := PREF_DEFAULT;
+    if (RdPTeam[ID] = PREF_OFF) and (not OvlShowTeam) then
+      RdPTeam[ID] := PREF_DEFAULT;
+    RadarDirty(ID);
+    PrefsSave(ID);
+    Say(ID, 'Team mates on the radar: ' + BoolText(RadarTeamOf(ID)) + '.', ColorGood);
+  end
   else if W = 'edit' then
   begin
     if (RadarMode(ID) = OVL_LABELS) or (RadarMode(ID) = OVL_ARROWS) then
-      Say(ID, 'The editor moves the list and the circle; the labels and the arrows stay by the players.', ColorBad)
+      Say(ID, 'The editor moves the list and the circle; the labels and the ring stay by the players.', ColorBad)
     else if TeamOf[ID] = TEAM_SPECTATOR then
       Say(ID, 'The editor works only while you play.', ColorBad)
     else
@@ -6608,11 +7003,17 @@ begin
         ColorBad);
       Exit;
     end;
-    RdPX[ID] := X;
-    RdPY[ID] := Y;
+    M := RadarMode(ID);
+    if (M <> OVL_LIST) and (M <> OVL_CIRCLE) then
+    begin
+      Say(ID, 'Only the list and the circle have a place on the screen.', ColorBad);
+      Exit;
+    end;
+    RdMX[ID][M] := X;
+    RdMY[ID][M] := Y;
     RadarDirty(ID);
     PrefsSave(ID);
-    Say(ID, 'Radar position ' + IntToStr(X) + ' ' + IntToStr(Y) + '.', ColorGood);
+    Say(ID, 'Radar (' + RadarModeName(M) + ') position ' + IntToStr(X) + ' ' + IntToStr(Y) + '.', ColorGood);
   end
   else if W = 'size' then
   begin
@@ -6626,24 +7027,25 @@ begin
       V := 0.3;
     if V > 4 then
       V := 4;
-    RdPSize[ID] := V;
+    M := RadarMode(ID);
+    if (M <> OVL_LIST) and (M <> OVL_CIRCLE) then
+    begin
+      Say(ID, 'Only the list and the circle have a size.', ColorBad);
+      Exit;
+    end;
+    RdMSize[ID][M] := V;
     if Abs(V - 1) < 0.001 then
-      RdPSize[ID] := 0;
+      RdMSize[ID][M] := 0;
     RadarDirty(ID);
     PrefsSave(ID);
-    Say(ID, 'Radar size ' + FloatStr(V, 2) + '.', ColorGood);
+    Say(ID, 'Radar (' + RadarModeName(M) + ') size ' + FloatStr(V, 2) + '.', ColorGood);
   end
   else if W = 'reset' then
   begin
     if RadarEditing(ID) then
       EditorStop(ID, False);
-    RdPMode[ID] := 0;
-    RdPTicks[ID] := 0;
-    RdPX[ID] := -1;
-    RdPY[ID] := -1;
-    RdPSize[ID] := 0;
-    RdPZoom[ID] := 0;
-    RdPShow[ID] := 0;
+    PrefsClear(ID);
+    RadarApplyOn(ID);
     RadarDirty(ID);
     OverlayRecount();
     PrefsSave(ID);
@@ -6657,7 +7059,9 @@ begin
       ColorGood);
     Say(ID, Cmd + ' pos <x> <y>; ' + Cmd + ' size <n>; ' + Cmd + ' zoom <n> - reach further (smaller circle marks)',
       ColorGood);
-    Say(ID, Cmd + ' show all|seenall|seen - only the players you or your team can see', ColorGood);
+    Say(ID, Cmd + ' show all|seenall|seen - only the players you or your team can see; ' + Cmd +
+      ' team on|off - team mates too', ColorGood);
+    Say(ID, 'The place, the size and the update rate are kept for each mode.', ColorGood);
   end;
 end;
 
@@ -6733,80 +7137,229 @@ end;
 
 { ---- admin commands on one player ---- }
 
-{ the player an admin command names: a slot or a name (the first word); nobody named = the admin
-  himself when SelfOk }
-function AdminTarget(ID: Integer; Args: string; SelfOk: Boolean): Integer;
+function TakeArg(var S: string): string;
 var
-  W: string;
+  p: Integer;
 begin
-  Result := -1;
-  W := FirstWord(Trim(Args));
-  if W = '' then
+  S := Trim(S);
+  Result := '';
+  if S = '' then
+    Exit;
+  if S[1] = '"' then
   begin
-    if SelfOk then
-      if ID >= 1 then
-        Result := ID;
-    if Result < 0 then
-      Say(ID, 'Name a player (id or name).', ColorBad);
+    Delete(S, 1, 1);
+    p := Pos('"', S);
+    if p = 0 then
+    begin
+      Result := S;
+      S := '';
+    end
+    else
+    begin
+      Result := Copy(S, 1, p - 1);
+      Delete(S, 1, p);
+      S := Trim(S);
+    end;
     Exit;
   end;
-  Result := FindPlayer(W);
-  if Result < 1 then
+  p := Pos(' ', S);
+  if p = 0 then
+  begin
+    Result := S;
+    S := '';
+  end
+  else
+  begin
+    Result := Copy(S, 1, p - 1);
+    S := Trim(Copy(S, p + 1, Length(S)));
+  end;
+end;
+
+function TeamWord(W: string): Integer;
+begin
+  Result := -1;
+  if (W = 'alpha') or (W = 'red') then
+    Result := 1
+  else if (W = 'bravo') or (W = 'blue') then
+    Result := 2
+  else if (W = 'charlie') or (W = 'yellow') then
+    Result := 3
+  else if (W = 'delta') or (W = 'green') then
+    Result := 4
+  else if (W = 'spec') or (W = 'specs') or (W = 'spectators') then
+    Result := TEAM_SPECTATOR;
+end;
+
+function PickTargets(ID: Integer; W: string; SelfOk, AliveOnly, Harmful: Boolean): Boolean;
+var
+  i, n, Tm, Hits: Integer;
+  L, Names: string;
+  Ok: Boolean;
+begin
+  TgtCount := 0;
+  TgtMany := False;
+  Result := False;
+  L := LowerCase(Trim(W));
+  if L = '' then
+  begin
+    if SelfOk and (ID >= 1) then
+      L := 'me'
+    else
+    begin
+      Say(ID, 'Name a player: id, name (part of it, "in quotes" with spaces), me, all, others, ' +
+        'alpha/bravo/charlie/delta/spec, bots or humans.', ColorBad);
+      Exit;
+    end;
+  end;
+  Tm := TeamWord(L);
+  if (L = 'all') or (L = '*') or (L = 'others') or (L = 'bots') or (L = 'humans') or (Tm >= 0) then
+  begin
+    TgtMany := True;
+    for i := 1 to TopSlot do
+      if ActiveSlot[i] then
+      begin
+        Ok := True;
+        if L = 'others' then
+          Ok := i <> ID
+        else if (L = 'all') or (L = '*') then
+          Ok := (i <> ID) or (not Harmful)
+        else if L = 'bots' then
+          Ok := not HumanOf[i]
+        else if L = 'humans' then
+          Ok := HumanOf[i]
+        else
+          Ok := TeamOf[i] = Tm;
+        if Ok then
+          if AliveOnly then
+            Ok := PL[i].Alive;
+        if Ok then
+        begin
+          TgtList[TgtCount] := i;
+          TgtCount := TgtCount + 1;
+        end;
+      end;
+    Result := TgtCount > 0;
+    if not Result then
+      Say(ID, 'Nobody matches "' + W + '"' + iif(AliveOnly, ' (alive)', '') + '.', ColorBad);
+    Exit;
+  end;
+  n := 0;
+  if L = 'me' then
+  begin
+    if ID < 1 then
+    begin
+      Say(ID, 'The console is not a player: name one.', ColorBad);
+      Exit;
+    end;
+    n := ID;
+  end
+  else
+  begin
+    n := StrToIntDef(L, 0);
+    if n <> 0 then
+    begin
+      if (n < 1) or (n > 32) then
+        n := 0
+      else if not ActiveSlot[n] then
+        n := 0;
+    end
+    else
+    begin
+      for i := 1 to TopSlot do
+        if n = 0 then
+          if ActiveSlot[i] then
+            if LowerCase(PL[i].Name) = L then
+              n := i;
+      if n = 0 then
+      begin
+        Hits := 0;
+        Names := '';
+        for i := 1 to TopSlot do
+          if ActiveSlot[i] then
+            if Pos(L, LowerCase(PL[i].Name)) > 0 then
+            begin
+              Hits := Hits + 1;
+              n := i;
+              if Names <> '' then
+                Names := Names + ', ';
+              Names := Names + PL[i].Name + ' (' + IntToStr(i) + ')';
+            end;
+        if Hits > 1 then
+        begin
+          Say(ID, '"' + W + '" matches ' + IntToStr(Hits) + ' players: ' + Names + '. Use the id.', ColorBad);
+          Exit;
+        end;
+      end;
+    end;
+  end;
+  if n = 0 then
+  begin
     Say(ID, 'Player not found (' + W + ')', ColorBad);
+    Exit;
+  end;
+  if AliveOnly then
+    if not PL[n].Alive then
+    begin
+      Say(ID, PL[n].Name + ' is dead.', ColorBad);
+      Exit;
+    end;
+  TgtList[0] := n;
+  TgtCount := 1;
+  Result := True;
+end;
+
+function TgtDesc(): string;
+begin
+  if TgtMany or (TgtCount <> 1) then
+    Result := IntToStr(TgtCount) + ' players'
+  else
+    Result := PL[TgtList[0]].Name;
+end;
+
+function OnOffWord(W: string; Current: Boolean): Boolean;
+begin
+  W := LowerCase(W);
+  if (W = 'on') or (W = '1') or (W = 'yes') then
+    Result := True
+  else if (W = 'off') or (W = '0') or (W = 'no') then
+    Result := False
+  else
+    Result := not Current;
 end;
 
 procedure CmdExplode(ID: Integer; Args: string; Kind: Integer);
 var
-  T, i, K, n: Integer;
+  k, K2: Integer;
   W, Rest: string;
 begin
-  W := FirstWord(Trim(Args));
-  Rest := Trim(AfterFirstWord(Trim(Args)));
-  K := Kind;
+  Rest := Args;
+  W := TakeArg(Rest);
+  K2 := Kind;
   if Rest <> '' then
   begin
-    K := FxKindOf(Rest);
-    if K < 0 then
+    K2 := FxKindOf(Rest);
+    if K2 < 0 then
     begin
       Say(ID, 'Unknown explosion "' + Rest + '". Kinds: ' + FX_KINDS + '.', ColorBad);
       Exit;
     end;
   end;
-  if K <> FX_PLAIN then
+  if K2 <> FX_PLAIN then
     if not BeOk then
     begin
       Say(ID, 'This explosion needs basicext_dll, which is not running: a plain one is used.', ColorBad);
-      K := FX_PLAIN;
+      K2 := FX_PLAIN;
     end;
   if W = '' then
   begin
-    Say(ID, 'Use: /explode <player|all> [' + ReplaceAll(FX_KINDS, ', ', '|') + ']', ColorBad);
+    Say(ID, 'Use: /explode <player|all|others|team> [' + ReplaceAll(FX_KINDS, ', ', '|') + ']', ColorBad);
     Exit;
   end;
-  if LowerCase(W) = 'all' then
-  begin
-    n := 0;
-    for i := 1 to TopSlot do
-      if i <> ID then
-        if PL[i].Active then
-          if PL[i].Alive then
-          begin
-            FxStart(i, K);
-            n := n + 1;
-          end;
-    Say(ID, 'Explosion (' + FxName(K) + ') on ' + IntToStr(n) + ' players.', ColorGood);
+  if not PickTargets(ID, W, False, True, True) then
     Exit;
-  end;
-  T := AdminTarget(ID, W, False);
-  if T < 1 then
-    Exit;
-  if not PL[T].Alive then
-  begin
-    Say(ID, PL[T].Name + ' is dead.', ColorBad);
-    Exit;
-  end;
-  FxStart(T, K);
-  Say(ID, PL[T].Name + ' exploded (' + FxName(K) + ').', ColorGood);
+  for k := 0 to TgtCount - 1 do
+    FxStart(TgtList[k], K2);
+  Say(ID, 'Explosion (' + FxName(K2) + '): ' + TgtDesc() + '.', ColorGood);
 end;
 
 procedure CmdTraj(ID: Integer; Args: string; Console: Boolean);
@@ -6842,12 +7395,14 @@ begin
   end
   else
   begin
-    T := FindPlayer(FirstWord(Trim(Args)));
-    if T < 1 then
+    if not PickTargets(ID, TakeArg(Args), False, False, False) then
+      Exit;
+    if TgtCount <> 1 then
     begin
-      Say(ID, 'Player not found (' + FirstWord(Trim(Args)) + ')', ColorBad);
+      Say(ID, 'Name one player.', ColorBad);
       Exit;
     end;
+    T := TgtList[0];
   end;
   if TrWatch[ID] = T then
   begin
@@ -6881,8 +7436,9 @@ end;
 
 procedure CmdAimbot(ID: Integer; Args: string; Console: Boolean);
 var
-  W, M: string;
-  NewOn: Boolean;
+  W, M, Rest, V: string;
+  N: Integer;
+  NewOn, Was: Boolean;
 begin
   if Console then
   begin
@@ -6894,8 +7450,28 @@ begin
     Say(ID, 'The aimbot needs basicext_dll, which is not running.', ColorBad);
     Exit;
   end;
-  W := LowerCase(Trim(Args));
+  Rest := Args;
+  W := LowerCase(TakeArg(Rest));
+  Was := AbOn[ID];
   NewOn := not AbOn[ID];
+  if (W = 'acc') or (W = 'accuracy') or (W = 'spread') then
+  begin
+    V := Trim(TakeArg(Rest));
+    if V <> '' then
+      if V[Length(V)] = '%' then
+        Delete(V, Length(V), 1);
+    N := StrToIntDef(V, -1);
+    if (N < 0) or (N > 100) then
+    begin
+      Say(ID, 'Spread of the aimbot: ' + IntToStr(AbAcc[ID]) + '% of the weapon''s own (0 = every shot exact). Use: ' +
+        '/aimbot acc <0-100>', ColorGood);
+      Exit;
+    end;
+    AbAcc[ID] := N;
+    Say(ID, 'Aimbot spread ' + IntToStr(N) + '% of the weapon''s own (standing, crouching, prone, running and ' +
+      'jumping count as in the game).', ColorGood);
+    Exit;
+  end;
   if W = 'on' then
     NewOn := True
   else if W = 'off' then
@@ -6912,16 +7488,16 @@ begin
   end
   else if W <> '' then
   begin
-    Say(ID, 'Use: /aimbot [on|off|cursor|nearest]', ColorBad);
+    Say(ID, 'Use: /aimbot [on|off|cursor|nearest|acc <0-100>]', ColorBad);
     Exit;
   end;
-  if NewOn and not AbOn[ID] then
+  if NewOn and not Was then
   begin
     AbCount := AbCount + 1;
     if (W <> 'nearest') and (W <> 'near') and (W <> 'cursor') and (W <> 'aim') then
       AbMode[ID] := AbTarget;
   end
-  else if AbOn[ID] and not NewOn then
+  else if Was and not NewOn then
     AbCount := AbCount - 1;
   AbOn[ID] := NewOn;
   AbHeld[ID] := False;
@@ -6934,121 +7510,292 @@ begin
   M := 'the enemy nearest to your cursor';
   if AbMode[ID] = AT_NEAREST then
     M := 'the nearest enemy';
-  Say(ID, 'Aimbot on: hold ' + AbKeyName() + ' and your weapon fires at ' + M + ' (it leads moving targets). /aimbot off',
-    ColorGood);
+  Say(ID, 'Aimbot on: hold ' + AbKeyName() + ' and your weapon fires at ' + M + ', spread ' + IntToStr(AbAcc[ID]) +
+    '% (/aimbot acc <n>). It uses your ammo; the game reloads the weapon.', ColorGood);
+  if AbKey = AK_FIRE then
+    Say(ID, 'Your own bullets do no damage while it is on: only its shots hit.', ColorGood);
 end;
 
-{ /god [player]: no damage for him until it is switched off (or he leaves) }
+function WeaponOf(S: string): Integer;
+var
+  N: Integer;
+begin
+  S := LowerCase(Trim(S));
+  Result := -1;
+  if S = '' then
+    Exit;
+  N := StrToIntDef(S, -1);
+  if (N >= 0) and (N <= 16) then
+  begin
+    Result := N;
+    Exit;
+  end;
+  if (S = 'usp') or (S = 'ussocom') or (S = 'socom') or (S = 'colt') or (S = 'pistol') then
+    Result := 0
+  else if (S = 'deagle') or (S = 'deagles') or (S = 'eagle') or (S = 'eagles') or (S = 'de') then
+    Result := 1
+  else if (S = 'mp5') or (S = 'hk') or (S = 'hkmp5') then
+    Result := 2
+  else if (S = 'ak') or (S = 'ak74') or (S = 'ak-74') or (S = 'ak47') then
+    Result := 3
+  else if (S = 'aug') or (S = 'steyr') or (S = 'steyraug') then
+    Result := 4
+  else if (S = 'spas') or (S = 'spas12') or (S = 'spas-12') or (S = 'shotgun') then
+    Result := 5
+  else if (S = 'ruger') or (S = 'ruger77') then
+    Result := 6
+  else if (S = 'm79') or (S = 'gl') then
+    Result := 7
+  else if (S = 'barrett') or (S = 'barret') or (S = 'm82') or (S = 'sniper') or (S = 'bar') then
+    Result := 8
+  else if (S = 'minimi') or (S = 'fn') or (S = 'm249') then
+    Result := 9
+  else if (S = 'minigun') or (S = 'mini') or (S = 'xm214') then
+    Result := 10
+  else if (S = 'knife') or (S = 'combatknife') then
+    Result := 11
+  else if (S = 'chainsaw') or (S = 'saw') then
+    Result := 12
+  else if (S = 'law') or (S = 'm72') or (S = 'rocket') or (S = 'rpg') then
+    Result := 13
+  else if (S = 'flamer') or (S = 'flamethrower') then
+    Result := 14
+  else if (S = 'bow') or (S = 'rambo') or (S = 'rambobow') then
+    Result := 15
+  else if (S = 'flamebow') or (S = 'firebow') or (S = 'flamedarrows') or (S = 'bow2') then
+    Result := 16;
+end;
+
+function WeaponObject(W: Integer): Integer;
+begin
+  Result := 0;
+  if (W >= 0) and (W <= 10) then
+    Result := W + 4
+  else if W = 11 then
+    Result := 24
+  else if W = 12 then
+    Result := 25
+  else if W = 13 then
+    Result := 26
+  else if W = 14 then
+    Result := 18
+  else if (W = 15) or (W = 16) then
+    Result := 15;
+end;
+
+function BonusOf(S: string): Integer;
+var
+  N: Integer;
+begin
+  S := LowerCase(Trim(S));
+  N := StrToIntDef(S, -1);
+  Result := -1;
+  if (N >= 1) and (N <= 7) then
+    Result := N
+  else if (S = 'predator') or (S = 'pred') or (S = 'invisible') then
+    Result := 1
+  else if (S = 'berserker') or (S = 'berserk') or (S = 'ber') then
+    Result := 2
+  else if (S = 'vest') or (S = 'armor') or (S = 'armour') then
+    Result := 3
+  else if (S = 'grenades') or (S = 'nades') or (S = 'nade') or (S = 'frags') then
+    Result := 4
+  else if (S = 'clusters') or (S = 'cluster') then
+    Result := 5
+  else if (S = 'flame') or (S = 'flamer') or (S = 'flamegod') or (S = 'fire') then
+    Result := 6
+  else if (S = 'medkit') or (S = 'medic') or (S = 'health') or (S = 'med') then
+    Result := 7;
+end;
+
+function BonusName(B: Integer): string;
+begin
+  case B of
+    1: Result := 'predator';
+    2: Result := 'berserker';
+    3: Result := 'vest';
+    4: Result := 'grenades';
+    5: Result := 'clusters';
+    6: Result := 'flame god';
+    7: Result := 'medkit';
+  else
+    Result := '?';
+  end;
+end;
+
+function BonusObject(B: Integer): Integer;
+begin
+  case B of
+    1: Result := 19;
+    2: Result := 21;
+    3: Result := 20;
+    4: Result := 17;
+    5: Result := 22;
+    6: Result := 18;
+    7: Result := 16;
+  else
+    Result := 0;
+  end;
+end;
+
+function ObjectsFree(Want: Integer): Integer;
+var
+  i: Integer;
+begin
+  Result := 0;
+  for i := MAX_OBJECT_ID downto 1 do
+    if not OB[i].Active then
+    begin
+      Result := Result + 1;
+      if Result >= Want then
+        Exit;
+    end;
+end;
+
+function SpawnObject(Style: Integer; X, Y: Single): Boolean;
+var
+  O: TNewMapObject;
+  A: TActiveMapObject;
+begin
+  Result := False;
+  if (Style < 1) or (Style > 27) then
+    Exit;
+  if ObjectsFree(OBJECT_MARGIN) < OBJECT_MARGIN then
+    Exit;
+  O := TNewMapObject.Create;
+  try
+    O.Style := Style;
+    O.X := X;
+    O.Y := Y;
+    A := Map.AddObject(O);
+    if A <> nil then
+    begin
+      Result := True;
+      if (A.ID >= 1) and (A.ID <= MAX_OBJECT_ID) then
+        ObjKeep[A.ID] := After(Game.TickCount, OBJ_KEEP_TICKS);
+    end;
+  finally
+    O.Free;
+  end;
+end;
+
+function NearX(k: Integer): Single;
+begin
+  Result := ((k mod 5) - 2) * 14;
+end;
+
 procedure CmdGod(ID: Integer; Args: string);
 var
-  T: Integer;
+  k, T: Integer;
+  W, Rest: string;
+  NewOn: Boolean;
 begin
-  T := AdminTarget(ID, Args, True);
-  if T < 1 then
+  Rest := Args;
+  W := TakeArg(Rest);
+  if not PickTargets(ID, W, True, False, False) then
     Exit;
-  GodOn[T] := not GodOn[T];
-  if T = ID then
-    Say(ID, 'Godmode ' + BoolText(GodOn[T]) + '.', ColorGood)
-  else
+  NewOn := True;
+  if (TgtCount = 1) and (not TgtMany) then
+    NewOn := not GodOn[TgtList[0]];
+  NewOn := OnOffWord(TakeArg(Rest), not NewOn);
+  for k := 0 to TgtCount - 1 do
   begin
-    Say(ID, 'Godmode of ' + PL[T].Name + ' ' + BoolText(GodOn[T]) + '.', ColorGood);
-    Say(T, AdminName(ID) + ' switched your godmode ' + BoolText(GodOn[T]) + '.', ColorGood);
+    T := TgtList[k];
+    GodOn[T] := NewOn;
+    if T <> ID then
+      Say(T, AdminName(ID) + ' switched your godmode ' + BoolText(NewOn) + '.', ColorGood);
   end;
-  Log('godmode of ' + PL[T].Name + ' ' + BoolText(GodOn[T]) + ' by ' + AdminName(ID));
+  Say(ID, 'Godmode ' + BoolText(NewOn) + ': ' + TgtDesc() + '.', ColorGood);
+  Log('godmode ' + BoolText(NewOn) + ' for ' + TgtDesc() + ' by ' + AdminName(ID));
 end;
 
-{ /heal <player|all>: full health }
 procedure CmdHeal(ID: Integer; Args: string);
 var
-  T, i: Integer;
+  k, T: Integer;
 begin
-  if LowerCase(Trim(Args)) = 'all' then
+  if not PickTargets(ID, TakeArg(Args), True, True, False) then
+    Exit;
+  for k := 0 to TgtCount - 1 do
   begin
-    for i := 1 to TopSlot do
-      if PL[i].Active then
-        if PL[i].Alive then
-        begin
-          PL[i].Health := MaxHealth;
-          LastHealth[i] := MaxHealth;
-          HudMark(i, False);
-        end;
-    Say(ID, 'Everybody healed.', ColorGood);
-    Exit;
+    T := TgtList[k];
+    PL[T].Health := MaxHealth;
+    LastHealth[T] := MaxHealth;
+    HudMark(T, False);
   end;
-  T := AdminTarget(ID, Args, True);
-  if T < 1 then
-    Exit;
-  if not PL[T].Alive then
-  begin
-    Say(ID, PL[T].Name + ' is dead.', ColorBad);
-    Exit;
-  end;
-  PL[T].Health := MaxHealth;
-  LastHealth[T] := MaxHealth;
-  HudMark(T, False);
-  Say(ID, PL[T].Name + ' healed.', ColorGood);
+  Say(ID, 'Healed: ' + TgtDesc() + '.', ColorGood);
 end;
 
-{ /slap <player> [damage]: a hit and a jump }
 procedure CmdSlap(ID: Integer; Args: string);
 var
-  T, N: Integer;
+  k, T, N: Integer;
+  W, Rest: string;
 begin
-  T := AdminTarget(ID, Args, False);
-  if T < 1 then
+  Rest := Args;
+  W := TakeArg(Rest);
+  if not PickTargets(ID, W, False, True, True) then
     Exit;
-  if not PL[T].Alive then
-  begin
-    Say(ID, PL[T].Name + ' is dead.', ColorBad);
-    Exit;
-  end;
-  N := StrToIntDef(AfterFirstWord(Args), AdSlapDamage);
+  N := StrToIntDef(TakeArg(Rest), AdSlapDamage);
   if N < 0 then
     N := 0;
-  AdminHit[T] := Game.TickCount;
-  if N > 0 then
-    PL[T].Damage(T, N);
-  PL[T].SetVelocity(Random(-40, 41) * 0.1, -6);
-  Say(T, AdminName(ID) + ' slapped you.', ColorBad);
-  Say(ID, PL[T].Name + ' slapped (' + IntToStr(N) + ').', ColorGood);
+  for k := 0 to TgtCount - 1 do
+  begin
+    T := TgtList[k];
+    AdminHit[T] := Game.TickCount;
+    if N > 0 then
+      PL[T].Damage(T, N);
+    PL[T].SetVelocity(Random(-40, 41) * 0.1, -6);
+    if T <> ID then
+      Say(T, AdminName(ID) + ' slapped you.', ColorBad);
+  end;
+  Say(ID, 'Slapped (' + IntToStr(N) + '): ' + TgtDesc() + '.', ColorGood);
 end;
 
-{ /freeze <player>: he stands where he is until it is switched off (or he dies or leaves) }
 procedure CmdFreeze(ID: Integer; Args: string);
 var
-  T: Integer;
+  k, T: Integer;
+  W, Rest: string;
+  NewOn: Boolean;
 begin
-  T := AdminTarget(ID, Args, False);
-  if T < 1 then
+  Rest := Args;
+  W := TakeArg(Rest);
+  if not PickTargets(ID, W, False, False, True) then
     Exit;
-  FrOn[T] := not FrOn[T];
-  if FrOn[T] then
+  NewOn := True;
+  if (TgtCount = 1) and (not TgtMany) then
+    NewOn := not FrOn[TgtList[0]];
+  NewOn := OnOffWord(TakeArg(Rest), not NewOn);
+  for k := 0 to TgtCount - 1 do
   begin
-    FrX[T] := PL[T].X;
-    FrY[T] := PL[T].Y;
-    FrCount := FrCount + 1;
-  end
-  else
-    FrCount := FrCount - 1;
+    T := TgtList[k];
+    if NewOn and not FrOn[T] then
+    begin
+      FrOn[T] := True;
+      FrX[T] := PL[T].X;
+      FrY[T] := PL[T].Y;
+      FrAt[T] := 0;
+      FrCount := FrCount + 1;
+      Say(T, 'An admin froze you.', ColorBad);
+    end
+    else if (not NewOn) and FrOn[T] then
+    begin
+      FrOn[T] := False;
+      FrCount := FrCount - 1;
+      Say(T, 'You can move again.', ColorGood);
+    end;
+  end;
   if FrCount < 0 then
     FrCount := 0;
-  Say(ID, PL[T].Name + iif(FrOn[T], ' frozen.', ' free again.'), ColorGood);
-  Say(T, iif(FrOn[T], 'An admin froze you.', 'You can move again.'), ColorBad);
+  Say(ID, iif(NewOn, 'Frozen: ', 'Free again: ') + TgtDesc() + '.', ColorGood);
 end;
 
-{ /bring <player>: he comes to the admin; /goto <player>: the admin goes to him }
 procedure CmdBring(ID: Integer; Args: string; Bring: Boolean);
 var
-  T: Integer;
+  k, T, n: Integer;
+  X, Y: Single;
 begin
-  T := AdminTarget(ID, Args, False);
-  if T < 1 then
-    Exit;
-  if T = ID then
-    Exit;
-  if not PL[T].Alive then
+  if ID < 1 then
   begin
-    Say(ID, PL[T].Name + ' is dead.', ColorBad);
+    Say(ID, 'Only for an admin in the game.', ColorBad);
     Exit;
   end;
   if not PL[ID].Alive then
@@ -7056,91 +7803,487 @@ begin
     Say(ID, 'You are dead.', ColorBad);
     Exit;
   end;
-  if Bring then
+  if not PickTargets(ID, TakeArg(Args), False, True, True) then
+    Exit;
+  if not Bring then
   begin
-    PL[T].Move(PL[ID].X, PL[ID].Y - 10);
-    PL[T].SetVelocity(0, 0);
-    if FrOn[T] then
+    if TgtCount <> 1 then
     begin
-      FrX[T] := PL[ID].X;
-      FrY[T] := PL[ID].Y - 10;
+      Say(ID, 'Go to one player.', ColorBad);
+      Exit;
     end;
-    Say(ID, PL[T].Name + ' brought to you.', ColorGood);
-  end
-  else
-  begin
+    T := TgtList[0];
     PL[ID].Move(PL[T].X, PL[T].Y - 10);
     PL[ID].SetVelocity(0, 0);
     Say(ID, 'You went to ' + PL[T].Name + '.', ColorGood);
+    Exit;
   end;
+  X := PL[ID].X;
+  Y := PL[ID].Y - 10;
+  n := 0;
+  for k := 0 to TgtCount - 1 do
+  begin
+    T := TgtList[k];
+    if T = ID then
+      Continue;
+    PL[T].Move(X + NearX(n + 1), Y);
+    PL[T].SetVelocity(0, 0);
+    if FrOn[T] then
+    begin
+      FrX[T] := X + NearX(n + 1);
+      FrY[T] := Y;
+    end;
+    n := n + 1;
+  end;
+  Say(ID, 'Brought to you: ' + TgtDesc() + '.', ColorGood);
 end;
 
-{ /disarm <player>: no weapons; /give <player> <weapon 0-16> as the primary weapon }
-procedure CmdWeapon(ID: Integer; Args: string; Disarm: Boolean);
+procedure CmdDisarm(ID: Integer; Args: string);
 var
-  T, W: Integer;
+  k: Integer;
   A, B: TNewWeapon;
 begin
-  T := AdminTarget(ID, Args, False);
-  if T < 1 then
+  if not PickTargets(ID, TakeArg(Args), False, True, True) then
     Exit;
-  if not PL[T].Alive then
-  begin
-    Say(ID, PL[T].Name + ' is dead.', ColorBad);
-    Exit;
-  end;
-  W := WEP_NONE;
-  if not Disarm then
-  begin
-    W := StrToIntDef(AfterFirstWord(Args), -1);
-    if (W < 0) or (W > 16) then
-    begin
-      Say(ID, 'Use: /give <player> <weapon 0-16> (0 USSOCOM, 1 Desert Eagles, 2 MP5, 3 Ak-74, 4 Steyr AUG,' +
-        ' 5 Spas-12, 6 Ruger, 7 M79, 8 Barrett, 9 Minimi, 10 Minigun, 11 knife, 12 chainsaw, 13 LAW, 14 flamer,' +
-        ' 15 bow, 16 flamed arrows)', ColorBad);
-      Exit;
-    end;
-  end;
   A := TNewWeapon.Create;
-  A.WType := W;
-  if Disarm then
-  begin
-    B := TNewWeapon.Create;
+  B := TNewWeapon.Create;
+  try
+    A.WType := WEP_NONE;
     B.WType := WEP_NONE;
-    PL[T].ForceWeapon(A, B);
+    for k := 0 to TgtCount - 1 do
+      PL[TgtList[k]].ForceWeapon(A, B);
+  finally
+    A.Free;
     B.Free;
-    Say(ID, PL[T].Name + ' disarmed.', ColorGood);
-  end
-  else
-  begin
-    PL[T].ForceWeapon(A, PL[T].Secondary);
-    Say(ID, PL[T].Name + ' got ' + WeaponName(W) + '.', ColorGood);
   end;
-  A.Free;
+  Say(ID, 'Disarmed: ' + TgtDesc() + '.', ColorGood);
 end;
 
-{ /bonus <player> <1-6>: predator, berserker, vest, grenades, clusters, flame god }
+function GiveBlocked(ID, W: Integer): Boolean;
+begin
+  Result := False;
+  if (W = 15) or (W = 16) then
+    if Game.GameStyle <> 4 then
+    begin
+      Say(ID, 'A bow outside Rambo mode makes the server itself ban the player for a day ("Not allowed ' +
+        'weapon", admins too).', ColorBad);
+      Result := True;
+      Exit;
+    end;
+  if W = 14 then
+    if not AdGiveFlamer then
+    begin
+      Say(ID, 'A server with sv_bonus_flamer 1 bans a player holding a flamer for a day ("Not allowed weapon"). ' +
+        'With sv_bonus_flamer 0 set [Admin] GiveFlamer = 1.', ColorBad);
+      Result := True;
+    end;
+end;
+
+procedure CmdGive(ID: Integer; Args: string);
+var
+  k, T, W, Ammo, n: Integer;
+  Who, A1, A2, Rest: string;
+  Near: Boolean;
+  A: TNewWeapon;
+begin
+  Rest := Args;
+  Who := TakeArg(Rest);
+  Near := LowerCase(Who) = 'near';
+  if Near then
+    Who := TakeArg(Rest);
+  A1 := TakeArg(Rest);
+  A2 := TakeArg(Rest);
+  Ammo := -1;
+  if A2 <> '' then
+  begin
+    Ammo := StrToIntDef(A1, -1);
+    A1 := A2;
+  end;
+  W := WeaponOf(A1);
+  if (W < 0) or ((A2 <> '') and ((Ammo < 0) or (Ammo > 255))) then
+  begin
+    Say(ID, 'Use: /give [near] <player|all|team> [ammo] <weapon> - weapons: usp deagle mp5 ak aug spas ruger m79 ' +
+      'barrett minimi minigun knife chainsaw law flamer bow flamebow (or 0-16)', ColorBad);
+    Exit;
+  end;
+  if GiveBlocked(ID, W) then
+    Exit;
+  if not PickTargets(ID, Who, True, True, False) then
+    Exit;
+  if Near then
+  begin
+    n := 0;
+    for k := 0 to TgtCount - 1 do
+    begin
+      T := TgtList[k];
+      if SpawnObject(WeaponObject(W), PL[T].X + NearX(k) + 18, PL[T].Y - 30) then
+        n := n + 1;
+    end;
+    Say(ID, WeaponName(W) + ' dropped next to ' + TgtDesc() + ' (' + IntToStr(n) + ').', ColorGood);
+    Exit;
+  end;
+  A := TNewWeapon.Create;
+  try
+    A.WType := W;
+    if Ammo >= 0 then
+      A.Ammo := Ammo;
+    for k := 0 to TgtCount - 1 do
+    begin
+      T := TgtList[k];
+      PL[T].ForceWeapon(A, PL[T].Secondary);
+      InfLastW[T] := W;
+    end;
+  finally
+    A.Free;
+  end;
+  if Ammo >= 0 then
+    Say(ID, WeaponName(W) + ' with ' + IntToStr(Ammo) + ' rounds (at most a full magazine): ' + TgtDesc() + '.',
+      ColorGood)
+  else
+    Say(ID, WeaponName(W) + ': ' + TgtDesc() + '.', ColorGood);
+end;
+
 procedure CmdBonus(ID: Integer; Args: string);
 var
-  T, N: Integer;
+  k, T, B, n: Integer;
+  Who, Rest: string;
+  Near: Boolean;
 begin
-  T := AdminTarget(ID, Args, True);
-  if T < 1 then
-    Exit;
-  N := StrToIntDef(AfterFirstWord(Args), 0);
-  if (N < 1) or (N > 6) then
+  Rest := Args;
+  Who := TakeArg(Rest);
+  Near := LowerCase(Who) = 'near';
+  if Near then
+    Who := TakeArg(Rest);
+  B := BonusOf(TakeArg(Rest));
+  if B < 0 then
   begin
-    Say(ID, 'Use: /bonus <player> <1 predator, 2 berserker, 3 vest, 4 grenades, 5 clusters, 6 flame god>', ColorBad);
+    Say(ID, 'Use: /bonus [near] <player|all|team> <predator|berserker|vest|nades|clusters|flame|medkit> (or 1-7)',
+      ColorBad);
     Exit;
   end;
-  if not PL[T].Alive then
+  if B = 6 then
+    if not AdGiveFlamer then
+    begin
+      Say(ID, 'Flame god gives a flamer, and a server with sv_bonus_flamer 1 bans a player holding one for a day ' +
+        '("Not allowed weapon"). With sv_bonus_flamer 0 set [Admin] GiveFlamer = 1.', ColorBad);
+      Exit;
+    end;
+  if not PickTargets(ID, Who, True, True, False) then
+    Exit;
+  n := 0;
+  for k := 0 to TgtCount - 1 do
   begin
-    Say(ID, PL[T].Name + ' is dead.', ColorBad);
+    T := TgtList[k];
+    if Near then
+    begin
+      if SpawnObject(BonusObject(B), PL[T].X + NearX(k) + 18, PL[T].Y - 30) then
+        n := n + 1;
+    end
+    else if B = 7 then
+    begin
+      PL[T].Health := MaxHealth;
+      LastHealth[T] := MaxHealth;
+      HudMark(T, False);
+    end
+    else if ObjectsFree(OBJECT_MARGIN) >= OBJECT_MARGIN then
+    begin
+      PL[T].GiveBonus(B);
+      HudMark(T, False);
+    end;
+  end;
+  if Near then
+    Say(ID, 'The ' + BonusName(B) + ' kit dropped next to ' + TgtDesc() + ' (' + IntToStr(n) + ').', ColorGood)
+  else
+    Say(ID, 'Bonus ' + BonusName(B) + ': ' + TgtDesc() + '.', ColorGood);
+end;
+
+procedure CmdStatgun(ID: Integer; Args: string; Remove: Boolean);
+var
+  i, k, n, Best: Integer;
+  W, Rest: string;
+  X, Y, D, BestD: Single;
+begin
+  Rest := Args;
+  W := LowerCase(TakeArg(Rest));
+  if (W = 'remove') or (W = 'del') or (W = 'delete') or (W = 'kill') then
+  begin
+    Remove := True;
+    W := LowerCase(TakeArg(Rest));
+  end;
+  if Remove then
+  begin
+    n := 0;
+    if W = 'all' then
+    begin
+      for i := 1 to MAX_OBJECT_ID do
+        if OB[i].Active then
+          if OB[i].Style = 27 then
+          begin
+            OB[i].Kill;
+            n := n + 1;
+          end;
+      Say(ID, 'Stationary guns removed: ' + IntToStr(n) + '.', ColorGood);
+      Exit;
+    end;
+    if ID < 1 then
+    begin
+      Say(ID, 'Use: /removestatgun all (from the console).', ColorBad);
+      Exit;
+    end;
+    X := PL[ID].X;
+    Y := PL[ID].Y;
+    Best := 0;
+    BestD := 0;
+    for i := 1 to MAX_OBJECT_ID do
+      if OB[i].Active then
+        if OB[i].Style = 27 then
+        begin
+          D := Sqrt((OB[i].X - X) * (OB[i].X - X) + (OB[i].Y - Y) * (OB[i].Y - Y));
+          if (Best = 0) or (D < BestD) then
+          begin
+            Best := i;
+            BestD := D;
+          end;
+        end;
+    if Best = 0 then
+    begin
+      Say(ID, 'There is no stationary gun on the map.', ColorBad);
+      Exit;
+    end;
+    OB[Best].Kill;
+    Say(ID, 'The nearest stationary gun (' + IntToStr(Round(BestD)) + ' px away) removed.', ColorGood);
     Exit;
   end;
-  PL[T].GiveBonus(N);
-  HudMark(T, False);
-  Say(ID, PL[T].Name + ' got the bonus.', ColorGood);
+  if (W = '') or (W = 'cursor') or (W = 'here') then
+  begin
+    if ID < 1 then
+    begin
+      Say(ID, 'Use: /statgun <player> from the console.', ColorBad);
+      Exit;
+    end;
+    if W = 'here' then
+    begin
+      X := PL[ID].X;
+      Y := PL[ID].Y - 20;
+    end
+    else
+    begin
+      X := PL[ID].MouseAimX;
+      Y := PL[ID].MouseAimY;
+    end;
+    if SpawnObject(27, X, Y) then
+      Say(ID, 'Stationary gun placed. /removestatgun [all] takes it away.', ColorGood)
+    else
+      Say(ID, 'The map has no room for another object.', ColorBad);
+    Exit;
+  end;
+  if not PickTargets(ID, W, False, True, False) then
+    Exit;
+  n := 0;
+  for k := 0 to TgtCount - 1 do
+    if SpawnObject(27, PL[TgtList[k]].X + NearX(k) + 20, PL[TgtList[k]].Y - 30) then
+      n := n + 1;
+  Say(ID, 'Stationary guns placed next to ' + TgtDesc() + ': ' + IntToStr(n) + '.', ColorGood);
+end;
+
+procedure CmdInfAmmo(ID: Integer; Args: string);
+var
+  k, T: Integer;
+  W, Rest: string;
+  NewOn: Boolean;
+begin
+  Rest := Args;
+  W := TakeArg(Rest);
+  if not PickTargets(ID, W, True, False, False) then
+    Exit;
+  NewOn := True;
+  if (TgtCount = 1) and (not TgtMany) then
+    NewOn := not InfOn[TgtList[0]];
+  NewOn := OnOffWord(TakeArg(Rest), not NewOn);
+  for k := 0 to TgtCount - 1 do
+  begin
+    T := TgtList[k];
+    if NewOn and not InfOn[T] then
+    begin
+      InfOn[T] := True;
+      InfLastW[T] := WEP_NONE;
+      InfCount := InfCount + 1;
+    end
+    else if (not NewOn) and InfOn[T] then
+    begin
+      InfOn[T] := False;
+      InfCount := InfCount - 1;
+    end;
+  end;
+  if InfCount < 0 then
+    InfCount := 0;
+  Say(ID, 'Infinite ammo ' + BoolText(NewOn) + ': ' + TgtDesc() + ' (a thrown knife comes back).', ColorGood);
+end;
+
+function PctFactor(S: string; var F: Single): Boolean;
+var
+  T: string;
+  V: Single;
+  Ok: Boolean;
+  Sign: Integer;
+begin
+  Result := False;
+  T := LowerCase(Trim(S));
+  if (T = 'off') or (T = 'reset') or (T = 'normal') then
+  begin
+    F := 1;
+    Result := True;
+    Exit;
+  end;
+  if T = '' then
+    Exit;
+  if T[1] = 'x' then
+  begin
+    V := ParseFloat(Copy(T, 2, Length(T)), Ok);
+    if Ok then
+      if V >= 0 then
+      begin
+        F := V;
+        Result := True;
+      end;
+    Exit;
+  end;
+  Sign := 0;
+  if T[1] = '+' then
+  begin
+    Sign := 1;
+    Delete(T, 1, 1);
+  end
+  else if T[1] = '-' then
+  begin
+    Sign := -1;
+    Delete(T, 1, 1);
+  end;
+  if T <> '' then
+    if T[Length(T)] = '%' then
+      Delete(T, Length(T), 1);
+  V := ParseFloat(T, Ok);
+  if not Ok then
+    Exit;
+  if Sign = 0 then
+    F := V / 100
+  else
+    F := 1 + Sign * V / 100;
+  if F < 0 then
+    F := 0;
+  if F > 100 then
+    F := 100;
+  Result := True;
+end;
+
+procedure DmRecount();
+var
+  i: Integer;
+begin
+  DmAny := False;
+  for i := 1 to 32 do
+    if (Abs(DmOut[i] - 1) > 0.0001) or (Abs(DmIn[i] - 1) > 0.0001) then
+      DmAny := True;
+end;
+
+procedure CmdDamage(ID: Integer; Args: string; Taken: Boolean);
+var
+  k, T: Integer;
+  W, V, Rest, What: string;
+  F: Single;
+begin
+  Rest := Args;
+  W := TakeArg(Rest);
+  V := TakeArg(Rest);
+  What := 'Damage dealt';
+  if Taken then
+    What := 'Damage taken';
+  if not PctFactor(V, F) then
+  begin
+    Say(ID, 'Use: /' + iif(Taken, 'dmgtaken', 'dmgfix') + ' <player|all|team> <+n%|-n%|n%|xN|off> - e.g. +20%, ' +
+      '-10%, 150%, x2', ColorBad);
+    Exit;
+  end;
+  if not PickTargets(ID, W, True, False, False) then
+    Exit;
+  for k := 0 to TgtCount - 1 do
+  begin
+    T := TgtList[k];
+    if Taken then
+      DmIn[T] := F
+    else
+      DmOut[T] := F;
+  end;
+  DmRecount();
+  Say(ID, What + ' ' + IntToStr(Round(F * 100)) + '%: ' + TgtDesc() + '.', ColorGood);
+  Log(What + ' ' + IntToStr(Round(F * 100)) + '% for ' + TgtDesc() + ' by ' + AdminName(ID));
+end;
+
+procedure CmdVest(ID: Integer; Args: string);
+var
+  k, N: Integer;
+  W, Rest: string;
+begin
+  Rest := Args;
+  W := TakeArg(Rest);
+  N := StrToIntDef(TakeArg(Rest), 100);
+  if N < 0 then
+    N := 0;
+  if N > 100 then
+    N := 100;
+  if not PickTargets(ID, W, True, True, False) then
+    Exit;
+  for k := 0 to TgtCount - 1 do
+  begin
+    PL[TgtList[k]].Vest := N;
+    HudMark(TgtList[k], False);
+  end;
+  Say(ID, 'Vest ' + IntToStr(N) + '%: ' + TgtDesc() + '.', ColorGood);
+end;
+
+procedure InfTick(Tick: Integer);
+var
+  i, W, A, Low: Integer;
+  P: TActivePlayer;
+  NW: TNewWeapon;
+begin
+  if Tick mod 3 <> 0 then
+    Exit;
+  for i := 1 to TopSlot do
+    if InfOn[i] then
+    begin
+      P := PL[i];
+      if not P.Active then
+      begin
+        InfOn[i] := False;
+        InfCount := InfCount - 1;
+        Continue;
+      end;
+      if not P.Alive then
+        Continue;
+      W := P.Primary.WType;
+      if (W = WEP_NONE) and (InfLastW[i] = WEP_KNIFE) then
+      begin
+        NW := TNewWeapon.Create;
+        try
+          NW.WType := WEP_KNIFE;
+          P.ForceWeapon(NW, P.Secondary);
+        finally
+          NW.Free;
+        end;
+        Continue;
+      end;
+      InfLastW[i] := W;
+      if (W < 0) or (W > 16) or (W = WEP_KNIFE) or (W = 12) then
+        Continue;
+      A := P.Primary.Ammo;
+      Low := WpAmmo[W] div 5;
+      if A <= Low then
+        if A < WpAmmo[W] then
+          P.Primary.Ammo := WpAmmo[W];
+    end;
+  if InfCount < 0 then
+    InfCount := 0;
 end;
 
 { every second tick while somebody is frozen: put back where he was frozen }
@@ -7149,26 +8292,26 @@ var
   i: Integer;
   P: TActivePlayer;
 begin
-  if Tick mod 2 <> 0 then
-    Exit;
   for i := 1 to TopSlot do
     if FrOn[i] then
-    begin
-      P := PL[i];
-      if not P.Active then
+      if Tick >= FrAt[i] then
       begin
-        FrOn[i] := False;
-        FrCount := FrCount - 1;
-        Continue;
+        P := PL[i];
+        if not P.Active then
+        begin
+          FrOn[i] := False;
+          FrCount := FrCount - 1;
+          Continue;
+        end;
+        if not P.Alive then
+          Continue;
+        if (Abs(P.X - FrX[i]) > 4) or (Abs(P.Y - FrY[i]) > 4) then
+        begin
+          P.Move(FrX[i], FrY[i]);
+          P.SetVelocity(0, 0);
+          FrAt[i] := Tick + 4;
+        end;
       end;
-      if not P.Alive then
-        Continue;
-      if (Abs(P.X - FrX[i]) > 2) or (Abs(P.Y - FrY[i]) > 2) then
-      begin
-        P.Move(FrX[i], FrY[i]);
-        P.SetVelocity(0, 0);
-      end;
-    end;
   if FrCount < 0 then
     FrCount := 0;
 end;
@@ -7232,9 +8375,15 @@ begin
     C_FREEZE: CmdFreeze(ID, Args);
     C_BRING: CmdBring(ID, Args, True);
     C_GOTO: CmdBring(ID, Args, False);
-    C_DISARM: CmdWeapon(ID, Args, True);
-    C_GIVE: CmdWeapon(ID, Args, False);
+    C_DISARM: CmdDisarm(ID, Args);
+    C_GIVE: CmdGive(ID, Args);
     C_BONUS: CmdBonus(ID, Args);
+    C_STATGUN: CmdStatgun(ID, Args, False);
+    C_STATGUN_DEL: CmdStatgun(ID, Args, True);
+    C_INFAMMO: CmdInfAmmo(ID, Args);
+    C_DMGFIX: CmdDamage(ID, Args, False);
+    C_DMGTAKEN: CmdDamage(ID, Args, True);
+    C_VEST: CmdVest(ID, Args);
     C_TELEMOUSE: CmdTele(ID, Console, TP_MOMENTUM, Args);
     C_FLYMOUSE: CmdTele(ID, Console, TP_FLY, '');
     C_ADMINLIST:
@@ -7929,6 +9078,12 @@ begin
     except
       StageError('freeze');
     end;
+  if InfCount > 0 then
+    try
+      InfTick(Tick);
+    except
+      StageError('infinite ammo');
+    end;
   if Tick >= DuePoll then
   begin
     DuePoll := After(Tick, 30);
@@ -8078,6 +9233,19 @@ begin
       Result := 0;
       Exit;
     end;
+  if DmAny then
+    if S <> V then
+      if Damage <= SERVER_HIT_DAMAGE then
+        Result := Damage * DmOut[S] * DmIn[V];
+  if AbOn[S] then
+    if AbKey = AK_FIRE then
+      if S <> V then
+        if (BulletId >= 1) and (BulletId <= 254) then
+          if (AbBulletOwner[BulletId] <> S) or (Tick - AbBulletTick[BulletId] > 600) then
+          begin
+            Result := 0;
+            Exit;
+          end;
   if Damage > SERVER_HIT_DAMAGE then
     ServerKill[V] := Tick;
   if S = V then
@@ -8205,6 +9373,8 @@ begin
         Say(V, S, KiColor);
       end;
 
+  if SrEnabled then
+    SpreeKill(K, V, (K <> V) and Enemies(K, V));
   if K <> V then
   begin
     if Enemies(K, V) then
@@ -8279,13 +9449,23 @@ begin
   PrefsLoad(ID);
   ResetLife(ID);
   TeamOf[ID] := PL[ID].Team;
+  if BeOk then
+    BE_Team(ID, TeamOf[ID]);
   SpecLeft[ID] := 0;
   AfIdle[ID] := 0;
   GodOn[ID] := False;
   if FrOn[ID] then
     FrCount := FrCount - 1;
   FrOn[ID] := False;
+  if InfOn[ID] then
+    InfCount := InfCount - 1;
+  InfOn[ID] := False;
+  InfLastW[ID] := WEP_NONE;
+  DmOut[ID] := 1;
+  DmIn[ID] := 1;
+  DmRecount();
   AsCount[ID] := 0;
+  SrRun[ID] := 0;
   McCount[ID] := 0;
   McLast[ID] := 0;
   SvTarget[ID] := 0;
@@ -8302,6 +9482,7 @@ begin
   if AbOn[ID] then
     AbCount := AbCount - 1;
   AbOn[ID] := False;
+  AbAcc[ID] := AbSpreadPct;
   if TrWatch[ID] > 0 then
     TrCount := TrCount - 1;
   TrWatch[ID] := 0;
@@ -8398,6 +9579,14 @@ begin
     FrOn[ID] := False;
     FrCount := FrCount - 1;
   end;
+  if InfOn[ID] then
+  begin
+    InfOn[ID] := False;
+    InfCount := InfCount - 1;
+  end;
+  DmOut[ID] := 1;
+  DmIn[ID] := 1;
+  DmRecount();
   RsWait[ID] := 0;
   { left before a ban he was told about: the ban lists get his address and computer }
   if BanAt[ID] > 0 then
@@ -8438,6 +9627,7 @@ begin
     AbOn[ID] := False;
     AbCount := AbCount - 1;
   end;
+  AbAcc[ID] := AbSpreadPct;
   if TrWatch[ID] > 0 then
   begin
     TrWatch[ID] := 0;
@@ -8465,6 +9655,8 @@ begin
   OutQ[ID].Clear;
   PrefKey[ID] := '';
   TeamOf[ID] := -1;
+  if BeOk then
+    BE_Team(ID, -1);
   RevokeGrant(ID);
   SteamId[ID] := '';
   ActiveSlot[ID] := False;
@@ -8541,6 +9733,8 @@ begin
     end;
   { read back: the guard or another script may have moved the player again }
   TeamOf[ID] := Player.Team;
+  if BeOk then
+    BE_Team(ID, TeamOf[ID]);
   SpecLeft[ID] := 0;
   AfIdle[ID] := 0;
   RadarDirty(ID);
@@ -8603,6 +9797,7 @@ begin
   for i := 1 to 32 do
   begin
     VicPend[i] := False;
+    SrRun[i] := 0;
     ResetLife(i);
     for j := 1 to 32 do
       DnLayer[i][j] := 0;
@@ -8679,6 +9874,9 @@ begin
     ActiveSlot[i] := PL[i].Active;
     EdKind[i] := ED_HUD;
     SnapIdx[i] := -1;
+    SlotBit[i] := 1 shl (i - 1);
+    DmOut[i] := 1;
+    DmIn[i] := 1;
   end;
   RecountTop();
   CfgKeys := File.CreateStringList();

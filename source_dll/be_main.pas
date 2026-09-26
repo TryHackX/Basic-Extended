@@ -28,10 +28,10 @@ library basicext_dll;
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   {$IFDEF WINDOWS}Windows,{$ENDIF}
-  SysUtils, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx;
+  SysUtils, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map;
 
 const
-  BE_API_VERSION = 2;
+  BE_API_VERSION = 3;
   GET_MODULE_HANDLE_EX_FLAG_PIN = 1;
   GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = 4;
 {$IFNDEF WINDOWS}
@@ -191,6 +191,11 @@ begin
         StatusBuf := StatusBuf + ', errors ' + IntToStr(Store.Errors + Writer.Errors) + ' (last: ' +
           Store.LastError + Writer.LastError + ')';
     end;
+    if MapReady then
+      StatusBuf := StatusBuf + ', map polygons ' + IntToStr(MapPolys) + ', trajectories computed ' +
+        IntToStr(TrajRecomputed)
+    else
+      StatusBuf := StatusBuf + ', map not loaded';
   except
     StatusBuf := 'status failed';
   end;
@@ -311,6 +316,51 @@ begin
   end;
 end;
 
+function BE_MapLoad(Path: PChar): LongInt; cdecl;
+begin
+  Result := -3;
+  try
+    Result := MapLoad(Str(Path, 512));
+  except
+    MapClear;
+    Result := -3;
+  end;
+end;
+
+function BE_MapRay(X1, Y1, X2, Y2: Single; Flags, Team: LongInt): LongInt; cdecl;
+begin
+  Result := -1;
+  try
+    if MapReady then
+      if MapRay(X1, Y1, X2, Y2, Flags, Team) then
+        Result := 1
+      else
+        Result := 0;
+  except
+    Result := -1;
+  end;
+end;
+
+function BE_VisRun(Tick: LongInt): LongInt; cdecl;
+var
+  a, c: LongInt;
+  p, q, r, t: Single;
+begin
+  Result := -1;
+  try
+    if not MapReady then
+      Exit;
+    Result := 0;
+    while VisNext(Tick, a, c, p, q, r, t) do
+    begin
+      VisSet(a, c, not MapRay(p, q, r, t, 0, 0));
+      Inc(Result);
+    end;
+  except
+    Result := -1;
+  end;
+end;
+
 function BE_VisNext(Tick: LongInt; S, B: PLongInt; X1, Y1, X2, Y2: PSingle): LongInt; cdecl;
 var
   a, c: LongInt;
@@ -361,6 +411,14 @@ procedure BE_RadarUser(ID, On, Mode, Show, PX, PY: LongInt; Size, Zoom, MarkSize
 begin
   try
     RadarUser(ID, On, Mode, Show, PX, PY, Size, Zoom, MarkSize, Editing);
+  except
+  end;
+end;
+
+procedure BE_RadarOpt(ID, Key, Value: LongInt); cdecl;
+begin
+  try
+    RadarOpt(ID, Key, Value);
   except
   end;
 end;
@@ -444,6 +502,53 @@ begin
       Kind^ := 0;
   except
     Result := ' ';
+  end;
+end;
+
+var
+  ReplaceBuf: AnsiString = '';
+
+function BE_Replace(Text, Find, Repl: PChar): PChar; cdecl;
+begin
+  try
+    ReplaceBuf := StringReplace(Str(Text, 65536), Str(Find, 4096), Str(Repl, 65536), [rfReplaceAll]);
+  except
+    ReplaceBuf := Str(Text, 65536);
+  end;
+  Result := PChar(ReplaceBuf);
+end;
+
+procedure BE_SupConfig(Radius, RadiusBig: Single; ScanTicks, TeamBullets, FriendlyFire, TeamGame: LongInt); cdecl;
+begin
+  try
+    SupConfig(Radius, RadiusBig, ScanTicks, TeamBullets <> 0, FriendlyFire <> 0, TeamGame <> 0);
+  except
+  end;
+end;
+
+procedure BE_SupPlayers(n: LongInt; I: PLongArr; F: PSingleArr); cdecl;
+begin
+  try
+    SupPlayers(n, I, F);
+  except
+  end;
+end;
+
+function BE_SupBullet(Owner, Style: LongInt; X, Y, VX, VY: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SupBullet(Owner, Style, X, Y, VX, VY);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_Team(ID, Team: LongInt); cdecl;
+begin
+  try
+    TeamSet(ID, Team);
+  except
   end;
 end;
 
@@ -562,6 +667,31 @@ begin
   end;
 end;
 
+function BE_PathClip(CX, CY, HW, HH: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := PathClip(CX, CY, HW, HH);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_Muzzle(X, Y, AimX, AimY: Single; Flags: LongInt; OX, OY: PSingle): LongInt; cdecl;
+var
+  a, b, c, d: Single;
+begin
+  Result := 0;
+  try
+    Muzzle(X, Y, AimX, AimY, Flags, a, b, c, d);
+    OX^ := a;
+    OY^ := b;
+    Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
 function BE_PathPoint(Index: LongInt; X, Y: PSingle): LongInt; cdecl;
 begin
   Result := 0;
@@ -595,12 +725,12 @@ begin
   end;
 end;
 
-function BE_Shot(W: LongInt; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed: LongInt; Style: PLongInt;
+function BE_Shot(W: LongInt; SX, SY, SVX, SVY, DX, DY, Spread: Single; Seed, Flags: LongInt; Style: PLongInt;
   HitM: PSingle): LongInt; cdecl;
 begin
   Result := 0;
   try
-    Result := BuildShot(W, SX, SY, SVX, SVY, DX, DY, Spread, Seed);
+    Result := BuildShot(W, SX, SY, SVX, SVY, DX, DY, Spread, Seed, Flags);
     Style^ := ShotStyle(W);
     HitM^ := ShotDamage(W);
   except
@@ -672,6 +802,37 @@ begin
   end;
 end;
 
+function BE_GunPick(Shooter, Mode: LongInt; MaxDist, MaxAngle, SX, SY, BodyH: Single; MaxCheck: LongInt): LongInt;
+  cdecl;
+var
+  c, k, n, T: LongInt;
+begin
+  Result := -1;
+  try
+    if not MapReady then
+      Exit;
+    Result := 0;
+    T := 0;
+    if ValidID(Shooter) then
+      T := WP[Shooter].Team;
+    c := GunTargets(Shooter, Mode, MaxDist, MaxAngle);
+    k := 0;
+    while (k < c) and (k < MaxCheck) do
+    begin
+      n := GunTarget(k);
+      if ValidID(n) then
+        if not MapRay(SX, SY, WP[n].X, WP[n].Y - BodyH, MR_BULLET, T) then
+        begin
+          Result := n;
+          Exit;
+        end;
+      Inc(k);
+    end;
+  except
+    Result := -1;
+  end;
+end;
+
 procedure BE_TrajInt(Key, Value: LongInt); cdecl;
 begin
   try
@@ -701,6 +862,18 @@ begin
   Result := 0;
   try
     Result := TrajPass(ID, Tick, Budget, Visible, Hit, CX, CY, Cursor);
+  except
+    OpCount := 0;
+    Result := 0;
+  end;
+end;
+
+function BE_TrajStep(ID, Tick, Budget, W, Flags, Team: LongInt; X, Y, VX, VY, AimX, AimY: Single;
+  Cursor: LongInt): LongInt; cdecl;
+begin
+  Result := -1;
+  try
+    Result := TrajStep(ID, Tick, Budget, W, Flags, Team, X, Y, VX, VY, AimX, AimY, Cursor);
   except
     OpCount := 0;
     Result := 0;
@@ -773,10 +946,14 @@ exports
   BE_VisReset,
   BE_VisNeeded,
   BE_VisNext,
+  BE_VisRun,
+  BE_MapLoad,
+  BE_MapRay,
   BE_RadarInt,
   BE_RadarFloat,
   BE_RadarText,
   BE_RadarUser,
+  BE_RadarOpt,
   BE_RadarPass,
   BE_RadarHide,
   BE_RadarPending,
@@ -785,6 +962,11 @@ exports
   BE_RadarRange,
   BE_Op,
   BE_TextWidth,
+  BE_Replace,
+  BE_SupConfig,
+  BE_SupPlayers,
+  BE_SupBullet,
+  BE_Team,
   BE_MoveSet,
   BE_Move,
   BE_MoveBlocked,
@@ -795,6 +977,8 @@ exports
   BE_WeaponSound,
   BE_Path,
   BE_PathPoint,
+  BE_PathClip,
+  BE_Muzzle,
   BE_Solve,
   BE_Shot,
   BE_ShotGet,
@@ -803,10 +987,12 @@ exports
   BE_GunReset,
   BE_GunTargets,
   BE_GunTarget,
+  BE_GunPick,
   BE_TrajInt,
   BE_TrajFloat,
   BE_TrajText,
   BE_TrajPass,
+  BE_TrajStep,
   BE_TrajHide,
   BE_TrajReset,
   BE_Fx,

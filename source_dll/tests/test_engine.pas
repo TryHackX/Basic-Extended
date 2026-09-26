@@ -4,7 +4,7 @@ program test_engine;
 
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
-  Classes, SysUtils, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx;
+  Classes, SysUtils, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map;
 
 var
   Failed: LongInt = 0;
@@ -121,95 +121,147 @@ begin
   Check((n = 1) and (Ops[0].Text = ' '), 'list hidden when off');
 end;
 
-procedure TestRadarArrows;
+function OpCenterX(k: LongInt): Single;
 var
-  n, i, k, Dots: LongInt;
-  X0, Y0, CX, CY: Single;
+  CX, CY: Single;
+begin
+  InkCenter(Ops[k].Text, CX, CY);
+  Result := Ops[k].X + CX * Ops[k].Scale * WORLD_EM;
+end;
+
+function OpCenterY(k: LongInt): Single;
+var
+  CX, CY: Single;
+begin
+  InkCenter(Ops[k].Text, CX, CY);
+  Result := Ops[k].Y + CY * Ops[k].Scale * WORLD_EM;
+end;
+
+procedure TestPathClip;
+var
+  n, m: LongInt;
+begin
+  n := BuildPath(8, 0, 0, 0, 0, 1000, 0, 400, 16, 3000);
+  Check(n > 100, 'long barrett path: ' + IntToStr(n));
+  m := PathClip(0, 0, 440, 260);
+  Check((m > 20) and (m < 40), 'path cut at the edge of the view: ' + IntToStr(m));
+  Check(PathX[m - 1] > 440, 'the last point is just past the edge');
+  Check(PathX[m - 2] <= 440, 'the one before is inside');
+  n := BuildPath(8, 0, 0, 0, 0, 1000, 0, 400, 16, 3000);
+  m := PathClip(5000, 5000, 440, 260);
+  Check(m = 1, 'a path never in view keeps only its start');
+end;
+
+procedure TestSuppression;
+var
+  M: LongInt;
+begin
+  SupConfig(50, 130, 4, True, False, True);
+  TeamSet(1, 1);
+  TeamSet(2, 2);
+  TeamSet(3, 1);
+  WI[0] := 2;
+  WI[1] := 2;
+  WF[0] := 100;
+  WF[1] := 100;
+  WI[2] := 3;
+  WI[3] := 1;
+  WF[2] := 500;
+  WF[3] := 100;
+  SupPlayers(2, @WI, @WF);
+  M := SupBullet(1, 1, 20, 90, 10, 0);
+  Check(M = 2, 'a bullet passing an enemy suppresses him: ' + IntToStr(M));
+  M := SupBullet(1, 1, 20, 300, 10, 0);
+  Check(M = 0, 'a far bullet suppresses nobody');
+  M := SupBullet(1, 1, 480, 100, 10, 0);
+  Check(M = 0, 'no suppression by a team mate without friendly fire');
+  SupConfig(50, 130, 4, True, True, True);
+  M := SupBullet(1, 1, 480, 100, 10, 0);
+  Check(M = 4, 'team bullets count with friendly fire: ' + IntToStr(M));
+  M := SupBullet(2, 4, 20, 190, 10, 0);
+  Check(M = 0, 'the owner is never suppressed by his own bullet');
+  M := SupBullet(1, 4, 20, 190, 10, 0);
+  Check(M = 2, 'explosives reach further: ' + IntToStr(M));
+end;
+
+procedure TestRadarRing;
+var
+  n, i, k, k2, k3: LongInt;
 begin
   RadarReset(1);
-  RadarInt(RI_ARROWS_MAX, 4);
-  RadarInt(RI_ARROW_DOTS, 3);
+  RadarInt(RI_TEAMGAME, 1);
+  RadarInt(RI_ARROWS_MAX, 6);
+  RadarInt(RI_ARROW_STEPS, 4);
+  RadarInt(RI_RING_COLOR_BY, RC_TEAM);
+  RadarFloat(RF_ARROW_OUTER, 30);
   RadarFloat(RF_ARROW_LEAD, 1);
+  RadarFloat(RF_RING_NEAR_SCALE, 0.16);
+  RadarFloat(RF_RING_FAR_SCALE, 0.07);
   WClear;
   WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 500, 500, 0, 0);
-  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 700, 500, 0, 0);
-  WAdd(3, WF_ALIVE, 2, 80, 0, 0, 0, 0, 500, 300, 0, 0);
+  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 600, 500, 0, 0);
+  WAdd(3, WF_ALIVE, 2, 80, TAG_FLAG, 0, 0, 0, 500, 0, 0, 0);
+  WAdd(4, WF_ALIVE, 1, 80, 0, 0, 0, 0, 400, 500, 0, 0);
   WLoad(2000);
-  RadarUser(1, 1, OVL_ARROWS, SHOW_ALL, 0, 0, 1, 1, 1, 0);
+  RadarUser(1, 1, OVL_RING, SHOW_ALL, 0, 0, 1, 1, 1, 0);
   n := RadarPass(1, 2000, 100);
-  Dots := 3 + 2;
-  Check(n = 2 * Dots, 'two arrows of five dots: ' + IntToStr(n));
-  for i := 0 to n - 1 do
-    Check(Ops[i].Text = '.', 'arrow dots are periods');
-  InkCenter('.', CX, CY);
-  k := FindOp(KIND_WORLD, 210 + 2);
-  if k < 0 then
-    k := FindOp(KIND_WORLD, 210 + 8 + 2);
-  Check(k >= 0, 'tip dot present');
+  Check(n = 3, 'ring: one dot per player (two enemies, one team mate): ' + IntToStr(n));
+  k2 := FindOp(KIND_WORLD, 210 + 1);
+  k3 := FindOp(KIND_WORLD, 210 + 2);
+  Check((k2 >= 0) and (k3 >= 0) and (FindOp(KIND_WORLD, 210 + 3) >= 0), 'ring layers by player slot');
+  if (k2 >= 0) and (k3 >= 0) then
+  begin
+    Check(Ops[k2].Text = '.', 'enemy dot is a period');
+    Check(Near(OpCenterX(k2), 530, 0.6) and Near(OpCenterY(k2), 500 - LOS_HEIGHT, 0.6),
+      'dot on the ring towards the enemy: ' + FloatToStr(OpCenterX(k2)) + ' ' + FloatToStr(OpCenterY(k2)));
+    Check(Ops[k2].Color = $FF4040, 'enemy colour');
+    Check(Ops[k3].Text = 'F', 'flag carrier letter');
+    Check(Near(OpCenterX(k3), 500, 0.6) and Near(OpCenterY(k3), 500 - LOS_HEIGHT - 30, 0.6), 'letter on the ring');
+    Check(Ops[k2].Scale > 0.07, 'near enemy: bigger dot');
+  end;
+  k := FindOp(KIND_WORLD, 210 + 3);
+  if k >= 0 then
+    Check(Ops[k].Color = $40FF40, 'team mate colour');
   n := RadarPass(1, 2001, 100);
-  Check(n = 0, 'still arrows are not resent');
-  WClear;
-  WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 501, 500, 0, 0);
-  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 700, 500, 0, 0);
-  WAdd(3, WF_ALIVE, 2, 80, 0, 0, 0, 0, 500, 300, 0, 0);
-  WLoad(2002);
+  Check(n = 0, 'still ring is not resent');
+  RadarOpt(1, RO_FRIENDS, 0);
   n := RadarPass(1, 2002, 100);
-  Check(n = 0, 'a move below ArrowMove sends nothing');
+  Check((n = 1) and (Ops[0].Layer = 210 + 3) and (Ops[0].Text = ' '), 'team mates hidden when friends are off');
+  RadarOpt(1, RO_FRIENDS, 1);
   WClear;
-  WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 510, 500, 0, 0);
-  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 700, 500, 0, 0);
-  WAdd(3, WF_ALIVE, 2, 80, 0, 0, 0, 0, 500, 300, 0, 0);
+  WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 500, 500, 0, 0);
+  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 1150, 500, 0, 0);
+  WAdd(3, WF_ALIVE, 2, 80, TAG_FLAG, 0, 0, 0, 500, 0, 0, 0);
+  WAdd(4, WF_ALIVE, 1, 80, 0, 0, 0, 0, 400, 500, 0, 0);
   WLoad(2003);
-  n := RadarPass(1, 2003, 4);
-  Check(n = 0, 'an arrow goes whole or not at all: ' + IntToStr(n));
-  Check(RadarPending(1) = 1, 'rest is pending');
-  n := RadarPass(1, 2004, Dots + 2);
-  Check(n = Dots, 'one whole arrow within the budget: ' + IntToStr(n));
-  Check(RadarPending(1) = 1, 'the other arrow is pending');
-  n := RadarPass(1, 2005, 100);
-  Check(n = Dots, 'the other arrow next: ' + IntToStr(n));
-  Check(RadarPending(1) = 0, 'nothing pending');
-  WClear;
-  WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 510, 500, 0, 0);
-  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 706, 500, 0, 0);
-  WAdd(3, WF_ALIVE, 2, 80, 0, 0, 0, 0, 499.7, 294, 0, 0);
-  WLoad(2006);
-  n := RadarPass(1, 2006, 100);
-  Check(n = 0, 'a distance change within a colour band sends nothing: ' + IntToStr(n));
-  WClear;
-  WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 530, 500, 0, 0);
-  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 706, 500, 0, 0);
-  WAdd(3, WF_ALIVE, 2, 80, 0, 0, 0, 0, 510, 294, 0, 0);
-  WLoad(2007);
-  n := RadarPass(1, 2007, Dots);
-  Check(n = Dots, 'one arrow a pass under a tight budget: ' + IntToStr(n));
-  n := RadarPass(1, 2008, Dots);
-  Check(n = Dots, 'the older arrow gets its turn: ' + IntToStr(n));
-  Check(RadarPending(1) = 0, 'both arrows caught up');
+  n := RadarPass(1, 2003, 100);
+  k := FindOp(KIND_WORLD, 210 + 1);
+  Check(k >= 0, 'far enemy redrawn');
+  if k >= 0 then
+    Check(Near(Ops[k].Scale, 0.07, 0.0011), 'far enemy: smallest dot ' + FloatToStr(Ops[k].Scale));
   WClear;
   WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 100, 0, 0, 510, 500, 5, 0);
-  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 700, 500, 0, 0);
+  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 1150, 500, 0, 0);
   WLoad(2010);
   n := RadarPass(1, 2010, 100);
-  k := FindOp(KIND_WORLD, 210);
-  if k < 0 then
-    k := FindOp(KIND_WORLD, 210 + 8);
-  Check(k >= 0, 'first shaft dot of the remaining arrow');
+  k := FindOp(KIND_WORLD, 210 + 1);
+  Check(k >= 0, 'moving user: dot moves');
   if k >= 0 then
-  begin
-    X0 := Ops[k].X + CX * Ops[k].Scale * WORLD_EM;
-    Check(Near(X0, 510 + 5 * 6 + 16, 0.6), 'arrow centre predicted with ping and velocity: ' + FloatToStr(X0));
-  end;
-  Check(FindOp(KIND_WORLD, 210 + 8) >= 0, 'dots of the gone arrow are hidden or moved');
+    Check(Near(OpCenterX(k), 510 + 5 * 6 + 30, 0.6), 'ring centre predicted with ping and speed: ' +
+      FloatToStr(OpCenterX(k)));
+  k := 0;
+  for i := 0 to n - 1 do
+    if Ops[i].Text = ' ' then
+      Inc(k);
+  Check(k = 2, 'dots of players who left are hidden: ' + IntToStr(k));
   RadarUser(1, 1, OVL_LIST, SHOW_ALL, 10, 150, 1, 1, 1, 0);
   n := RadarPass(1, 2011, 100);
   k := 0;
   for i := 0 to n - 1 do
     if Ops[i].Text = ' ' then
       Inc(k);
-  Check(k = Dots, 'mode change hides the arrows: ' + IntToStr(k));
-  Y0 := 0;
-  Check(Y0 = 0, 'noop');
+  Check(k = 1, 'mode change hides the ring: ' + IntToStr(k));
+  RadarInt(RI_TEAMGAME, 0);
 end;
 
 procedure TestRadarCircle;
@@ -404,11 +456,11 @@ begin
       Check(Best < 16, 'solution hits the moving target, weapon ' + IntToStr(W) + ' miss ' + FloatToStr(Sqrt(Best)));
     end;
   end;
-  n := BuildShot(5, 0, 0, 0, 0, 1, 0, 1, 7);
+  n := BuildShot(5, 0, 0, 0, 0, 1, 0, 1, 7, 0);
   Check(n = 6, 'shotgun six pellets');
-  n := BuildShot(1, 0, 0, 0, 0, 1, 0, 1, 7);
+  n := BuildShot(1, 0, 0, 0, 0, 1, 0, 1, 7, 0);
   Check(n = 2, 'deagles two bullets');
-  n := BuildShot(3, 0, 0, 2, 0, 1, 0, 1, 7);
+  n := BuildShot(3, 0, 0, 2, 0, 1, 0, 1, 7, 0);
   Check((n = 1) and Near(ShotVX[0], 24 + 1, 0.01), 'inherited velocity');
 end;
 
@@ -529,6 +581,181 @@ begin
   Check((FindOp(KIND_WORLD, 100 + 6) >= 0) and (Ops[FindOp(KIND_WORLD, 100 + 6)].Text = ' '), 'extra dots hidden');
 end;
 
+procedure PutInt(S: TStream; V: LongInt);
+begin
+  S.WriteBuffer(V, 4);
+end;
+
+procedure PutWord(S: TStream; V: Word);
+begin
+  S.WriteBuffer(V, 2);
+end;
+
+procedure PutByte(S: TStream; V: Byte);
+begin
+  S.WriteBuffer(V, 1);
+end;
+
+procedure PutSingle(S: TStream; V: Single);
+begin
+  S.WriteBuffer(V, 4);
+end;
+
+procedure PutZero(S: TStream; N: LongInt);
+var
+  i: LongInt;
+begin
+  for i := 1 to N do
+    PutByte(S, 0);
+end;
+
+type
+  TTestPoly = record
+    X, Y: array[1..3] of Single;
+    T: Byte;
+  end;
+
+procedure WriteMap(const Path: AnsiString; const P: array of TTestPoly; SecDiv, SecNum: LongInt; Cut: Boolean);
+var
+  F: TFileStream;
+  i, j, k, v, n: LongInt;
+  L: array[0..63] of Word;
+  X0, X1, Y0, Y1, MinX, MaxX, MinY, MaxY: Single;
+begin
+  F := TFileStream.Create(Path, fmCreate);
+  try
+    PutInt(F, 11);
+    PutZero(F, 1 + 38 + 1 + 24 + 20);
+    PutInt(F, Length(P));
+    for i := 0 to High(P) do
+    begin
+      for v := 1 to 3 do
+      begin
+        PutSingle(F, P[i].X[v]);
+        PutSingle(F, P[i].Y[v]);
+        PutZero(F, 20);
+      end;
+      PutZero(F, 36);
+      PutByte(F, P[i].T);
+    end;
+    if Cut then
+      Exit;
+    PutInt(F, SecDiv);
+    PutInt(F, SecNum);
+    for i := -SecNum to SecNum do
+      for j := -SecNum to SecNum do
+      begin
+        X0 := (i - 0.5) * SecDiv;
+        X1 := (i + 0.5) * SecDiv;
+        Y0 := (j - 0.5) * SecDiv;
+        Y1 := (j + 0.5) * SecDiv;
+        n := 0;
+        for k := 0 to High(P) do
+        begin
+          MinX := P[k].X[1];
+          MaxX := P[k].X[1];
+          MinY := P[k].Y[1];
+          MaxY := P[k].Y[1];
+          for v := 2 to 3 do
+          begin
+            if P[k].X[v] < MinX then MinX := P[k].X[v];
+            if P[k].X[v] > MaxX then MaxX := P[k].X[v];
+            if P[k].Y[v] < MinY then MinY := P[k].Y[v];
+            if P[k].Y[v] > MaxY then MaxY := P[k].Y[v];
+          end;
+          if (MaxX >= X0) and (MinX <= X1) and (MaxY >= Y0) and (MinY <= Y1) then
+          begin
+            L[n] := k + 1;
+            Inc(n);
+          end;
+        end;
+        PutWord(F, n);
+        for k := 0 to n - 1 do
+          PutWord(F, L[k]);
+      end;
+    PutInt(F, 0);
+  finally
+    F.Free;
+  end;
+end;
+
+function Tri(X1, Y1, X2, Y2, X3, Y3: Single; T: Byte): TTestPoly;
+begin
+  Result.X[1] := X1;
+  Result.Y[1] := Y1;
+  Result.X[2] := X2;
+  Result.Y[2] := Y2;
+  Result.X[3] := X3;
+  Result.Y[3] := Y3;
+  Result.T := T;
+end;
+
+procedure TestMap(const Dir: AnsiString);
+var
+  P: array[0..4] of TTestPoly;
+  n, i: LongInt;
+  OX, OY, DX, DY, MaxX, HitX: Single;
+  Found: Boolean;
+begin
+  P[0] := Tri(100, 100, 200, 100, 200, 200, 0);
+  P[1] := Tri(100, 100, 200, 200, 100, 200, 0);
+  P[2] := Tri(300, 100, 400, 100, 400, 200, 3);
+  P[3] := Tri(500, 100, 600, 100, 600, 200, 2);
+  P[4] := Tri(700, 100, 800, 100, 800, 200, 1);
+  WriteMap(Dir + 'be_test_map.pms', P, 50, 20, False);
+  WriteMap(Dir + 'be_test_cut.pms', P, 50, 20, True);
+  Check(MapLoad(Dir + 'no_such_map.pms') = -1, 'missing map');
+  Check(not MapReady, 'no map after a failed load');
+  Check(MapLoad(Dir + 'be_test_cut.pms') = -2, 'cut map refused');
+  Check(MapLoad(Dir + 'BE_TEST_MAP.PMS') = 5, 'map found whatever the letter case');
+  Check(MapReady, 'map ready');
+  Check(MapRay(0, 150, 300, 150, MR_BULLET, 0), 'ray through the block');
+  Check(not MapRay(0, 50, 300, 50, MR_BULLET, 0), 'ray above the block');
+  Check(MapRay(150, 150, 160, 160, 0, 0), 'ray from inside');
+  Check(MapRay(150, 0, 150, 300, 0, 0), 'vertical ray');
+  Check(MapRay(50, 120, 250, 180, 0, 0), 'slanted ray');
+  Check(not MapRay(250, 150, 450, 150, MR_BULLET, 0), 'no-collide polygon');
+  Check(not MapRay(450, 150, 650, 150, MR_BULLET, 0), 'player-only polygon lets bullets through');
+  Check(MapRay(450, 150, 650, 150, MR_PLAYER, 0), 'player-only polygon stops players');
+  Check(MapRay(650, 150, 850, 150, MR_BULLET, 0), 'bullet-only polygon stops bullets');
+  Check(not MapRay(650, 150, 850, 150, 0, 0), 'bullet-only polygon is not a wall for sight');
+  Check(MapPointSolid(150, 150, 0, 0) and not MapPointSolid(250, 150, 0, 0), 'point in a wall');
+  Muzzle(0, 0, 1000, -11.4, 0, OX, OY, DX, DY);
+  Check(Near(OX, 1.3, 0.05) and Near(OY, -13.4, 0.05) and Near(DX, 1, 0.001), 'standing muzzle');
+  Muzzle(0, 0, -1000, -1.6, SF_PRONE, OX, OY, DX, DY);
+  Check(Near(OX, -5.5, 0.05) and Near(OY, -3.6, 0.05) and Near(DX, -1, 0.001), 'prone muzzle facing left');
+  Muzzle(0, 0, 0, -1000, SF_CROUCH, OX, OY, DX, DY);
+  Check(Near(OX, -2.1, 0.1) and Near(OY, -10.9, 0.1), 'crouching muzzle aiming up');
+  TrajRecomputed;
+  TrajReset(3);
+  TrajInt(TJ_DOTS, 12);
+  n := TrajStep(3, 200, 100, 8, 0, 0, 0, 161.4, 0, 0, 1000, 150, 0);
+  Found := False;
+  HitX := 0;
+  for i := 0 to OpCount - 1 do
+    if Ops[i].Text = 'x' then
+    begin
+      Found := True;
+      HitX := Ops[i].X;
+    end;
+  Check(n > 0, 'trajectory drawn');
+  Check(Found and (HitX > 85) and (HitX < 105), 'hit mark at the wall: ' + FloatToStr(HitX));
+  Check(TrajStep(3, 201, 100, 8, 0, 0, 0, 161.4, 0, 0, 1000, 150, 0) = 0, 'same input: nothing sent');
+  Check(TrajRecomputed = 1, 'same input: path not computed again');
+  TrajStep(3, 202, 100, 8, 0, 0, 0, 161.4, 0, 0, 1000, 140, 0);
+  Check(TrajRecomputed = 1, 'aim moved: computed again');
+  TrajReset(4);
+  n := TrajStep(4, 300, 100, 8, 0, 0, 0, -1000, 0, 0, 600, -1000, 0);
+  MaxX := 0;
+  for i := 0 to OpCount - 1 do
+    if (Ops[i].Text = '.') and (Ops[i].X > MaxX) then
+      MaxX := Ops[i].X;
+  Check((n > 0) and (MaxX > 700) and (MaxX < 900), 'path cut at the edge of the view: ' + FloatToStr(MaxX));
+  MapClear;
+  Check(TrajStep(4, 301, 100, 8, 0, 0, 0, -1000, 0, 0, 600, -1000, 0) = -1, 'no map: the script draws');
+  Check(not MapRay(0, 150, 300, 150, MR_BULLET, 0), 'no map: no walls');
+end;
+
 procedure TestFx;
 var
   k: LongInt;
@@ -548,7 +775,9 @@ begin
   ForceDirectories(Dir);
   TestFont;
   TestRadarList;
-  TestRadarArrows;
+  TestRadarRing;
+  TestSuppression;
+  TestPathClip;
   TestRadarCircle;
   TestLabels;
   TestVision;
@@ -558,6 +787,7 @@ begin
   TestGun;
   TestTargets;
   TestTraj;
+  TestMap(Dir);
   TestFx;
   WriteLn(Passed, ' passed, ', Failed, ' failed');
   if Failed > 0 then
