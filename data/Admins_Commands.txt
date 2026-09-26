@@ -3,16 +3,23 @@ ____________________________________Admin Commands______________________________
 /banr <ID> <Time(m|h|d|mon|y)> <Reason>, /banipr, /banhwr <time> <data> <reason>     |
 /displayspawns, /removeallspawn, /removenearspawn, /ip <*>, /hwid <*>                |
 /editnearspawn, /countspawns, /createspawn, /createspawn <0-4>, /saveallspawns       |
-/search, /checkp, /checkd, /privacy, /resetallplayersstats, /resetallmapsstats       |                                                                     ',GOOD+700);
-/backupcreate <backup name>, /restorebackup <backup name>, /statusa <name*>          |                                                                     ',GOOD+700);
+/search, /checkp, /checkd, /privacy, /resetallplayersstats, /resetallmapsstats       |
+/backupcreate <backup name>, /restorebackup <backup name>, /statusa <name*>          |
 /removeolderthan <data> (/removeolderthan 18.01.2021 or /removeolderthan 2021.01.18) |
 /radar [help|mode|tick|edit|zoom|show], /steamadmin, /be_status, /be_test, /be_bench |
-/explode <id|all> [kind], /bigexplode <id|all>, /nuke <id|all>                       |
+<player> = id, name or part of it ("with spaces"), me, all, others, alpha, bravo,    |
+  charlie, delta, spec, bots, humans                                                 |
+/explode <player> [kind], /bigexplode <player>, /nuke <player>                       |
   kinds: plain big nuke law m79 arrows firearrows bullets spas flame cluster nades   |
          knives rain                                                                 |
-/god [id], /heal <id|all>, /slap <id> [damage], /freeze <id>                         |
-/bring <id>, /goto <id>, /disarm <id>, /give <id> <weapon>, /bonus <id> <1-6>        |
+/god [player], /heal <player>, /slap <player> [damage], /freeze <player>             |
+/bring <player>, /goto <player>, /disarm <player>, /vest <player> [0-100]            |
+/give [near] <player> [ammo] <weapon>   e.g. /give all 30 ak, /give near bravo m79   |
+/bonus [near] <player> <predator|berserker|vest|nades|clusters|flame|medkit|1-7>     |
+/statgun [player], /removestatgun [all], /infammo <player>                           |
+/dmgfix <player> <+20%|-10%|150%|x2|off>, /dmgtaken <player> <...>                   |
 /tele, /teletomouse [inherit|fixed], /flytomouse (reload key: tap = jump, hold =     |
-  teleport after teleport, inherit = faster the longer you hold)                     |
-/trajectory [id|off] - the flight of the bullets, /aimbot [on|off|cursor|nearest]    |
+  fly where the cursor points, inherit = faster the longer you hold)                 |
+/trajectory [player|off], /aimbot [on|off|cursor|nearest|acc <0-100>]                |
+/suspects [all], /acstats <player>, /acclear <player|all> [forever]                  |
 _____________________________________________________________________________________|

@@ -1,4 +1,4 @@
-# Basic-Extended 3.2
+# Basic-Extended 3.3
 
 The complete server essentials, Battlefield 3-style health regeneration, dynamic damage numbers, tactical radar, and administration suite for **Soldat Dedicated Server 2.8.2 (Soldat 1.7.1)** running **ScriptCore 3**.
 
@@ -19,11 +19,14 @@ Author: **Dominik (TryHackX)** — MIT License. Designed for high-performance se
    - [Damage Numbers & Hit Flash](#damage-numbers--hit-flash)
    - [Tactical Radar & Overlays](#tactical-radar--overlays)
    - [Admin Tools: Teleport, Trajectory, Aimbot, Explosions](#admin-tools-teleport-trajectory-aimbot-explosions)
+   - [Anti-Cheat Statistics](#anti-cheat-statistics)
+   - [Map Geometry in the Library](#map-geometry-in-the-library)
    - [Steam ID Admin Rights & Moderation](#steam-id-admin-rights--moderation)
    - [Combat Extras & Class Mechanics](#combat-extras--class-mechanics)
 7. [Configuration (`settings.ini`)](#configuration-settingsini)
 8. [Building from Source](#building-from-source)
 9. [Troubleshooting](#troubleshooting)
+10. [Roadmap](ROADMAP.md)
 
 ---
 
@@ -40,14 +43,19 @@ Soldat Dedicated Server (Game Thread)
   |  events: OnDamage, OnKill, OnTick, OnCommand, OnSpeak, OnSteamAuth
   v
 main.pas (ScriptCore 3 bridge)
-  |  reads the game state once (world snapshot), sends only the texts the library asks for
+  |  reads the game state once per pass (one call per player into the library), sends only the
+  |  texts the library asks for, does what only the game can do (move, bullets, objects)
   v
 basicext_dll.dll / .so (native code)
-     Radar engine (list / labels / circle / arrows layout, exact glyph metrics of the game font)
+     Map geometry (the .pms polygons and sectors, ray casts exactly like the server's)
+     Radar engine (list / labels / circle / ring layout, exact glyph metrics of the game font)
      Text diff engine (per-player sent state, only changed texts go out, per-tick and per-second caps)
-     Team vision scheduler (which ray casts the script has to do this tick)
-     Teleport / flight controller (tap, hold, velocity inheritance, dead zone, smoothing)
-     Ballistics (weapons.ini, bullet paths, lead solver, fire rate / magazine / reload, explosion patterns)
+     Team vision (the ray casts of the "seen" filter)
+     Teleport / flight controller (tap, hold steering with camera-lag compensation, dead zone)
+     Ballistics (weapons.ini, muzzle position, bullet paths clipped to the view, lead solver,
+                 fire rate / magazine / reload, the game's inaccuracy model, explosion patterns)
+     Anti-cheat statistics (start-up, fire interval, jumps, bink, movement accuracy, head hits)
+     Suppression (swept bullet tests against the hurt players)
      TBEStore (BEDB binary storage, memory-mapped preference lookups)
      TBEWriter + Worker Thread (asynchronous logger, disk IO every 2s without holding server ticks)
 ```
@@ -57,8 +65,8 @@ basicext_dll.dll / .so (native code)
 - **Library Module Pinning:** The DLL/SO pins itself in memory (`GET_MODULE_HANDLE_EX_FLAG_PIN` / `RTLD_NODELETE`), allowing seamless in-game `/recompile` reloading without crashing background threads.
 - **Packet & Console Flooding Prevention:** Commands and system messages are queued and metered (`LinesPerTick`, `BroadcastLinesPerTick`, `TEXTS_PER_TICK`) to prevent client-side network choking and engine freezes.
 - **Selective Processing:** Heavy collision checks (e.g. bullet suppression scans) operate exclusively when hurt players are waiting for regeneration and scan only active bullet IDs.
-- **Math in Native Code:** PascalScript is slow (a single array operation costs about 2 microseconds), so every layout, distance, colour, ballistic and movement calculation runs in `basicext_dll`. The script only reads the game once per pass and sends the texts the library returns. The radar costs about 0.03 ms per user and tick.
-- **Diffed Text Updates:** Every radar, trajectory and damage text is compared with what the player already has; unchanged texts are not sent again, small moves under a threshold are ignored, and each player gets at most `TextsPerTick` / `MaxTextsPerSecond` radar texts (an arrow always goes whole, the oldest first).
+- **Math in Native Code:** PascalScript is slow (an array element or a property costs about a microsecond, as much as a call into the library), so every layout, distance, colour, ballistic, ray cast and movement calculation runs in `basicext_dll`. The script reads each player once per pass and hands the values over with one call; the library reads the map itself and answers ray casts in about a microsecond. `/be_bench` measures these costs on the running server.
+- **Diffed Text Updates:** Every radar, trajectory and damage text is compared with what the player already has; unchanged texts are not sent again, small moves under a threshold are ignored, and each player gets at most `TextsPerTick` / `MaxTextsPerSecond` radar texts.
 
 ---
 
@@ -67,8 +75,10 @@ basicext_dll.dll / .so (native code)
 - **Dynamic Health HUD:** BigText on-screen display with smooth color interpolation (Green $\to$ Yellow $\to$ Red), low-health flashing, customizable layouts, and an **interactive in-game live editor** (`!hp edit`).
 - **Battlefield 3-style Health Regeneration:** Health regenerates gradually after a delay, accelerating over time. Nearby enemy bullet passes apply **Suppression**, pausing regeneration.
 - **Dynamic Damage Numbers:** WorldText numbers floating above hit targets (`sum`, `column`, or `hit` modes). Automatically hides damage numbers through walls when playing in Realistic Mode (Line of Sight checks).
-- **Tactical Radar / ESP Overlay:** Four distinct operational modes: `list` (HUD text with the distance in meters, as the kill screen shows it), `labels` (overhead player tags), `circle` (circular mini-map), and `arrows` (small arrows of dots around your soldier). Features realistic raycast vision filters (`all`, `seen`, `seenall`).
-- **Admin Tools:** click / hold teleport with velocity inheritance, smooth flight to the cursor, the bullet trajectory of any player, an aimbot that works with every weapon, and 14 kinds of explosions (`/bigexplode`, `/nuke`, rockets, arrows, knives, rain of bullets...).
+- **Tactical Radar / ESP Overlay:** Four modes: `list` (HUD text with the distance in meters, as the kill screen shows it), `labels` (overhead player tags), `circle` (circular mini-map), and `ring` (a dot on a ring around your soldier for each nearby player: the size is the distance, `F` marks a flag carrier). Realistic ray-cast vision filters (`all`, `seen`, `seenall`), team mates on or off, and every mode keeps its own place, size and update rate.
+- **Admin Tools:** click / hold teleport that steers after the cursor, fast flight to the cursor, the bullet trajectory of any player (only the part on screen), an aimbot that uses the weapon's real magazine, reload and inaccuracy, 14 kinds of explosions, and commands that take `all`, teams or names: give weapons with ammo, bonuses, stationary guns, infinite ammo, damage and vest changes.
+- **Anti-Cheat Statistics:** Barrett start-up time, fire interval, teleports, hits under bink and while moving, head hits - per game and for all games of a computer, `/suspects` for the admins, a log of every finding.
+- **Killing Sprees (`[Spree]`):** the old sprees are back, switched off by default (ZitroStats has its own).
 - **Steam ID Authentication:** Assigns admin permissions verified directly against Steam Web tickets (`Admins_Steam.txt`), eliminating HWID spoofing vulnerabilities.
 - **Modular Combat Extras:** Optional assists, multikill announcements, first blood rewards, savior bonuses, suicide penalties, posthumous martyrdom grenade drops, and medic classes.
 
@@ -130,7 +140,7 @@ soldatserver/
 | `!rules`, `!rul` | *none* | Displays server rules. |
 | `!hp`, `!health` | `[on\|off\|style\|size\|pos\|edit\|reset]` | Toggles or configures the health display. `!hp edit` opens the visual editor. |
 | `!dmg`, `!damage` | *none* | Toggles floating damage numbers over targets. |
-| `!radar` | `[on\|off\|mode\|tick\|zoom\|show\|edit\|pos\|size\|reset]` | Configures tactical radar (if public). Modes: `list`, `circle`. |
+| `!radar` | `[on\|off\|mode\|tick\|zoom\|show\|team\|edit\|pos\|size\|reset]` | Configures tactical radar (if public). Modes: `list`, `circle`. Place, size and rate are kept for each mode. |
 | `!rate`, `!ratio`, `!kd` | `[player]` | Displays kill/death ratio and flag capture statistics. |
 | `!ping` | `[player]` | Checks ping of self or another player. |
 | `!track`, `!t` | `[player]` | Tracks ping of a player over several seconds and reports average/max. |
@@ -149,21 +159,26 @@ soldatserver/
 | :--- | :--- | :--- |
 | `/admincommands` | *none* | Displays admin command documentation (`Admins_Commands.txt`). |
 | `/steamadmin` | `[add\|del <player\|SteamID>]` | Lists or modifies authorized Steam admins (`Admins_Steam.txt`). |
-| `/radar`, `/overlay` | `[mode\|tick\|zoom\|show\|pos\|size]` | Configures admin radar (includes `labels` and `arrows` modes). |
+| `/radar`, `/overlay` | `[mode\|tick\|zoom\|show\|team\|pos\|size]` | Configures admin radar (includes `labels` and `ring` modes). |
 | `/tele`, `/tp` | *none* | Toggles click-to-teleport (jump to cursor on configured key). |
-| `/teletomouse`, `/ttm` | `[inherit\|fixed]` | Tap the key = jump to the cursor and keep flying; hold it = teleport after teleport towards the cursor. `inherit`: the longer you hold, the faster you fly (up to `InheritMax`). |
-| `/flytomouse`, `/ftm` | *none* | Toggles smooth flight toward the cursor while holding the key (faster when it is further, hovering when it is on you). |
-| `/trajectory`, `/traj` | `[player\|off]` | Draws where the bullets of your (or a player's) weapon fly; green = where they hit. |
-| `/aimbot` | `[on\|off\|cursor\|nearest]` | While the aimbot key (crouch) is held, your weapon fires at an enemy, leading moving targets. |
-| `/god` | `[player]` | Toggles invulnerability (godmode). |
-| `/heal` | `<player\|all>` | Restores health to 100%. |
-| `/slap` | `<player> [damage]` | Slaps player upward, dealing optional damage. |
-| `/freeze` | `<player>` | Freezes player at current position. |
-| `/explode` | `<player\|all> [kind]` | Detonates an explosion at the target: `plain`, `big`, `nuke`, `law`, `m79`, `arrows`, `firearrows`, `bullets`, `spas`, `flame`, `cluster`, `nades`, `knives`, `rain`. |
-| `/bigexplode`, `/boom`, `/nuke` | `<player\|all>` | A spectacular big explosion, or a nuke (rings of blasts and rockets from the sky). |
-| `/bring`, `/goto` | `<player>` | Teleports player to you, or teleports you to player. |
-| `/disarm`, `/give` | `<player> [0-16]` | Strips weapons or grants a specific primary weapon. |
-| `/bonus` | `<player> <1-6>` | Grants bonus kits (1: Predator, 2: Berserker, 3: Vest, 4: Grenades, 5: Clusters, 6: Flamer). |
+| `/teletomouse`, `/ttm` | `[inherit\|fixed]` | Tap the key = jump to the cursor and keep flying; hold it = fly where the cursor points (turning round too), jumping towards it. `inherit`: the longer you hold, the faster you fly (up to `InheritMax`). |
+| `/flytomouse`, `/ftm` | *none* | Toggles flight toward the cursor while holding the key (faster when it is further, hovering when it is on you). |
+| `/trajectory`, `/traj` | `[player\|off]` | Draws where the bullets of your (or a player's) weapon fly, only the part on screen; green = where they hit. |
+| `/aimbot` | `[on\|off\|cursor\|nearest\|acc <0-100>]` | While the aimbot key (crouch) is held, your weapon fires at an enemy, leading moving targets; `acc` = share of the weapon's own inaccuracy. |
+| `/god`, `/heal`, `/slap`, `/freeze` | `<player> [...]` | Godmode, full health, a slap (optional damage), freeze (again = free). |
+| `/explode` | `<player> [kind]` | Detonates an explosion at the target: `plain`, `big`, `nuke`, `law`, `m79`, `arrows`, `firearrows`, `bullets`, `spas`, `flame`, `cluster`, `nades`, `knives`, `rain`. |
+| `/bigexplode`, `/boom`, `/nuke` | `<player>` | A spectacular big explosion, or a nuke (rings of blasts and rockets from the sky). |
+| `/bring`, `/goto` | `<player>` | Teleports players to you, or you to a player. |
+| `/disarm` | `<player>` | Takes the weapons. |
+| `/give` | `[near] <player> [ammo] <weapon>` | Gives a weapon with that many rounds (`/give all 30 ak`); `near` drops it next to them. A bow outside Rambo is refused (the server bans for it). |
+| `/bonus` | `[near] <player> <kind>` | Gives a bonus at once: `predator`, `berserker`, `vest`, `nades`, `clusters`, `flame`, `medkit` (1-7); `near` drops the kit next to them. |
+| `/statgun`, `/removestatgun` | `[player]`, `[all]` | Places a stationary gun next to you (or a player); removes the nearest one (or all). |
+| `/infammo` | `<player>` | Infinite ammo on/off (a thrown knife comes back). |
+| `/dmgfix`, `/dmgtaken` | `<player> <+n%\|-n%\|n%\|xN\|off>` | Changes the damage the player deals / takes (`/dmgfix 1 +2%`, `/dmgtaken bravo -10%`). |
+| `/vest` | `<player> [0-100]` | Sets body armour. |
+| `/suspects` | `[all]` | Anti-cheat: the players of this game by suspicion. |
+| `/acstats` | `<player>` | Anti-cheat numbers of this game and of all games of that computer. |
+| `/acclear` | `<player\|all> [forever]` | Forgets the anti-cheat numbers (`forever`: all games too). |
 | `/banr` | `<id> <time> <reason>` | Timed player ban (e.g. `10m`, `2h`, `7d`, `1mon`, `1y`). |
 | `/banipr`, `/banhwr` | `<time> <IP\|HWID> <reason>` | Manual timed IP or Hardware ID ban. |
 | `/killall`, `/kickall`| *none* | Mass moderation commands (respects admin exemptions). |
@@ -171,7 +186,7 @@ soldatserver/
 | `/randomize` | *none* | Shuffles server map list rotation. |
 | `/reloadsettings`, `/be_reload` | *none* | Hot-reloads `settings.ini` and text data files without server restart. |
 | `/be_status` | *none* | Displays live engine performance, memory database status, and throughput stats. |
-| `/be_bench` | *none* | Benchmarks internal collision and object sweep performance (run on test servers). |
+| `/be_bench` | *none* | Measures the bullet scan, the kit sweep, a property read, the player snapshot and a library call (run on test servers). |
 | `/be_test` | `<slot> <command>` | Emulates player commands for testing. |
 
 ---
@@ -223,9 +238,9 @@ Designed for administrative spectating, competitive tournaments, or public tacti
 | `list` | Static on-screen text panel with direction, health and the distance in meters (`{m}`, pixels / 14 like the kill screen) | Admins / Public |
 | `circle` | Circular mini-map HUD showing relative angles and ranges | Admins / Public |
 | `labels` | Name and health tags centred over the soldiers (health coloured) | Steam Admins |
-| `arrows` | Small arrows of `.` dots around your soldier, pointing to the nearest players; the colour tells the distance | Steam Admins |
+| `ring` | A dot on a ring around your soldier for each nearby player; the dot's size tells the distance, `F` a flag carrier; colours by team, distance or health | Steam Admins |
 
-Every mark is centred exactly with the metrics of the game font. The arrows are drawn where your soldier will be when they reach you (your ping and speed), and a dot is sent again only when it moved more than `ArrowMove` pixels.
+Every mark is centred exactly with the metrics of the game font. The ring is drawn where your soldier will be when the texts reach you (your ping and speed). `!radar team off` hides the team mates; every mode keeps its own position, size and update rate.
 
 **Radar editor (`!radar edit`):** the movement keys move the list or the circle (a tap = 1 pixel), reload / change weapon resize it in fine steps. The soldier is not pulled back every tick while a key is held any more (that flooded the server with position updates), and the marks keep their size while you resize, so the game does not have to build new letter sets.
 
@@ -238,10 +253,33 @@ Every mark is centred exactly with the metrics of the game font. The arrows are 
 
 ### Admin Tools: Teleport, Trajectory, Aimbot, Explosions
 
-- **Teleport (`[Teleport]`):** the key is read every tick. `/tele` jumps to the cursor and stops. `/teletomouse`: a tap jumps and keeps the speed towards the cursor; holding the key longer than `HoldTicks` makes teleport after teleport towards the cursor with pushes in between. With `inherit` the speed grows the longer you hold (`InheritAccel` per second, `InheritGain` per jump, at most `InheritMax`). `/flytomouse` flies smoothly: the speed grows with the distance beyond `FlyDeadZone`, with the cursor on the soldier he hovers, and the direction is smoothed (`FlySmooth`) and corrected for gravity, so a cursor close to the soldier no longer makes him shake left and right.
-- **Trajectory (`[Trajectory]`):** `/trajectory [player]` shows the flight of the bullets of the weapon in hand (speed, gravity and the speed of the soldier taken from the server's `weapons.ini`), with ray casts against the map; the dot where the bullets hit is green.
-- **Aimbot (`[Aimbot]`):** while the key (crouch) is held, the weapon in hand fires at the enemy nearest to the cursor (or the nearest one). The shot leads a moving target, keeps the fire rate, magazine and reload of the weapon, is heard by the players nearby, and is fired as new bullets - the weapon itself is not fired nor changed, so every weapon works the same (not only the Barrett).
-- **Explosions (`[Admin]`):** `/explode <player|all> [kind]`, `/bigexplode`, `/nuke`. The patterns are built in the library and spawned over several ticks (at most 48 bullets a tick). `ExplodePower` scales the damage.
+- **Teleport (`[Teleport]`):** the key is read every tick. `/tele` jumps to the cursor and stops. `/teletomouse`: a tap jumps and keeps the speed towards the cursor; holding the key longer than `HoldTicks` flies where the cursor points - move the mouse to the other side and you turn round - with jumps towards it at most every `HopTicks` (and not before your ping has passed). The game's camera lags behind after every jump, so for a moment the cursor seems to be behind you; the controller leaves that out. With `inherit` the speed grows the longer you hold (`InheritAccel` per second, `InheritGain` per jump, at most `InheritMax`). `/flytomouse` flies smoothly: the speed grows with the distance beyond `FlyDeadZone` (8 px) up to `FlyMax` (11 px a tick on each axis, 15.5 diagonally), with the cursor on the soldier you hover. Jumps never end in a wall (`NotIntoWalls`).
+- **Trajectory (`[Trajectory]`):** `/trajectory [player]` shows the flight of the bullets of the weapon in hand (speed, gravity and the speed of the soldier taken from the server's `weapons.ini`), from the gun's real muzzle (standing, crouching or prone), with ray casts against the map; the dot where the bullets hit is green. It is worked out again only when the position, speed, cursor, weapon or stance changed, and only the part the player can see is drawn (the screen around the camera, which the game keeps between the soldier and the cursor - further out with a Barrett zoom). Soldat sends the cursor to the server only after the mouse moved about 30 pixels, so a far M79 shot can land a little off the drawn path.
+- **Aimbot (`[Aimbot]`):** while the key (crouch) is held, the weapon in hand fires at the enemy nearest to the cursor (or the nearest one). The shot leads a moving target, keeps the fire rate, start-up and reload of the weapon, takes a round of its real magazine (the game reloads it; `/infammo` or `InfiniteAmmo` = no), and `/aimbot acc <0-100>` adds that share of the weapon's own inaccuracy (standing, crouching, prone, running and jumping as in the game). The bullets start at the gun's muzzle. With `Key = fire` the weapon's own bullets do no damage while the aimbot is on. The server does not let a script turn a player's cursor or press keys for a human (only for bots), so the soldier's arm does not follow the target.
+- **Explosions (`[Admin]`):** `/explode <player> [kind]`, `/bigexplode`, `/nuke`. The patterns are built in the library and spawned over several ticks (at most 48 bullets a tick, and never into the last 32 free bullet slots of the game). `ExplodePower` scales the damage.
+
+---
+
+### Anti-Cheat Statistics
+
+Numbers for the admins, worked out in the library from what the server sees; nobody is kicked by them (`[AntiCheat]`).
+
+| Measure | How |
+| :--- | :--- |
+| Start-up | The time from the fire key (it reaches the server with the movement packets) to the Barrett / LAW bullet. The Barrett needs 19 ticks; a cheat without start-up fires at once. A lost packet can make one honest shot look short, so the share matters. |
+| Fire interval | Two bullets of a weapon with a long interval (Barrett, Ruger, Spas...) closer than `FireIntervalShare` of it. |
+| Jumps | A living player who moved further than 11 px a tick on each axis allows between two looks (with lag allowance); moves by the script are left out. |
+| Hits under bink | Barrett hits fired soon after the shooter was hit while holding it (the game spreads those bullets widely). |
+| Hits while moving | Hits by weapons with movement inaccuracy fired while running, jumping or flying. |
+| Head hits | The hit zone from the bullet's damage and speed. |
+
+The fire time of every hit is worked out from the bullet's position and speed, so only hits are seen (the server tells nothing about misses). `/suspects` lists the players of this game by suspicion, `/acstats <player>` shows this game and all games of that computer (kept in `players.bdb`), findings go to `data/anticheat.log` with ping, computer id and address, and admins in the game are told once a player's suspicion reaches `TellFromScore`.
+
+---
+
+### Map Geometry in the Library
+
+At every map change the library reads `maps/<map>.pms` (`[MapGeometry] MapFolder`) and casts rays exactly like the server (sectors, polygon types, team polygons), only faster: it skips polygons already tested and those whose bounding box the ray misses. The radar's `seen` filter, the trajectory, the aimbot's line of sight, the realistic fog of war of the damage numbers and the teleport's wall check use it; when the map cannot be read, the script casts the rays with `Map.RayCast` as before. `/be_status` shows the polygon count and compares rays between the players with the server's own.
 
 ---
 
@@ -276,8 +314,11 @@ Key sections include:
 - `[Radar]`: Steam IDs, public access switches, display modes, and radar update frequencies.
 - `[Admin]`: Steam admin files, ban duration caps, command aliases, explosion commands and power.
 - `[Teleport]`: Tap / hold behaviour, velocity inheritance, flight speed, dead zone and smoothing, wall collision prevention, and trigger keys.
-- `[Trajectory]`, `[Aimbot]`: Commands, update rates, dots, target selection, range, spread, ammunition and sound.
+- `[Trajectory]`, `[Aimbot]`: Commands, update rates, dots, view clipping, target selection, range, spread, ammunition and sound.
 - `[Weapons]`: Which `weapons.ini` the trajectory and the aimbot read (`auto` = the server's own).
+- `[AntiCheat]`: Commands, thresholds, the log file and when admins are told.
+- `[MapGeometry]`: Where the map files are and how many vision rays the library casts a tick.
+- `[Spree]`: Killing sprees (off by default).
 
 ---
 
@@ -312,7 +353,7 @@ sh build.sh debug    # debug build
 
 Compiled libraries are automatically placed in `scripts/Basic-Extended/`.
 
-`test.bat` (Windows) builds and runs the tests: the store, the library through its exports, and the engines (radar layout, text diff, teleport controller, ballistics, explosions). `main.pas` needs the library of the same release (`BE_API` 2).
+`test.bat` (Windows) builds and runs the tests: the store, the library through its exports, and the engines (radar layout, text diff, teleport controller, ballistics, explosions). `main.pas` needs the library of the same release (`BE_API` 3).
 
 ---
 
@@ -327,6 +368,8 @@ Compiled libraries are automatically placed in `scripts/Basic-Extended/`.
 | Damage numbers show through walls | Set `[DamageNumbers] LineOfSight = auto` or `on`. Ensure map polygons are compiled correctly. |
 | Steam admins not recognized | Ensure the client runs an authentic Steam copy and `Admins_Steam.txt` contains valid Steam IDs (e.g. `S123456789` or `76561198...`). |
 | Server freezes on high player count | Decrease `LinesPerTick` in `[General]`. Ensure `basicext_dll` is running (check `/be_status`). |
+| `/be_status` says `map not loaded` | The library could not read `maps/<map>.pms` (another folder: `[MapGeometry] MapFolder`). Everything still works, the script casts the rays itself. |
+| A player (admin too) banned for a day, "Not allowed weapon" | The server's own anti-cheat: a bow outside Rambo mode, a weapon switched off on the server, or a flamer while `sv_bonus_flamer` is 1. `/give` refuses the bow; see `[Admin] GiveFlamer`. |
 
 ---
 

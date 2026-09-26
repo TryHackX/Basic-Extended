@@ -283,7 +283,7 @@ external {$IFDEF WIN32} 'BE_FxGet@scripts/Basic-Extended/basicext_dll.dll cdecl'
 implementation
 
 const
-  VERSION = '3.2';
+  VERSION = '3.3';
   { the library this main.pas was written for (source_dll/be_main.pas BE_API_VERSION) }
   BE_API = 3;
   TAG = '[Basic-Extended] ';
@@ -7382,7 +7382,8 @@ begin
     K := 'change weapon';
   if Mode = TP_MOMENTUM then
   begin
-    Name := 'tap ' + K + ' = jump to your cursor and keep flying that way; hold it = teleport after teleport towards the cursor';
+    Name := 'tap ' + K + ' = jump to your cursor and keep flying that way; hold it = fly where the cursor points ' +
+      '(turning round too), jumping towards it';
     if Vari = TP_VAR_INHERIT then
       Name := Name + ', faster the longer you hold (up to ' + FloatStr(TpVmax, 1) + ')'
     else
@@ -7650,7 +7651,7 @@ begin
   begin
     if TeamOf[ID] = TEAM_SPECTATOR then
     begin
-      Say(ID, 'Use: /trajectory <player> - the flight of his bullets; /trajectory off', ColorBad);
+      Say(ID, 'Use: /trajectory <player> - the flight of that player''s bullets; /trajectory off', ColorBad);
       Exit;
     end;
     T := ID;
