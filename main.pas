@@ -8645,7 +8645,6 @@ begin
     InfCount := 0;
 end;
 
-{ every second tick while somebody is frozen: put back where he was frozen }
 procedure FreezeTick(Tick: Integer);
 var
   i: Integer;
