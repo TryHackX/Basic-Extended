@@ -4,7 +4,7 @@ program test_engine;
 
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
-  Classes, SysUtils, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map;
+  Classes, SysUtils, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac;
 
 var
   Failed: LongInt = 0;
@@ -360,20 +360,21 @@ end;
 
 procedure TestMove;
 var
-  A, T: LongInt;
-  OX, OY, OVX, OVY, Sp, LastSp, MaxSp, FlyX: Single;
+  A, T, n: LongInt;
+  OX, OY, OVX, OVY, Sp, LastSp, MaxSp, FlyX, PX, Art, HopD: Single;
+  Back, Forward: Boolean;
 begin
   MoveReset(5);
-  A := MoveStep(5, 100, TP_MOMENTUM, VAR_INHERIT, 0, 1, 100, 100, 0, 0, 300, 100, OX, OY, OVX, OVY);
+  A := MoveStep(5, 100, TP_MOMENTUM, VAR_INHERIT, 0, 1, 0, 1, 0, 100, 100, 0, 0, 300, 100, OX, OY, OVX, OVY);
   Check(A = 0, 'no action without a press');
-  A := MoveStep(5, 101, TP_MOMENTUM, VAR_INHERIT, 1, 1, 100, 100, 0, 0, 300, 100, OX, OY, OVX, OVY);
+  A := MoveStep(5, 101, TP_MOMENTUM, VAR_INHERIT, 1, 1, 0, 1, 0, 100, 100, 0, 0, 300, 100, OX, OY, OVX, OVY);
   Check((A and MA_MOVE) <> 0, 'tap moves');
   Check(Near(OX, 300, 0.01) and Near(OY, 100, 0.01), 'tap target is the cursor');
   Check(Near(OVX, 2 + 200 * 0.008, 0.01) and Near(OVY, 0, 0.01), 'tap speed');
   LastSp := 0;
   for T := 102 to 160 do
   begin
-    A := MoveStep(5, T, TP_MOMENTUM, VAR_INHERIT, 1, 1, 300, 100, 3.6, 0, 300 + (T - 100) div 5, 100, OX, OY,
+    A := MoveStep(5, T, TP_MOMENTUM, VAR_INHERIT, 1, 1, 0, 1, 0, 300, 100, 3.6, 0, 300 + (T - 100) div 5, 100, OX, OY,
       OVX, OVY);
     if (A and MA_VELOCITY) <> 0 then
       LastSp := Sqrt(OVX * OVX + OVY * OVY);
@@ -382,7 +383,7 @@ begin
   MaxSp := 0;
   for T := 161 to 900 do
   begin
-    A := MoveStep(5, T, TP_MOMENTUM, VAR_INHERIT, 1, 1, 300, 100, 3.6, 0, 400 + T, 100, OX, OY, OVX, OVY);
+    A := MoveStep(5, T, TP_MOMENTUM, VAR_INHERIT, 1, 1, 0, 1, 0, 300, 100, 3.6, 0, 400 + T, 100, OX, OY, OVX, OVY);
     if (A and MA_VELOCITY) <> 0 then
     begin
       Sp := Sqrt(OVX * OVX + OVY * OVY);
@@ -391,23 +392,69 @@ begin
     end;
   end;
   Check((MaxSp > 8) and (MaxSp <= 9.2), 'vmax reached and respected: ' + FloatToStr(MaxSp));
+  Back := False;
+  for T := 901 to 960 do
+  begin
+    A := MoveStep(5, T, TP_MOMENTUM, VAR_INHERIT, 1, 1, 0, 1, 0, 300, 100, 9, 0, 300 - 250, 100, OX, OY, OVX, OVY);
+    if (A and MA_VELOCITY) <> 0 then
+      if OVX < 0 then
+        Back := True;
+  end;
+  Check(Back, 'held: turns round when the cursor goes behind');
+  MoveReset(8);
+  MoveStep(8, 1000, TP_MOMENTUM, VAR_INHERIT, 0, 1, 100, 1, 0, 0, 0, 0, 0, 200, 0, OX, OY, OVX, OVY);
+  MoveStep(8, 1001, TP_MOMENTUM, VAR_INHERIT, 1, 1, 100, 1, 0, 0, 0, 0, 0, 200, 0, OX, OY, OVX, OVY);
+  PX := 200;
+  HopD := 0;
+  Forward := True;
+  n := 0;
+  for T := 1002 to 1100 do
+  begin
+    Art := 0;
+    if (HopD > 0) and (n >= 0) then
+      Art := HopD * Exp(n * Ln(0.86));
+    A := MoveStep(8, T, TP_MOMENTUM, VAR_INHERIT, 1, 1, 100, 1, 0, PX, 0, 6, 0, Round(PX + 150 - Art), 0, OX, OY, OVX,
+      OVY);
+    Inc(n);
+    if (A and MA_MOVE) <> 0 then
+    begin
+      HopD := OX - PX;
+      PX := OX;
+      n := -6;
+    end;
+    if (A and MA_VELOCITY) <> 0 then
+      if OVX < 0 then
+        Forward := False;
+    PX := PX + 6;
+  end;
+  Check(Forward, 'held: the camera lag after a jump does not turn it round');
+  Check(PX > 900, 'held: jumps keep going: ' + FloatToStr(PX));
+  MoveReset(9);
+  A := MoveStep(9, 50, TP_JUMP, VAR_FIXED, 0, 1, 0, 1, MO_NO_WALLS, 0, 0, 0, 0, 10, 10, OX, OY, OVX, OVY);
+  A := MoveStep(9, 51, TP_JUMP, VAR_FIXED, 1, 1, 0, 1, MO_NO_WALLS, 0, 0, 0, 0, 10, 10, OX, OY, OVX, OVY);
+  Check((A and MA_MOVE) <> 0, 'jump without a map');
   MoveReset(6);
-  MoveStep(6, 200, TP_FLY, VAR_FIXED, 0, 1, 100, 100, 0, 0, 105, 102, OX, OY, OVX, OVY);
-  A := MoveStep(6, 201, TP_FLY, VAR_FIXED, 1, 1, 100, 100, 0, 0, 105, 102, OX, OY, OVX, OVY);
+  MoveStep(6, 200, TP_FLY, VAR_FIXED, 0, 1, 0, 1, 0, 100, 100, 0, 0, 105, 102, OX, OY, OVX, OVY);
+  A := MoveStep(6, 201, TP_FLY, VAR_FIXED, 1, 1, 0, 1, 0, 100, 100, 0, 0, 105, 102, OX, OY, OVX, OVY);
   Check((A and MA_VELOCITY) <> 0, 'fly pushes');
   Check(Near(OVX, 0, 0.01) and (OVY < 0) and (OVY > -0.2), 'inside the dead zone it only hovers');
-  A := MoveStep(6, 203, TP_FLY, VAR_FIXED, 1, 1, 130, 100, 3, 0, 105, 102, OX, OY, OVX, OVY);
-  Check(OVX >= -0.01, 'a stale cursor behind the moving player does not reverse the push');
   MoveReset(7);
-  MoveStep(7, 300, TP_FLY, VAR_FIXED, 0, 1, 100, 100, 0, 0, 250, 100, OX, OY, OVX, OVY);
+  MoveStep(7, 300, TP_FLY, VAR_FIXED, 0, 1, 0, 1, 0, 100, 100, 0, 0, 250, 100, OX, OY, OVX, OVY);
   FlyX := 0;
   for T := 301 to 340 do
   begin
-    A := MoveStep(7, T, TP_FLY, VAR_FIXED, 1, 1, 100, 100, 0, 0, 250, 100, OX, OY, OVX, OVY);
+    A := MoveStep(7, T, TP_FLY, VAR_FIXED, 1, 1, 0, 1, 0, 100, 100, 0, 0, 250, 100, OX, OY, OVX, OVY);
     if (A and MA_VELOCITY) <> 0 then
       FlyX := OVX;
   end;
-  Check(Near(FlyX, 1 + (150 - 18) * 0.03, 0.3), 'fly speed grows with the distance: ' + FloatToStr(FlyX));
+  Check(Near(FlyX, 1.5 + (150 - 8) * 0.04, 0.3), 'fly speed grows with the distance: ' + FloatToStr(FlyX));
+  for T := 341 to 380 do
+  begin
+    A := MoveStep(7, T, TP_FLY, VAR_FIXED, 1, 1, 0, 1, 0, 100, 100, 0, 0, 900, 900, OX, OY, OVX, OVY);
+    if (A and MA_VELOCITY) <> 0 then
+      FlyX := OVX;
+  end;
+  Check((FlyX > 7.5) and (FlyX <= 11), 'fly reaches FlyMax, each axis at most 11: ' + FloatToStr(FlyX));
 end;
 
 procedure TestBallistics;
@@ -756,6 +803,100 @@ begin
   Check(not MapRay(0, 150, 300, 150, MR_BULLET, 0), 'no map: no walls');
 end;
 
+procedure AcFeed(ID, Tick, Flags: LongInt);
+var
+  L: array[0..0] of LongInt;
+begin
+  L[0] := ID * 16 + Flags;
+  AcKeys(Tick, 1, @L);
+end;
+
+function BulletAfter(n: LongInt; out BX, V: Single): Boolean;
+var
+  k: LongInt;
+begin
+  BX := 0;
+  V := 55;
+  for k := 1 to n do
+  begin
+    BX := BX + V;
+    V := V * 0.99;
+  end;
+  Result := True;
+end;
+
+procedure TestAc;
+var
+  T, ID, Kind, n, k: LongInt;
+  BX, V: Single;
+  Txt: AnsiString;
+  Tot: TAcTotals;
+begin
+  WeaponsDefault(False);
+  AcSet(AC_ENABLED, 1);
+  AcReset(3);
+  while AcNext(ID, Kind, Txt) do ;
+  WorldName(3, 'Sniper');
+  for T := 100 to 125 do
+    if T < 101 then
+      AcFeed(3, T, 0)
+    else
+      AcFeed(3, T, AF_FIRE);
+  BulletAfter(5, BX, V);
+  Check(AcHit(130, 3, 8, 7, 4.45 * V * 0.95, BX, 0, V, 0, 0, 0) = 0, 'barrett shot 24 ticks after the key is fine');
+  AcTotals(3, Tot);
+  Check((Tot[T_SU_N] = 1) and (Tot[T_SU_BAD] = 0) and (Tot[T_SU_MIN] = 24), 'start-up measured: ' +
+    IntToStr(Tot[T_SU_MIN]));
+  for T := 126 to 400 do
+    if T < 390 then
+      AcFeed(3, T, 0)
+    else
+      AcFeed(3, T, AF_FIRE);
+  BulletAfter(2, BX, V);
+  Check(AcHit(392, 3, 8, 9, 4.45 * V * 1.1, BX, 0, V, 0, 0, 0) = AK_STARTUP, 'barrett shot at once is reported');
+  Check(AcNext(ID, Kind, Txt) and (ID = 3) and (Kind = AK_STARTUP) and (Pos('Sniper', Txt) = 1), 'incident: ' + Txt);
+  Check(AcHit(393, 3, 8, 9, 4.45 * V * 1.1, BX + V, 0, V * 0.99, 0, 0, 0) = 0, 'the same bullet counts once');
+  for T := 401 to 510 do
+    if T < 490 then
+      AcFeed(3, T, 0)
+    else
+      AcFeed(3, T, AF_FIRE or AF_MOVE);
+  AcHurt(3, 485, 8);
+  BulletAfter(1, BX, V);
+  k := AcHit(510, 3, 8, 11, 4.45 * V * 0.95, BX, 0, V, 0, 0, 0);
+  Check(k = AK_RATE, 'two barrett shots 120 ticks apart: ' + IntToStr(k));
+  AcTotals(3, Tot);
+  Check((Tot[T_BINK_HITS] = 1) and (Tot[T_B_HITS] = 3), 'hit under bink counted');
+  Check((Tot[T_MOVE_HITS] = 1) and (Tot[T_M_HITS] = 3), 'hit while running counted');
+  Check((Tot[T_HITS] = 4) and (Tot[T_HEADS] = 2), 'head hits: ' + IntToStr(Tot[T_HEADS]) + '/' +
+    IntToStr(Tot[T_HITS]));
+  Check(AcScore(3) >= 40, 'score: ' + IntToStr(AcScore(3)));
+  Check(Pos('start-up 1/3 short (min 0, avg 14', AcLineOf(Tot)) > 0, 'line: ' + AcLineOf(Tot));
+  while AcNext(ID, Kind, Txt) do ;
+  AcReset(4);
+  WClear;
+  WAdd(4, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 100, 100, 0, 0);
+  WorldLoad(600, WN, @WI, @WF);
+  AcWorld(600);
+  WClear;
+  WAdd(4, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 1500, 100, 0, 0);
+  WorldLoad(603, WN, @WI, @WF);
+  AcWorld(603);
+  Check(AcNext(ID, Kind, Txt) and (Kind = AK_JUMP), 'teleport seen: ' + Txt);
+  AcMoved(4, 605);
+  WClear;
+  WAdd(4, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 3000, 100, 0, 0);
+  WorldLoad(610, WN, @WI, @WF);
+  AcWorld(610);
+  Check(not AcNext(ID, Kind, Txt), 'a move by the script is not a teleport');
+  WClear;
+  WAdd(4, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 3010, 100, 0, 0);
+  WorldLoad(720, WN, @WI, @WF);
+  AcWorld(720);
+  Check(not AcNext(ID, Kind, Txt), 'walking is not a teleport');
+  AcSet(AC_ENABLED, 0);
+end;
+
 procedure TestFx;
 var
   k: LongInt;
@@ -788,6 +929,7 @@ begin
   TestTargets;
   TestTraj;
   TestMap(Dir);
+  TestAc;
   TestFx;
   WriteLn(Passed, ' passed, ', Failed, ' failed');
   if Failed > 0 then

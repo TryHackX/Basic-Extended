@@ -32,7 +32,7 @@ const
 type
   TWeaponStat = record
     Name: AnsiString;
-    Damage, Speed, Spread, Inherit, MoveAcc: Single;
+    Damage, Speed, Spread, Inherit, MoveAcc, ModHead, ModChest, ModLegs: Single;
     Style, Interval, Ammo, Reload, StartUp, Bink: LongInt;
     Sound: AnsiString;
   end;
@@ -124,6 +124,9 @@ begin
     Weapon[i].Sound := Sounds[i];
     Weapon[i].Style := NStyle[i];
     Weapon[i].Inherit := NInherit[i];
+    Weapon[i].ModHead := 1.1;
+    Weapon[i].ModChest := 0.95;
+    Weapon[i].ModLegs := 0.85;
     if Realistic then
     begin
       Weapon[i].Damage := RDamage[i];
@@ -266,6 +269,12 @@ begin
           Weapon[W].MoveAcc := V;
       if ReadNum(Keys[W].Values['bink'], V) then
         Weapon[W].Bink := Round(V);
+      if ReadNum(Keys[W].Values['modifierhead'], V) then
+        Weapon[W].ModHead := V;
+      if ReadNum(Keys[W].Values['modifierchest'], V) then
+        Weapon[W].ModChest := V;
+      if ReadNum(Keys[W].Values['modifierlegs'], V) then
+        Weapon[W].ModLegs := V;
     end;
     Result := Found;
   finally

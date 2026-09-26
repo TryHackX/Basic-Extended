@@ -122,8 +122,8 @@ external {$IFDEF WIN32} 'BE_TextWidth@scripts/Basic-Extended/basicext_dll.dll cd
 procedure BE_MoveSet(Key: Integer; Value: Single);
 external {$IFDEF WIN32} 'BE_MoveSet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_MoveSet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
-function BE_Move(ID, Tick, Mode, Vari, Key, Alive: Integer; X, Y, VX, VY: Single; AimX, AimY: Integer;
-  var OX, OY, OVX, OVY: Single): Integer;
+function BE_Move(ID, Tick, Mode, Vari, Key, Alive, Ping, Team, Opts: Integer; X, Y, VX, VY: Single;
+  AimX, AimY: Integer; var OX, OY, OVX, OVY: Single): Integer;
 external {$IFDEF WIN32} 'BE_Move@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Move@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
 procedure BE_MoveBlocked(ID, Tick: Integer);
@@ -172,6 +172,42 @@ external {$IFDEF WIN32} 'BE_TrajStep@scripts/Basic-Extended/basicext_dll.dll cde
 
 function BE_GunPick(Shooter, Mode: Integer; MaxDist, MaxAngle, SX, SY, BodyH: Single; MaxCheck: Integer): Integer;
 external {$IFDEF WIN32} 'BE_GunPick@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunPick@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AcSet(Key: Integer; Value: Single);
+external {$IFDEF WIN32} 'BE_AcSet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcSet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AcReset(ID: Integer);
+external {$IFDEF WIN32} 'BE_AcReset@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcReset@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AcKeys(Tick, Count: Integer; var I: TBEInts);
+external {$IFDEF WIN32} 'BE_AcKeys@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcKeys@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AcMoved(ID, Tick: Integer);
+external {$IFDEF WIN32} 'BE_AcMoved@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcMoved@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AcHurt(Victim, Tick, W: Integer);
+external {$IFDEF WIN32} 'BE_AcHurt@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcHurt@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_AcHit(Tick, Shooter, W, Bullet: Integer; Damage, BX, BY, BVX, BVY, SX, SY: Single): Integer;
+external {$IFDEF WIN32} 'BE_AcHit@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcHit@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_AcWatched(W: Integer): Integer;
+external {$IFDEF WIN32} 'BE_AcWatched@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcWatched@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_AcNext(var ID, Kind: Integer): PChar;
+external {$IFDEF WIN32} 'BE_AcNext@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcNext@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_AcScore(ID: Integer): Integer;
+external {$IFDEF WIN32} 'BE_AcScore@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcScore@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_AcLine(ID: Integer; Key: PChar): PChar;
+external {$IFDEF WIN32} 'BE_AcLine@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcLine@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AcSave(ID: Integer; Key: PChar);
+external {$IFDEF WIN32} 'BE_AcSave@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcSave@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AcForget(Key: PChar);
+external {$IFDEF WIN32} 'BE_AcForget@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcForget@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
 function BE_Solve(W: Integer; SX, SY, SVX, SVY, TX, TY, TVX, TVY, TGrav: Single; var DX, DY: Single;
   var Ticks: Integer): Integer;
@@ -344,6 +380,9 @@ const
   C_DMGFIX = 76;
   C_DMGTAKEN = 77;
   C_VEST = 78;
+  C_SUSPECTS = 79;
+  C_ACSTATS = 80;
+  C_ACCLEAR = 81;
   { damage number modes }
   DM_SUM = 0;
   DM_COLUMN = 1;
@@ -480,6 +519,8 @@ const
   MA_MOVE = 1;
   MA_VELOCITY = 2;
   MA_TAP = 4;
+  MA_BLOCKED = 8;
+  MO_NO_WALLS = 1;
   MF_MOM_BASE = 1;
   MF_MOM_PER_PIXEL = 2;
   MF_MOM_KEEP = 3;
@@ -497,8 +538,9 @@ const
   MF_FLY_DEAD = 15;
   MF_FLY_SMOOTH = 16;
   MF_GRAVITY = 17;
-  MF_HOP_TIMEOUT = 18;
   MF_ACCEL = 19;
+  MF_STEER = 20;
+  MF_HOP_MAX = 21;
   TJ_LAYER = 1;
   TJ_DOTS = 2;
   TJ_COLOR = 3;
@@ -543,6 +585,16 @@ const
   SF_AIRBORNE = 4;
   SF_RUNNING = 8;
   MR_BULLET = 4;
+  AF_FIRE = 1;
+  AF_MOVE = 2;
+  AF_AIR = 4;
+  ACS_ENABLED = 1;
+  ACS_SLACK = 2;
+  ACS_JUMP_SLACK = 3;
+  ACS_JUMP_LAG = 4;
+  ACS_RATE = 5;
+  ACS_BINK_TICKS = 6;
+  ACS_GRACE = 7;
   BODY_HEIGHT = 10;
 
 var
@@ -620,7 +672,7 @@ var
   TpEnabled, TpNoWalls: Boolean;
   TpKey, TpFlyEvery, TpHoldTicks, TpHopTicks, TpPushTicks, TpVariantDefault: Integer;
   TpMomBase, TpMomPerDist, TpMomKeep, TpMomMax, TpFlyBase, TpFlyPerDist, TpFlyMax: Single;
-  TpHopMin, TpGain, TpAccel, TpVmax, TpFlyDead, TpFlySmooth, TpHopTimeout: Single;
+  TpHopMin, TpGain, TpAccel, TpVmax, TpFlyDead, TpFlySmooth, TpSteer, TpHopMax: Single;
 
   TrEnabled: Boolean;
   TrLayer, TrDots, TrTicks, TrColor, TrHitColor, TrCursorColor, TrBudget: Integer;
@@ -860,6 +912,13 @@ var
   TpVariant: array[1..32] of Integer;
   TrWatch, TrDue: array[1..32] of Integer;
   TrView, MapOk, MgOn: Boolean;
+  AcOn, AcNotify: Boolean;
+  AcNotifyScore, AcCooldown, AcWatchTicks, AcSnapTicks, AcN, AcNextWatch: Integer;
+  AcSlack, AcJumpSlack, AcJumpLag, AcRate, AcBinkTicks, AcGrace: Single;
+  AcLogName: string;
+  AcWep, AcTold, AcSkip: array[1..32] of Integer;
+  AcList: array[0..31] of Integer;
+  AcI: TBEInts;
   TrMargin: Single;
   MgFolder, MgName: string;
   MgRays, MgPolys: Integer;
@@ -2158,12 +2217,11 @@ begin
   TpMomBase := CfgFloat('Teleport', 'MomentumBase', 2, 0, 11);
   TpMomPerDist := CfgFloat('Teleport', 'MomentumPerPixel', 0.008, 0, 1);
   TpMomKeep := CfgFloat('Teleport', 'MomentumKeep', 1, 0, 2);
-  TpMomMax := CfgFloat('Teleport', 'MomentumMax', 11, 0, 11);
+  TpMomMax := CfgFloat('Teleport', 'MomentumMax', 11, 0, 15.5);
   TpHoldTicks := CfgInt('Teleport', 'HoldTicks', 15, 1, 600);
   TpHopTicks := CfgInt('Teleport', 'HopTicks', 6, 1, 120);
   TpHopMin := CfgFloat('Teleport', 'HopMinPixels', 24, 0, 2000);
   TpPushTicks := CfgInt('Teleport', 'PushTicks', 3, 1, 60);
-  TpHopTimeout := CfgInt('Teleport', 'HopTimeoutTicks', 20, 1, 600);
   S := LowerCase(Trim(CfgStr('Teleport', 'HoldSpeed', 'inherit')));
   TpVariantDefault := TP_VAR_INHERIT;
   if S = 'fixed' then
@@ -2172,12 +2230,14 @@ begin
     CfgWarn('Teleport', 'HoldSpeed', S, 'inherit or fixed; inherit used');
   TpGain := CfgFloat('Teleport', 'InheritGain', 0.6, 0, 11);
   TpAccel := CfgFloat('Teleport', 'InheritAccel', 4, 0, 60);
-  TpVmax := CfgFloat('Teleport', 'InheritMax', 9, 1, 11);
-  TpFlyBase := CfgFloat('Teleport', 'FlyBase', 1, 0, 11);
-  TpFlyPerDist := CfgFloat('Teleport', 'FlyPerPixel', 0.03, 0, 1);
-  TpFlyMax := CfgFloat('Teleport', 'FlyMax', 9, 0, 11);
+  TpVmax := CfgFloat('Teleport', 'InheritMax', 11, 1, 15.5);
+  TpSteer := CfgFloat('Teleport', 'HoldSteer', 0.3, 0.01, 1);
+  TpHopMax := CfgFloat('Teleport', 'HopMaxPixels', 600, 24, 5000);
+  TpFlyBase := CfgFloat('Teleport', 'FlyBase', 1.5, 0, 11);
+  TpFlyPerDist := CfgFloat('Teleport', 'FlyPerPixel', 0.04, 0, 1);
+  TpFlyMax := CfgFloat('Teleport', 'FlyMax', 11, 0, 15.5);
   TpFlyEvery := CfgInt('Teleport', 'FlyEveryTicks', 2, 1, 60);
-  TpFlyDead := CfgFloat('Teleport', 'FlyDeadZone', 18, 0, 500);
+  TpFlyDead := CfgFloat('Teleport', 'FlyDeadZone', 8, 0, 500);
   TpFlySmooth := CfgFloat('Teleport', 'FlySmooth', 0.5, 0.05, 1);
 
   TrEnabled := CfgBool('Trajectory', 'Enabled', True);
@@ -2230,6 +2290,31 @@ begin
   AbSound := CfgBool('Aimbot', 'Sound', True);
   AbSoundRange := CfgFloat('Aimbot', 'SoundRange', 900, 0, 10000);
 
+  AcOn := CfgBool('AntiCheat', 'Enabled', True);
+  AcNotify := CfgBool('AntiCheat', 'TellAdmins', True);
+  AcNotifyScore := CfgInt('AntiCheat', 'TellFromScore', 50, 0, 100);
+  AcCooldown := CfgInt('AntiCheat', 'TellEverySeconds', 60, 1, 3600) * 60;
+  AcLogName := Trim(CfgStr('AntiCheat', 'LogFile', 'anticheat.log'));
+  AcWatchTicks := CfgInt('AntiCheat', 'WeaponCheckTicks', 30, 1, 600);
+  AcSnapTicks := CfgInt('AntiCheat', 'PositionTicks', 10, 1, 120);
+  AcSlack := CfgFloat('AntiCheat', 'StartUpSlack', 7, 0, 60);
+  AcRate := CfgFloat('AntiCheat', 'FireIntervalShare', 0.85, 0.1, 1);
+  AcJumpSlack := CfgFloat('AntiCheat', 'JumpPixels', 40, 0, 5000);
+  AcJumpLag := CfgFloat('AntiCheat', 'JumpLagTicks', 10, 0, 120);
+  AcGrace := CfgFloat('AntiCheat', 'MovedGraceTicks', 90, 0, 600);
+  AcBinkTicks := CfgFloat('AntiCheat', 'BinkTicks', 35, 1, 200);
+  if AcOn then
+  begin
+    AddWords(CfgStr('AntiCheat', 'SuspectsCommands', 'suspects'), C_SUSPECTS, True);
+    AddWords(CfgStr('AntiCheat', 'StatsCommands', 'acstats'), C_ACSTATS, True);
+    AddWords(CfgStr('AntiCheat', 'ClearCommands', 'acclear'), C_ACCLEAR, True);
+  end
+  else
+  begin
+    CfgStr('AntiCheat', 'SuspectsCommands', '');
+    CfgStr('AntiCheat', 'StatsCommands', '');
+    CfgStr('AntiCheat', 'ClearCommands', '');
+  end;
   MgOn := CfgBool('MapGeometry', 'Enabled', True);
   MgFolder := Trim(CfgStr('MapGeometry', 'MapFolder', 'maps/'));
   if MgFolder <> '' then
@@ -3545,6 +3630,14 @@ begin
   Result := Map.RayCast(X1, Y1, X2, Y2, False, False, Bullet, False, 0);
 end;
 
+procedure MovePlayer(P: TActivePlayer; X, Y: Single);
+begin
+  P.Move(X, Y);
+  if AcOn then
+    if BeOk then
+      BE_AcMoved(P.ID, Game.TickCount);
+end;
+
 { Could Viewer see Target now? The fog of war of realistic mode: team mates always, everybody for a
   dead player, the others only in front of the aim, up to LOS_RANGE away and with no wall between
   the upper bodies. A damage number over a player the shooter cannot see would show where he is. }
@@ -4511,6 +4604,121 @@ begin
       end;
 end;
 
+function AcKey(ID: Integer): string;
+begin
+  Result := PL[ID].HWID;
+  if Result = '' then
+    Result := LowerCase(PL[ID].Name);
+  Result := 'ac:' + Result;
+end;
+
+procedure AcTick(Tick: Integer);
+var
+  i, k, n, F: Integer;
+  P: TActivePlayer;
+begin
+  if Tick >= AcNextWatch then
+  begin
+    AcNextWatch := After(Tick, AcWatchTicks);
+    AcN := 0;
+    for i := 1 to TopSlot do
+    begin
+      AcWep[i] := -1;
+      if ActiveSlot[i] then
+        if HumanOf[i] or DebugBots then
+          if PL[i].Alive then
+          begin
+            k := PL[i].Primary.WType;
+            if BE_AcWatched(k) = 1 then
+            begin
+              AcWep[i] := k;
+              AcList[AcN] := i;
+              AcN := AcN + 1;
+            end;
+          end;
+    end;
+  end;
+  n := 0;
+  for k := 0 to AcN - 1 do
+  begin
+    i := AcList[k];
+    P := PL[i];
+    F := 0;
+    if P.KeyShoot then
+    begin
+      F := AF_FIRE;
+      if P.KeyJetpack then
+        F := F + AF_MOVE
+      else if P.KeyLeft or P.KeyRight then
+        if not P.KeyCrouch then
+          if not P.IsProne then
+            F := F + AF_MOVE;
+      if not P.OnGround then
+        F := F + AF_AIR;
+    end;
+    AcI[n] := i * 16 + F;
+    n := n + 1;
+  end;
+  if n > 0 then
+    BE_AcKeys(Tick, n, AcI);
+  if Tick - SnapTick >= AcSnapTicks then
+    WorldSnap(Tick, SNAP_POS, False);
+end;
+
+procedure AcDrain(Tick: Integer);
+var
+  ID, Kind, Sc, Guard: Integer;
+  T, Line: string;
+begin
+  Guard := 0;
+  T := BE_AcNext(ID, Kind);
+  while (T <> '') and (Guard < 64) do
+  begin
+    Guard := Guard + 1;
+    Line := T;
+    Sc := 0;
+    if (ID >= 1) and (ID <= 32) then
+      if ActiveSlot[ID] then
+      begin
+        Sc := BE_AcScore(ID);
+        Line := Line + ', ping ' + IntToStr(PL[ID].Ping) + ', suspicion ' + IntToStr(Sc) + '% [' + PL[ID].HWID + ' ' +
+          PL[ID].IP + ']';
+        if AcNotify then
+          if Sc >= AcNotifyScore then
+            if Tick - AcTold[ID] >= AcCooldown then
+            begin
+              AcTold[ID] := Tick;
+              SayAdmins('[AC] ' + T + ' - suspicion ' + IntToStr(Sc) + '% (/acstats ' + IntToStr(ID) + ')', ColorBad);
+            end;
+      end;
+    if AcLogName <> '' then
+      BE_Log(PChar(DataDir + AcLogName), PChar(FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + '  ' + Line));
+    T := BE_AcNext(ID, Kind);
+  end;
+end;
+
+procedure AcDamage(S, V, Tick, BulletId: Integer; Damage: Single; Shooter: TActivePlayer);
+var
+  Bul: TActiveMapBullet;
+  W: Integer;
+begin
+  if AcWep[V] >= 0 then
+    BE_AcHurt(V, Tick, AcWep[V]);
+  if Tick - AcSkip[S] < 600 then
+    Exit;
+  if Tick - AdminHit[S] < 600 then
+    Exit;
+  Bul := BL[BulletId];
+  if not Bul.Active then
+    Exit;
+  if Bul.Owner <> S then
+    Exit;
+  W := Bul.GetOwnerWeaponId;
+  if (W < 0) or (W > 16) then
+    Exit;
+  BE_AcHit(Tick, S, W, BulletId, Damage, Bul.X, Bul.Y, Bul.VelX, Bul.VelY, Shooter.X, Shooter.Y - 10);
+end;
+
 function AbKeyDown(P: TActivePlayer): Boolean;
 begin
   if AbKey = AK_JET then
@@ -4649,6 +4857,7 @@ begin
       for k := 0 to n - 1 do
         if BE_ShotGet(k, X, Y, VX, VY) = 1 then
         begin
+          AcSkip[i] := Tick;
           B := Map.CreateBullet(X, Y, VX, VY, HitM, Style, P);
           if (B >= 0) and (B <= 255) then
           begin
@@ -4960,14 +5169,14 @@ begin
         begin
           if Drift > 80 then
           begin
-            P.Move(EdPinX[i], EdPinY[i]);
+            MovePlayer(P, EdPinX[i], EdPinY[i]);
             P.SetVelocity(0, 0);
             EdPinAt[i] := Tick + 20;
           end;
         end
         else if Drift > 4 then
         begin
-          P.Move(EdPinX[i], EdPinY[i]);
+          MovePlayer(P, EdPinX[i], EdPinY[i]);
           P.SetVelocity(0, 0);
           EdPinAt[i] := Tick + 6;
         end;
@@ -5274,7 +5483,10 @@ begin
     Exit;
   end;
   if BulletRoom(1) then
+  begin
+    AcSkip[V] := Game.TickCount;
     Map.CreateBullet(P.X, P.Y - 30, 0, 0, PhPower, PhStyle, P);
+  end;
   if PhText <> '' then
     Say(V, PhText, PhColor);
 end;
@@ -6610,7 +6822,8 @@ begin
   BE_MoveSet(MF_FLY_EVERY, TpFlyEvery);
   BE_MoveSet(MF_FLY_DEAD, TpFlyDead);
   BE_MoveSet(MF_FLY_SMOOTH, TpFlySmooth);
-  BE_MoveSet(MF_HOP_TIMEOUT, TpHopTimeout);
+  BE_MoveSet(MF_STEER, TpSteer);
+  BE_MoveSet(MF_HOP_MAX, TpHopMax);
   BE_MoveSet(MF_ACCEL, TpAccel);
   BE_TrajInt(TJ_LAYER, TrLayer);
   BE_TrajInt(TJ_DOTS, TrDots);
@@ -6624,6 +6837,14 @@ begin
   BE_TrajFloat(TJF_SPACING, TrSpacing);
   BE_TrajFloat(TJF_RANGE, TrRange);
   BE_TrajFloat(TJF_MARGIN, TrMargin);
+  BE_AcSet(ACS_ENABLED, BoolInt(AcOn));
+  BE_AcSet(ACS_SLACK, AcSlack);
+  BE_AcSet(ACS_JUMP_SLACK, AcJumpSlack);
+  BE_AcSet(ACS_JUMP_LAG, AcJumpLag);
+  BE_AcSet(ACS_RATE, AcRate);
+  BE_AcSet(ACS_BINK_TICKS, AcBinkTicks);
+  BE_AcSet(ACS_GRACE, AcGrace);
+  AcNextWatch := 0;
   EngineWeapons();
   MapGeoLoad();
 end;
@@ -7813,7 +8034,7 @@ begin
       Exit;
     end;
     T := TgtList[0];
-    PL[ID].Move(PL[T].X, PL[T].Y - 10);
+    MovePlayer(PL[ID], PL[T].X, PL[T].Y - 10);
     PL[ID].SetVelocity(0, 0);
     Say(ID, 'You went to ' + PL[T].Name + '.', ColorGood);
     Exit;
@@ -7826,7 +8047,7 @@ begin
     T := TgtList[k];
     if T = ID then
       Continue;
-    PL[T].Move(X + NearX(n + 1), Y);
+    MovePlayer(PL[T], X + NearX(n + 1), Y);
     PL[T].SetVelocity(0, 0);
     if FrOn[T] then
     begin
@@ -8241,6 +8462,102 @@ begin
   Say(ID, 'Vest ' + IntToStr(N) + '%: ' + TgtDesc() + '.', ColorGood);
 end;
 
+procedure CmdSuspects(ID: Integer; Args: string);
+var
+  i, k, n, Best, BestSc: Integer;
+  Sc: array[1..32] of Integer;
+  Done: array[1..32] of Boolean;
+  All: Boolean;
+begin
+  All := LowerCase(Trim(Args)) = 'all';
+  n := 0;
+  for i := 1 to 32 do
+  begin
+    Done[i] := True;
+    Sc[i] := 0;
+    if i <= TopSlot then
+      if ActiveSlot[i] then
+        if HumanOf[i] or DebugBots then
+        begin
+          Sc[i] := BE_AcScore(i);
+          if All or (Sc[i] > 0) then
+          begin
+            Done[i] := False;
+            n := n + 1;
+          end;
+        end;
+  end;
+  if n = 0 then
+  begin
+    Say(ID, 'Nobody looks suspicious now (/suspects all shows everybody).', ColorGood);
+    Exit;
+  end;
+  Say(ID, 'Anti-cheat, this game (/acstats <player> for all games):', ColorGood);
+  for k := 1 to n do
+  begin
+    Best := 0;
+    BestSc := -1;
+    for i := 1 to 32 do
+      if not Done[i] then
+        if Sc[i] > BestSc then
+        begin
+          Best := i;
+          BestSc := Sc[i];
+        end;
+    if Best = 0 then
+      Break;
+    Done[Best] := True;
+    Say(ID, PL[Best].Name + ' (' + IntToStr(Best) + ', ping ' + IntToStr(PL[Best].Ping) + '): ' +
+      BE_AcLine(Best, ''), iif(Sc[Best] >= AcNotifyScore, ColorBad, ColorGood));
+  end;
+end;
+
+procedure CmdAcStats(ID: Integer; Args: string);
+var
+  k, T: Integer;
+  Rest: string;
+begin
+  Rest := Args;
+  if not PickTargets(ID, TakeArg(Rest), True, False, False) then
+    Exit;
+  for k := 0 to TgtCount - 1 do
+  begin
+    T := TgtList[k];
+    Say(ID, PL[T].Name + ' (' + IntToStr(T) + ', ping ' + IntToStr(PL[T].Ping) + '): ' + BE_AcLine(T, AcKey(T)),
+      ColorGood);
+  end;
+end;
+
+procedure CmdAcClear(ID: Integer; Args: string);
+var
+  k, T: Integer;
+  Rest, Who: string;
+  Forever: Boolean;
+begin
+  Rest := Args;
+  Who := TakeArg(Rest);
+  Forever := LowerCase(Trim(Rest)) = 'forever';
+  if Who = '' then
+  begin
+    Say(ID, 'Use: /acclear <player|all> [forever] - forget what the anti-cheat saw (forever: all games too)',
+      ColorBad);
+    Exit;
+  end;
+  if not PickTargets(ID, Who, True, False, False) then
+    Exit;
+  for k := 0 to TgtCount - 1 do
+  begin
+    T := TgtList[k];
+    BE_AcReset(T);
+    if Forever then
+      BE_AcForget(PChar(AcKey(T)));
+  end;
+  if Forever then
+    Say(ID, 'Anti-cheat data forgotten (all games): ' + TgtDesc() + '.', ColorGood)
+  else
+    Say(ID, 'Anti-cheat data of this game forgotten: ' + TgtDesc() + '.', ColorGood);
+end;
+
 procedure InfTick(Tick: Integer);
 var
   i, W, A, Low: Integer;
@@ -8307,7 +8624,7 @@ begin
           Continue;
         if (Abs(P.X - FrX[i]) > 4) or (Abs(P.Y - FrY[i]) > 4) then
         begin
-          P.Move(FrX[i], FrY[i]);
+          MovePlayer(P, FrX[i], FrY[i]);
           P.SetVelocity(0, 0);
           FrAt[i] := Tick + 4;
         end;
@@ -8384,6 +8701,9 @@ begin
     C_DMGFIX: CmdDamage(ID, Args, False);
     C_DMGTAKEN: CmdDamage(ID, Args, True);
     C_VEST: CmdVest(ID, Args);
+    C_SUSPECTS: CmdSuspects(ID, Args);
+    C_ACSTATS: CmdAcStats(ID, Args);
+    C_ACCLEAR: CmdAcClear(ID, Args);
     C_TELEMOUSE: CmdTele(ID, Console, TP_MOMENTUM, Args);
     C_FLYMOUSE: CmdTele(ID, Console, TP_FLY, '');
     C_ADMINLIST:
@@ -8647,7 +8967,7 @@ end;
 
 procedure TeleportTick(Tick: Integer);
 var
-  i, A, Key, Al: Integer;
+  i, A, Key, Al, Pg, Opts: Integer;
   P: TActivePlayer;
   Down, Blocked: Boolean;
   X, Y, VX, VY, OX, OY, OVX, OVY: Single;
@@ -8675,6 +8995,7 @@ begin
       if Down then
         Key := 1;
       Al := 0;
+      Pg := 0;
       X := 0;
       Y := 0;
       VX := 0;
@@ -8686,8 +9007,14 @@ begin
         Y := P.Y;
         VX := P.VelX;
         VY := P.VelY;
+        if Down then
+          Pg := P.Ping;
       end;
-      A := BE_Move(i, Tick, TpMode[i], TpVariant[i], Key, Al, X, Y, VX, VY, P.MouseAimX, P.MouseAimY, OX, OY, OVX, OVY);
+      Opts := 0;
+      if TpNoWalls then
+        Opts := MO_NO_WALLS;
+      A := BE_Move(i, Tick, TpMode[i], TpVariant[i], Key, Al, Pg, TeamOf[i], Opts, X, Y, VX, VY, P.MouseAimX,
+        P.MouseAimY, OX, OY, OVX, OVY);
       if A = 0 then
         Continue;
       if not P.IsAdmin then
@@ -8698,11 +9025,15 @@ begin
         Say(i, 'Teleport off: you are not an admin any more.', ColorBad);
         Continue;
       end;
+      if (A and MA_BLOCKED) <> 0 then
+        if (A and MA_TAP) <> 0 then
+          Say(i, 'Your cursor is inside a wall.', ColorBad);
       if (A and MA_MOVE) <> 0 then
       begin
         Blocked := False;
         if TpNoWalls then
-          Blocked := Map.RayCast(OX, OY - 10, OX + 1, OY - 9, True, False, False, False, TeamOf[i]);
+          if not MapOk then
+            Blocked := Map.RayCast(OX, OY - 10, OX + 1, OY - 9, True, False, False, False, TeamOf[i]);
         if Blocked then
         begin
           BE_MoveBlocked(i, Tick);
@@ -8713,7 +9044,7 @@ begin
           end;
         end
         else
-          P.Move(OX, OY);
+          MovePlayer(P, OX, OY);
       end;
       if (A and MA_VELOCITY) <> 0 then
         P.SetVelocity(OVX, OVY);
@@ -9060,6 +9391,15 @@ begin
     except
       StageError('aimbot');
     end;
+  if AcOn then
+    if BeOk then
+      try
+        AcTick(Tick);
+        if Tick mod 30 = 0 then
+          AcDrain(Tick);
+      except
+        StageError('anticheat');
+      end;
   if TrCount > 0 then
     try
       TrTick(Tick);
@@ -9246,6 +9586,13 @@ begin
             Result := 0;
             Exit;
           end;
+  if AcOn then
+    if BeOk then
+      if S <> V then
+        if (BulletId >= 1) and (BulletId <= MAX_BULLET_ID) then
+          if Damage <= SERVER_HIT_DAMAGE then
+            if Shooter.Human or DebugBots then
+              AcDamage(S, V, Tick, BulletId, Damage, Shooter);
   if Damage > SERVER_HIT_DAMAGE then
     ServerKill[V] := Tick;
   if S = V then
@@ -9406,6 +9753,9 @@ var
   ID: Integer;
 begin
   ID := Player.ID;
+  if AcOn then
+    if BeOk then
+      BE_AcMoved(ID, Game.TickCount);
   { during a map change the new map is loaded and its kits come right after the respawns: with the
     medkit spawn points switched off no kit is created at all. A respawn during the countdown (still
     the old map) must not use this up. A restart of the same map is left to OnAfterMapEv. }
@@ -9471,6 +9821,11 @@ begin
   SvTarget[ID] := 0;
   ServerKill[ID] := -1;
   AdminHit[ID] := -1000000;
+  AcWep[ID] := -1;
+  AcTold[ID] := -1000000;
+  AcSkip[ID] := -1000000;
+  if BeOk then
+    BE_AcReset(ID);
   RsWait[ID] := 0;
   MdWants[ID] := False;
   LgWatched[ID] := False;
@@ -9567,6 +9922,13 @@ var
   ID, i: Integer;
 begin
   ID := Player.ID;
+  if BeOk then
+    if AcOn then
+    begin
+      BE_AcSave(ID, PChar(AcKey(ID)));
+      BE_AcReset(ID);
+    end;
+  AcWep[ID] := -1;
   if LgEnabled then
     if LgJoins then
       LogLine(ID, Player.Name + iif(Kicked, ' was kicked', ' left'));
@@ -9796,6 +10158,9 @@ begin
   VicCount := 0;
   for i := 1 to 32 do
   begin
+    if AcOn then
+      if BeOk then
+        BE_AcMoved(i, Game.TickCount);
     VicPend[i] := False;
     SrRun[i] := 0;
     ResetLife(i);

@@ -28,7 +28,7 @@ library basicext_dll;
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   {$IFDEF WINDOWS}Windows,{$ENDIF}
-  SysUtils, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map;
+  SysUtils, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac;
 
 const
   BE_API_VERSION = 3;
@@ -40,6 +40,8 @@ const
 {$ENDIF}
 
 var
+  AcBuf: AnsiString = '';
+  AcNextBuf: AnsiString = '';
   Store: TBEStore = nil;
   Writer: TBEWriter = nil;
   Worker: TBEWorker = nil;
@@ -276,7 +278,197 @@ procedure BE_World(Tick, Count: LongInt; I: PLongArr; F: PSingleArr); cdecl;
 begin
   try
     if (I <> nil) and (F <> nil) then
+    begin
       WorldLoad(Tick, Count, I, F);
+      if AcEnabled then
+        AcWorld(Tick);
+    end;
+  except
+  end;
+end;
+
+procedure BE_AcSet(Key: LongInt; Value: Single); cdecl;
+begin
+  try
+    AcSet(Key, Value);
+  except
+  end;
+end;
+
+procedure BE_AcReset(ID: LongInt); cdecl;
+begin
+  try
+    AcReset(ID);
+  except
+  end;
+end;
+
+procedure BE_AcKeys(Tick, Count: LongInt; I: PLongArr); cdecl;
+begin
+  try
+    if I <> nil then
+      AcKeys(Tick, Count, I);
+  except
+  end;
+end;
+
+procedure BE_AcMoved(ID, Tick: LongInt); cdecl;
+begin
+  try
+    AcMoved(ID, Tick);
+  except
+  end;
+end;
+
+procedure BE_AcHurt(Victim, Tick, W: LongInt); cdecl;
+begin
+  try
+    AcHurt(Victim, Tick, W);
+  except
+  end;
+end;
+
+function BE_AcHit(Tick, Shooter, W, Bullet: LongInt; Damage, BX, BY, BVX, BVY, SX, SY: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AcHit(Tick, Shooter, W, Bullet, Damage, BX, BY, BVX, BVY, SX, SY);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_AcWatched(W: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if AcWatched(W) then
+      Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_AcNext(ID, Kind: PLongInt): PChar; cdecl;
+var
+  a, b: LongInt;
+begin
+  AcNextBuf := '';
+  try
+    if AcNext(a, b, AcNextBuf) then
+    begin
+      ID^ := a;
+      Kind^ := b;
+    end;
+  except
+    AcNextBuf := '';
+  end;
+  Result := PChar(AcNextBuf);
+end;
+
+function BE_AcScore(ID: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AcScore(ID);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure AcStored(const K: AnsiString; out T: TAcTotals);
+var
+  i, n: LongInt;
+begin
+  for i := 0 to AC_TOTALS - 1 do
+    T[i] := 0;
+  T[T_SU_MIN] := -1;
+  if (Store = nil) or (K = '') then
+    Exit;
+  n := Store.Count(K);
+  if n > AC_TOTALS then
+    n := AC_TOTALS;
+  for i := 0 to n - 1 do
+    T[i] := Store.Get(K, i);
+end;
+
+procedure AcMerge(var A: TAcTotals; const B: TAcTotals);
+var
+  i: LongInt;
+begin
+  for i := 0 to AC_TOTALS - 1 do
+    case i of
+      T_SU_MIN:
+        if (B[i] >= 0) and ((A[i] < 0) or (B[i] < A[i])) then
+          A[i] := B[i];
+      T_JUMP_MAX:
+        if B[i] > A[i] then
+          A[i] := B[i];
+    else
+      A[i] := A[i] + B[i];
+    end;
+end;
+
+function BE_AcLine(ID: LongInt; Key: PChar): PChar; cdecl;
+var
+  T, S: TAcTotals;
+  K: AnsiString;
+begin
+  AcBuf := '';
+  try
+    AcTotals(ID, T);
+    AcBuf := AcLineOf(T);
+    K := Str(Key, 200);
+    if K <> '' then
+    begin
+      AcStored(K, S);
+      if S[T_SESSIONS] > 0 then
+      begin
+        AcMerge(S, T);
+        AcBuf := 'now ' + AcBuf + ' | all ' + IntToStr(S[T_SESSIONS]) + ' games ' + AcLineOf(S);
+      end;
+    end;
+  except
+    AcBuf := '';
+  end;
+  Result := PChar(AcBuf);
+end;
+
+procedure BE_AcSave(ID: LongInt; Key: PChar); cdecl;
+var
+  T, S: TAcTotals;
+  K: AnsiString;
+  V: TBEValues;
+  i: LongInt;
+begin
+  try
+    K := Str(Key, 200);
+    if (Store = nil) or (K = '') then
+      Exit;
+    AcTotals(ID, T);
+    if T[T_SU_N] + T[T_RATE] + T[T_JUMPS] + T[T_B_HITS] + T[T_M_HITS] + T[T_HITS] = 0 then
+      Exit;
+    AcStored(K, S);
+    AcMerge(S, T);
+    SetLength(V, AC_TOTALS);
+    for i := 0 to AC_TOTALS - 1 do
+      V[i] := S[i];
+    Store.Put(K, V);
+    Worker.Wake;
+  except
+  end;
+end;
+
+procedure BE_AcForget(Key: PChar); cdecl;
+var
+  V: TBEValues;
+begin
+  try
+    if Store = nil then
+      Exit;
+    SetLength(V, 0);
+    Store.Put(Str(Key, 200), V);
+    Worker.Wake;
   except
   end;
 end;
@@ -570,14 +762,14 @@ begin
   end;
 end;
 
-function BE_Move(ID, Tick, Mode, Variant, Key, Alive: LongInt; X, Y, VX, VY: Single; AimX, AimY: LongInt;
-  OX, OY, OVX, OVY: PSingle): LongInt; cdecl;
+function BE_Move(ID, Tick, Mode, Variant, Key, Alive, Ping, Team, Opts: LongInt; X, Y, VX, VY: Single;
+  AimX, AimY: LongInt; OX, OY, OVX, OVY: PSingle): LongInt; cdecl;
 var
   a, b, c, d: Single;
 begin
   Result := 0;
   try
-    Result := MoveStep(ID, Tick, Mode, Variant, Key, Alive, X, Y, VX, VY, AimX, AimY, a, b, c, d);
+    Result := MoveStep(ID, Tick, Mode, Variant, Key, Alive, Ping, Team, Opts, X, Y, VX, VY, AimX, AimY, a, b, c, d);
     OX^ := a;
     OY^ := b;
     OVX^ := c;
@@ -941,6 +1133,18 @@ exports
   BE_Pref_Commit,
   BE_Log,
   BE_World,
+  BE_AcSet,
+  BE_AcReset,
+  BE_AcKeys,
+  BE_AcMoved,
+  BE_AcHurt,
+  BE_AcHit,
+  BE_AcWatched,
+  BE_AcNext,
+  BE_AcScore,
+  BE_AcLine,
+  BE_AcSave,
+  BE_AcForget,
   BE_Name,
   BE_Vis,
   BE_VisReset,
