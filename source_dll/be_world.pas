@@ -12,6 +12,8 @@ const
   SHOW_ALL = 0;
   SHOW_SEENALL = 1;
   SHOW_SEEN = 2;
+  SHOW_SEENALL_REAL = 3;
+  SHOW_SEEN_REAL = 4;
   WF_ALIVE = 1;
   WF_HUMAN = 2;
   WI_STRIDE = 8;
@@ -41,6 +43,7 @@ var
   WFlags: array[0..2] of TWFlag;
   WTick: LongInt = 0;
   WTeamGame: Boolean = False;
+  WRealistic: Boolean = False;
   VisMine: array[1..BE_PLAYERS, 1..BE_PLAYERS] of Boolean;
   VisShow: array[1..BE_PLAYERS] of LongInt;
   VisRaysPerTick: LongInt = 24;
@@ -59,6 +62,7 @@ procedure WorldName(ID: LongInt; const Name: AnsiString);
 function ValidID(ID: LongInt): Boolean;
 function Enemies(A, B: LongInt): Boolean;
 function Shows(A, B, Show: LongInt): Boolean;
+function NeedsLos(Show: LongInt): Boolean;
 procedure VisSet(S, B: LongInt; Seen: Boolean);
 procedure VisReset(ID: LongInt);
 function VisNeeded: Boolean;
@@ -221,26 +225,49 @@ begin
     Result := WP[A].Team <> WP[B].Team;
 end;
 
+function NeedsLos(Show: LongInt): Boolean;
+begin
+  Result := (Show = SHOW_SEENALL_REAL) or (Show = SHOW_SEEN_REAL) or
+    (WRealistic and ((Show = SHOW_SEENALL) or (Show = SHOW_SEEN)));
+end;
+
+function OnScreen(S, B: LongInt): Boolean;
+var
+  CX, CY: Single;
+begin
+  CX := WP[S].X + (WP[S].AimX - WP[S].X) * 0.5;
+  CY := WP[S].Y - LOS_HEIGHT + (WP[S].AimY - WP[S].Y) * 0.5;
+  Result := (Abs(WP[B].X - CX) <= 457) and (Abs(WP[B].Y - LOS_HEIGHT - CY) <= 270);
+end;
+
+function SeenBy(S, B: LongInt; Los: Boolean): Boolean;
+begin
+  if Los then
+    Result := VisMine[S, B]
+  else
+    Result := OnScreen(S, B);
+end;
+
 function Shows(A, B, Show: LongInt): Boolean;
 var
   s: LongInt;
+  Los, Dead: Boolean;
 begin
   Result := True;
   if Show = SHOW_ALL then
     Exit;
   if WTeamGame and (WP[B].Team = WP[A].Team) then
     Exit;
-  if VisMine[A, B] then
+  Los := NeedsLos(Show);
+  Dead := (Show = SHOW_SEENALL) or (Show = SHOW_SEENALL_REAL);
+  if SeenBy(A, B, Los) then
     Exit;
   if WTeamGame then
     for s := 1 to BE_PLAYERS do
-      if (s <> A) and WP[s].Active and (WP[s].Team = WP[A].Team) and VisMine[s, B] then
-      begin
-        if Show = SHOW_SEENALL then
-          Exit;
-        if WP[s].Alive then
-          Exit;
-      end;
+      if (s <> A) and WP[s].Active and (WP[s].Team = WP[A].Team) then
+        if Dead or WP[s].Alive then
+          if SeenBy(s, B, Los) then
+            Exit;
   Result := False;
 end;
 
@@ -269,7 +296,7 @@ var
 begin
   Result := False;
   for k := 1 to BE_PLAYERS do
-    if VisShow[k] > SHOW_ALL then
+    if NeedsLos(VisShow[k]) then
     begin
       Result := True;
       Exit;
@@ -284,7 +311,7 @@ begin
   if not WP[S].Active then
     Exit;
   for a := 1 to BE_PLAYERS do
-    if (VisShow[a] > SHOW_ALL) and WP[a].Active then
+    if NeedsLos(VisShow[a]) and WP[a].Active then
       if (a = S) or (WTeamGame and (WP[a].Team = WP[S].Team)) then
       begin
         Result := True;

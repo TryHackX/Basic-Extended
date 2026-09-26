@@ -56,6 +56,12 @@ type
 procedure BE_World(Tick, Count: Integer; var I: TBEInts; var F: TBEFloats);
 external {$IFDEF WIN32} 'BE_World@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_World@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+function BE_Pref_Load(Key: PChar; var V: TBEInts): Integer;
+external {$IFDEF WIN32} 'BE_Pref_Load@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Pref_Load@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_Pref_Save(Key: PChar; Count: Integer; var V: TBEInts);
+external {$IFDEF WIN32} 'BE_Pref_Save@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Pref_Save@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 procedure BE_Name(ID: Integer; Name: PChar);
 external {$IFDEF WIN32} 'BE_Name@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Name@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
@@ -99,6 +105,26 @@ external {$IFDEF WIN32} 'BE_Op@scripts/Basic-Extended/basicext_dll.dll cdecl' {$
 
 function BE_Replace(Text, Find, Repl: PChar): PChar;
 external {$IFDEF WIN32} 'BE_Replace@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Replace@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_Fill(Text, Pairs: PChar): PChar;
+external {$IFDEF WIN32} 'BE_Fill@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Fill@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_FloatStr(V: Single; Decimals: Integer): PChar;
+external {$IFDEF WIN32} 'BE_FloatStr@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_FloatStr@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_MixColor(A, B: Integer; T: Single): Integer;
+external {$IFDEF WIN32} 'BE_MixColor@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_MixColor@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_HudStyle(Style: Integer; Template: PChar);
+external {$IFDEF WIN32} 'BE_HudStyle@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_HudStyle@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_HudBar(Full, Empty: PChar; Len: Integer);
+external {$IFDEF WIN32} 'BE_HudBar@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_HudBar@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_HudRegen(Mark: PChar);
+external {$IFDEF WIN32} 'BE_HudRegen@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_HudRegen@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_HudText(Style, Pct, Hp, MaxHp, Vest, Regen: Integer): PChar;
+external {$IFDEF WIN32} 'BE_HudText@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_HudText@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_LogStamp(Folder, Text, Watched: PChar);
+external {$IFDEF WIN32} 'BE_LogStamp@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_LogStamp@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_Sees(VX, VY, AimX, AimY, TX, TY, Range: Single; Team: Integer): Integer;
+external {$IFDEF WIN32} 'BE_Sees@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Sees@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_WeaponName(Num: Integer): PChar;
+external {$IFDEF WIN32} 'BE_WeaponName@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_WeaponName@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 procedure BE_SupConfig(Radius, RadiusBig: Single; ScanTicks, TeamBullets, FriendlyFire, TeamGame: Integer);
 external {$IFDEF WIN32} 'BE_SupConfig@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SupConfig@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 procedure BE_SupPlayers(n: Integer; var I: TBEInts; var F: TBEFloats);
@@ -233,6 +259,9 @@ external {$IFDEF WIN32} 'BE_AcSave@scripts/Basic-Extended/basicext_dll.dll cdecl
 procedure BE_AcForget(Key: PChar);
 external {$IFDEF WIN32} 'BE_AcForget@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcForget@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+function BE_AcForgetAll(): Integer;
+external {$IFDEF WIN32} 'BE_AcForgetAll@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcForgetAll@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 function BE_Solve(W: Integer; SX, SY, SVX, SVY, TX, TY, TVX, TVY, TGrav: Single; var DX, DY: Single;
   var Ticks: Integer): Integer;
 external {$IFDEF WIN32} 'BE_Solve@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_Solve@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
@@ -243,6 +272,9 @@ external {$IFDEF WIN32} 'BE_Shot@scripts/Basic-Extended/basicext_dll.dll cdecl' 
 
 function BE_ShotGet(Index: Integer; var X, Y, VX, VY: Single): Integer;
 external {$IFDEF WIN32} 'BE_ShotGet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ShotGet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_ShotPush(var PX, PY: Single);
+external {$IFDEF WIN32} 'BE_ShotPush@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ShotPush@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
 function BE_GunTick(ID, Tick, W, Trigger, Infinite: Integer): Integer;
 external {$IFDEF WIN32} 'BE_GunTick@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_GunTick@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
@@ -292,9 +324,9 @@ external {$IFDEF WIN32} 'BE_FxGet@scripts/Basic-Extended/basicext_dll.dll cdecl'
 implementation
 
 const
-  VERSION = '3.4';
+  VERSION = '3.5';
   { the library this main.pas was written for (source_dll/be_main.pas BE_API_VERSION) }
-  BE_API = 4;
+  BE_API = 5;
   TAG = '[Basic-Extended] ';
   TEAM_SPECTATOR = 5;
   MAX_BULLET_ID = 254;
@@ -416,7 +448,6 @@ const
   C_SPEED = 83;
   C_SAYAS = 84;
   C_SAYTEAM = 85;
-  C_WEAPONMOD = 86;
   C_KILL = 87;
   C_LAST = 87;
   PW_ALL = 1;
@@ -451,6 +482,8 @@ const
   SHOW_ALL = 0;
   SHOW_SEENALL = 1;
   SHOW_SEEN = 2;
+  SHOW_SEENALL_REAL = 3;
+  SHOW_SEEN_REAL = 4;
   { marks of special players: a flag carrier, a bow (Rambo bow, flamed arrows: weapons 15 and 16) }
   TAG_NONE = 0;
   TAG_FLAG = 1;
@@ -544,6 +577,10 @@ const
   RC_HEALTH = 2;
   RO_FRIENDS = 1;
   RO_OUTLINE = 2;
+  RO_MARKS = 3;
+  RO_EDGE = 4;
+  RI_REALISTIC = 42;
+  RF_RING_LETTER = 28;
   RI_LIST_COLOR_BY = 31;
   RI_LIST_LINE_LAYER = 32;
   RI_FLAGS = 33;
@@ -560,7 +597,6 @@ const
   RF_RANGE_CIRCLE = 22;
   RF_RANGE_RING = 23;
   RF_LIST_SPACING = 24;
-  RF_OUTLINE_STEP = 25;
   RF_OUTLINE_MOVE = 26;
   RF_OUTLINE_GRID = 27;
   RT_FLAG_RED = 13;
@@ -630,6 +666,7 @@ const
   MF_FLY_HOP_TICKS = 22;
   MF_FLY_HOP_MAX = 23;
   MF_FLY_VEL_MAX = 24;
+  MF_FLY_HOPS = 25;
   TJ_LAYER = 1;
   TJ_DOTS = 2;
   TJ_COLOR = 3;
@@ -663,6 +700,13 @@ const
   FX_PER_TICK = 48;
   BULLET_MARGIN = 32;
   OBJECT_MARGIN = 4;
+  TA_ME = 0;
+  TA_SELF = 1;
+  TA_SELFME = 2;
+  TA_PUBLIC = 3;
+  SPM_ALL = 0;
+  SPM_GROUND = 1;
+  SPM_JUMP = 2;
   AK_CROUCH = 0;
   AK_JET = 1;
   AK_PRONE = 2;
@@ -679,6 +723,8 @@ const
   SF_PRONE = 2;
   SF_AIRBORNE = 4;
   SF_RUNNING = 8;
+  SF_JET = 16;
+  SF_FLAG = 32;
   MR_BULLET = 4;
   MR_COLLIDER = 8;
   AF_FIRE = 1;
@@ -771,11 +817,12 @@ var
   TpMomBase, TpMomPerDist, TpMomKeep, TpMomMax, TpFlyBase, TpFlyPerDist, TpFlyMax: Single;
   TpHopMin, TpGain, TpAccel, TpVmax, TpFlyDead, TpFlySmooth, TpSteer, TpHopMax: Single;
   TpFlyHopTicks, TpFlyHopMax, TpFlyVelMax: Single;
+  TpFlyHops: Boolean;
 
   TrEnabled: Boolean;
   TrLayer, TrDots, TrTicks, TrColor, TrHitColor, TrCursorColor, TrBudget: Integer;
   TrSpacing, TrRange, TrScale, TrCursorScale, TrMove: Single;
-  AbEnabled, AbInfinite, AbSound, AbColliders: Boolean;
+  AbEnabled, AbInfinite, AbSound, AbColliders, AbPush: Boolean;
   AbLawRule, AbPause, AbXMinDef, AbXMaxDef, AbXInterval: Integer;
   AbCircleDots, AbCircleLayer, AbCircleColor, AbCircleTicks, AbEditSecs, AbEditCount: Integer;
   AbCircleScale: Single;
@@ -933,14 +980,18 @@ var
   { the radar (on/off, mode + 1, update ticks, position, size) and the hit markers: 0 or -1 = the
     server default }
   RdPOn, RdPMode, RdPShow, RdPTeam: array[1..32] of Integer;
-  RdPZoom: array[1..32] of Single;
+  RdMZoom: array[1..32] of array[0..3] of Single;
+  RdPMarks, RdPEdge: array[1..32] of Single;
+  OvlEdgeScale, OvlRingLetter: Single;
+  FlagSnapTick: Integer;
   RdMX, RdMY, RdMTicks: array[1..32] of array[0..3] of Integer;
   RdPOutline: array[1..32] of Integer;
+  PfI: TBEInts;
   OvlAdminsFull, OvlOutline, OvlOutlineOn, OvlFlags: Boolean;
   OvlFullModes, OvlPublicModes, OvlPublicMode, OvlFullMinTicks, OvlListColorBy, OvlLabelColorBy: Integer;
   OvlListLineLayer, OvlOutlineDots, OvlOutlineLayer, OvlOutlineColor, OvlFlagRed, OvlFlagBlue, OvlFlagOther: Integer;
   OvlRangeList, OvlRangeLabels, OvlRangeCircle, OvlRangeRing, OvlListSpacing: Single;
-  OvlOutlineStep, OvlOutlineMove, OvlOutlineGrid: Single;
+  OvlOutlineMove, OvlOutlineGrid: Single;
   OvlFlagRedName, OvlFlagBlueName, OvlFlagOtherName, OvlFlagMark, OvlOutlineChar, OvlListFlag: string;
   RdMSize: array[1..32] of array[0..3] of Single;
 
@@ -1026,12 +1077,17 @@ var
   TpVariant: array[1..32] of Integer;
   TrWatch, TrDue, TrBullet, TrShotAt, TrAmmo: array[1..32] of Integer;
   TrCursor: array[1..32] of Boolean;
+  TrAud: array[1..32] of Integer;
+  OpT: array[0..255] of string;
+  OpKind, OpLayer, OpDelay, OpColor: array[0..255] of Integer;
+  OpSc, OpX, OpY: array[0..255] of Single;
   TrFollow, TrColliders: Boolean;
   TrFollowTicks, TrCursorTicks: Integer;
   TrView, MapOk, MgOn: Boolean;
   AcOn, AcNotify, AcVote: Boolean;
   AcVoteScore, AcVoteMin, AcVoteEvery, VoteBusyUntil: Integer;
   AcSpeed: Single;
+  AcColorOk, AcColorNote, AcColorBad, AcColorHead: Longint;
   AcNotifyScore, AcCooldown, AcWatchTicks, AcSnapTicks, AcN, AcNextWatch: Integer;
   AcSlack, AcJumpSlack, AcJumpLag, AcRate, AcBinkTicks, AcGrace: Single;
   AcLogName: string;
@@ -1068,12 +1124,13 @@ var
   { away from the keyboard: seconds alive without a key or a cursor move, the cursor last seen }
   AfIdle, AfAimX, AfAimY: array[1..32] of Integer;
   { godmode, frozen players (where) }
-  GodOn, FrOn, InfOn, SpOn: array[1..32] of Boolean;
+  GodOn, FrOn, InfOn, SpOn, SpWasGround: array[1..32] of Boolean;
   SpFactor: array[1..32] of Single;
-  SpCount: Integer;
-  SpDefault, SpRun, SpJet: Single;
+  SpMode: array[1..32] of Integer;
+  SpCount, SpModeDef: Integer;
+  SpDefault, SpRun, SpJet, SpJumpShare: Single;
   SayChatColor, SayTeamColor, SaySpecColor: Longint;
-  WmFolder, WmLoaded: string;
+  WmLoaded, WmPending: string;
   FrX, FrY, DmOut, DmIn: array[1..32] of Single;
   FrCount, InfCount: Integer;
   InfLastW, FrAt: array[1..32] of Integer;
@@ -1205,6 +1262,11 @@ var
   Neg: Boolean;
   S: string;
 begin
+  if BeOk then
+  begin
+    Result := BE_FloatStr(V, Decimals);
+    Exit;
+  end;
   Neg := V < 0;
   if Neg then
     V := -V;
@@ -1296,6 +1358,11 @@ function MixColor(A, B: Longint; T: Single): Longint;
 var
   ar, ag, ab, br, bg, bb: Integer;
 begin
+  if BeOk then
+  begin
+    Result := BE_MixColor(A, B, T);
+    Exit;
+  end;
   if T < 0 then
     T := 0;
   if T > 1 then
@@ -1313,6 +1380,11 @@ end;
 { names of Soldat's weapon numbers (what a bullet's GetOwnerWeaponId returns) }
 function WeaponName(Num: Integer): string;
 begin
+  if BeOk then
+  begin
+    Result := BE_WeaponName(Num);
+    Exit;
+  end;
   case Num of
     0: Result := 'USSOCOM';
     1: Result := 'Desert Eagles';
@@ -1775,6 +1847,28 @@ begin
     Result := IntToStr(A) + '-' + IntToStr(B);
 end;
 
+function SpeedModeOf(S: string): Integer;
+begin
+  S := LowerCase(Trim(S));
+  Result := -1;
+  if (S = 'all') or (S = 'air') then
+    Result := SPM_ALL
+  else if S = 'ground' then
+    Result := SPM_GROUND
+  else if S = 'jump' then
+    Result := SPM_JUMP;
+end;
+
+function SpeedModeName(M: Integer): string;
+begin
+  if M = SPM_GROUND then
+    Result := 'on the ground'
+  else if M = SPM_JUMP then
+    Result := 'on the ground and in the jump'
+  else
+    Result := 'on the ground and in the air';
+end;
+
 function LawRuleName(R: Integer): string;
 begin
   if R = LAW_GROUND then
@@ -2067,8 +2161,7 @@ begin
     C_ACREVIEW: Result := 'acreview';
     C_SPEED: Result := 'speed';
     C_SAYAS: Result := 'sayas';
-    C_SAYTEAM: Result := 'sayteamas';
-    C_WEAPONMOD: Result := 'weaponmod';
+    C_SAYTEAM: Result := 'sayteam';
     C_KILL: Result := 'slay';
   else
     Result := '';
@@ -2089,6 +2182,12 @@ begin
   end;
   CmdWho[C_TEST] := PW_CONSOLE;
   CmdWho[C_BENCH] := PW_CONSOLE;
+  CmdWho[C_SUSPECTS] := PW_ALL;
+  CmdPfx[C_SUSPECTS] := PX_BOTH;
+  CmdWho[C_ACSTATS] := PW_ALL;
+  CmdPfx[C_ACSTATS] := PX_BOTH;
+  CmdWho[C_ACREVIEW] := PW_ALL;
+  CmdPfx[C_ACREVIEW] := PX_BOTH;
   for Id := 1 to C_LAST do
   begin
     if CmdKey(Id) = '' then
@@ -2280,7 +2379,11 @@ begin
   if S = SHOW_SEENALL then
     Result := 'seenall'
   else if S = SHOW_SEEN then
-    Result := 'seen';
+    Result := 'seen'
+  else if S = SHOW_SEENALL_REAL then
+    Result := 'seenallreal'
+  else if S = SHOW_SEEN_REAL then
+    Result := 'seenreal';
 end;
 
 function ShowOf(S: string): Integer;
@@ -2292,7 +2395,11 @@ begin
   else if S = 'seenall' then
     Result := SHOW_SEENALL
   else if S = 'seen' then
-    Result := SHOW_SEEN;
+    Result := SHOW_SEEN
+  else if S = 'seenallreal' then
+    Result := SHOW_SEENALL_REAL
+  else if S = 'seenreal' then
+    Result := SHOW_SEEN_REAL;
 end;
 
 function ModesOf(S: string): Integer;
@@ -2396,6 +2503,13 @@ begin
   end;
   Full := CfgStr('HealthHud', 'BarFull', '|');
   Empty := CfgStr('HealthHud', 'BarEmpty', '.');
+  if BeOk then
+  begin
+    for i := 1 to STYLE_COUNT do
+      BE_HudStyle(i, PChar(HudStyleText[i]));
+    BE_HudBar(PChar(Full), PChar(Empty), HudBarLen);
+    BE_HudRegen(PChar(HudRegenMark));
+  end;
   for i := 0 to HudBarLen do
   begin
     S := '';
@@ -2634,7 +2748,9 @@ begin
   OvlCircleDots := CfgInt('Radar', 'CircleDots', 16, 0, RING_MAX);
   OvlCircleLayer := CfgInt('Radar', 'CircleLayerFirst', 110, 0, 255 - CIRCLE_LAYERS);
   OvlShowFar := CfgBool('Radar', 'ShowFar', True);
-  OvlCircleMove := CfgFloat('Radar', 'CircleMovePixels', 1, 0, 20);
+  OvlCircleMove := CfgFloat('Radar', 'CircleMovePixels', 0, 0, 20);
+  OvlEdgeScale := CfgFloat('Radar', 'CircleEdgeScale', 1, 0.2, 5);
+  OvlRingLetter := CfgFloat('Radar', 'RingLetterScale', 0.03, 0.005, 0.5);
   OvlRingChar := MarkChar(CfgStr('Radar', 'RingChar', '.'), '.');
   OvlRingColor := CfgColor('Radar', 'RingColor', $808080);
   OvlSelfChar := MarkChar(CfgStr('Radar', 'SelfChar', '+'), '+');
@@ -2712,11 +2828,10 @@ begin
   OvlListFlag := CfgStr('Radar', 'ListFlagLine', '{dir} {flag} {m}');
   OvlOutline := CfgBool('Radar', 'Outline', True);
   OvlOutlineOn := CfgBool('Radar', 'OutlineDefaultOn', False);
-  OvlOutlineDots := CfgInt('Radar', 'OutlineDots', 24, 1, 64);
+  OvlOutlineDots := CfgInt('Radar', 'OutlineDots', 32, 4, 64);
   OvlOutlineLayer := CfgInt('Radar', 'OutlineLayerFirst', 40, 1, 255 - OvlOutlineDots);
   OvlOutlineColor := CfgColor('Radar', 'OutlineColor', $707070);
   OvlOutlineChar := MarkChar(CfgStr('Radar', 'OutlineChar', '.'), '.');
-  OvlOutlineStep := CfgFloat('Radar', 'OutlineStepPixels', 40, 5, 500);
   OvlOutlineMove := CfgFloat('Radar', 'OutlineMovePixels', 2, 0, 50);
   OvlOutlineGrid := CfgFloat('Radar', 'OutlineGridPixels', 24, 1, 500);
   OvlShowTeam := CfgBool('Radar', 'ShowTeam', True);
@@ -2768,8 +2883,9 @@ begin
   TpHopMax := CfgFloat('Teleport', 'HopMaxPixels', 600, 24, 5000);
   TpFlyBase := CfgFloat('Teleport', 'FlyBase', 1.5, 0, 11);
   TpFlyPerDist := CfgFloat('Teleport', 'FlyPerPixel', 0.04, 0, 1);
-  TpFlyMax := CfgFloat('Teleport', 'FlyMax', 24, 0, 60);
-  TpFlyVelMax := CfgFloat('Teleport', 'FlyVelocityMax', 11, 1, 15.5);
+  TpFlyMax := CfgFloat('Teleport', 'FlyMax', 15.5, 0, 60);
+  TpFlyVelMax := CfgFloat('Teleport', 'FlyVelocityMax', 15.5, 1, 15.5);
+  TpFlyHops := CfgBool('Teleport', 'FlyHops', False);
   TpFlyHopTicks := CfgFloat('Teleport', 'FlyHopTicks', 4, 1, 60);
   TpFlyHopMax := CfgFloat('Teleport', 'FlyHopMaxPixels', 160, 10, 2000);
   TpFlyEvery := CfgInt('Teleport', 'FlyEveryTicks', 2, 1, 60);
@@ -2839,6 +2955,7 @@ begin
   AbSound := CfgBool('Aimbot', 'Sound', True);
   AbSoundRange := CfgFloat('Aimbot', 'SoundRange', 900, 0, 10000);
   AbColliders := CfgBool('Aimbot', 'Colliders', True);
+  AbPush := CfgBool('Aimbot', 'Recoil', True);
   S := CfgStr('Aimbot', 'ExtraShots', '1-5');
   if not ShotRange(S, AbXMinDef, AbXMaxDef) then
   begin
@@ -2869,6 +2986,10 @@ begin
   AcGrace := CfgFloat('AntiCheat', 'MovedGraceTicks', 90, 0, 600);
   AcBinkTicks := CfgFloat('AntiCheat', 'BinkTicks', 35, 1, 200);
   AcSpeed := CfgFloat('AntiCheat', 'SpeedPixels', 16.5, 5, 200);
+  AcColorHead := CfgColor('AntiCheat', 'ColorTitle', $FFFFFF);
+  AcColorOk := CfgColor('AntiCheat', 'ColorClean', $90E090);
+  AcColorNote := CfgColor('AntiCheat', 'ColorNotice', $FFD040);
+  AcColorBad := CfgColor('AntiCheat', 'ColorFound', $FF5050);
   AcVote := CfgBool('AntiCheat', 'VoteKick', False);
   AcVoteScore := CfgInt('AntiCheat', 'VoteFromScore', 70, 1, 100);
   AcVoteMin := CfgInt('AntiCheat', 'VoteMinFindings', 3, 1, 1000);
@@ -3383,13 +3504,19 @@ begin
   SpDefault := CfgFloat('Admin', 'SpeedDefault', 2, 1.1, 5);
   SpRun := CfgFloat('Admin', 'SpeedRunPixels', 3.9, 1, 11);
   SpJet := CfgFloat('Admin', 'SpeedJetPush', 0.1, 0, 2);
+  SpJumpShare := CfgFloat('Admin', 'SpeedJumpShare', 0.5, 0, 2);
+  S := LowerCase(Trim(CfgStr('Admin', 'SpeedMode', 'all')));
+  SpModeDef := SpeedModeOf(S);
+  if SpModeDef < 0 then
+  begin
+    CfgWarn('Admin', 'SpeedMode', S, 'all, ground or jump; all used');
+    SpModeDef := SPM_ALL;
+  end;
   AddWords(CfgStr('Admin', 'SayAsCommands', 'sayas'), C_SAYAS, True);
-  AddWords(CfgStr('Admin', 'SayTeamAsCommands', 'sayteamas'), C_SAYTEAM, True);
+  AddWords(CfgStr('Admin', 'SayTeamCommands', 'sayteam|sayteamas'), C_SAYTEAM, True);
   SayChatColor := CfgColor('Admin', 'SayAsColor', $EFFEEA);
   SayTeamColor := CfgColor('Admin', 'SayTeamAsColor', $FEDA7C);
   SaySpecColor := CfgColor('Admin', 'SayAsSpectatorColor', $DF7AB0);
-  AddWords(CfgStr('Admin', 'WeaponModCommands', 'weaponmod|wepmod'), C_WEAPONMOD, True);
-  WmFolder := Trim(CfgStr('Admin', 'WeaponModFolder', 'configs/'));
   AddWords(CfgStr('Admin', 'SlayCommands', 'slay'), C_KILL, True);
   AddWords(CfgStr('Admin', 'RandomizeCommands', 'randomize'), C_RANDOMIZE, True);
   AddWords(CfgStr('Admin', 'ReloadCommands', 'reloadsettings|be_reload'), C_RELOAD, True);
@@ -3455,7 +3582,8 @@ begin
   HudPScale[ID] := 0;
   RdPOn[ID] := PREF_DEFAULT;
   RdPMode[ID] := 0;
-  RdPZoom[ID] := 0;
+  RdPMarks[ID] := 0;
+  RdPEdge[ID] := 0;
   RdPShow[ID] := 0;
   RdPTeam[ID] := PREF_DEFAULT;
   RdPOutline[ID] := PREF_DEFAULT;
@@ -3465,6 +3593,7 @@ begin
     RdMY[ID][m] := -1;
     RdMSize[ID][m] := 0;
     RdMTicks[ID][m] := 0;
+    RdMZoom[ID][m] := 0;
   end;
 end;
 
@@ -3481,50 +3610,59 @@ begin
     Exit;
   AllDefault := (HudPOn[ID] = PREF_DEFAULT) and (DmgPOn[ID] = PREF_DEFAULT) and (HudPX[ID] < 0) and
     (HudPY[ID] < 0) and (HudPStyle[ID] = 0) and (HudPScale[ID] <= 0) and (RdPOn[ID] = PREF_DEFAULT) and
-    (RdPMode[ID] = 0) and (RdPZoom[ID] <= 0) and (RdPShow[ID] = 0) and (RdPTeam[ID] = PREF_DEFAULT) and
-    (RdPOutline[ID] = PREF_DEFAULT);
+    (RdPMode[ID] = 0) and (RdPShow[ID] = 0) and (RdPTeam[ID] = PREF_DEFAULT) and
+    (RdPOutline[ID] = PREF_DEFAULT) and (RdPMarks[ID] <= 0) and (RdPEdge[ID] <= 0);
   for m := 0 to 3 do
-    if (RdMX[ID][m] >= 0) or (RdMY[ID][m] >= 0) or (RdMSize[ID][m] > 0) or (RdMTicks[ID][m] > 0) then
+    if (RdMX[ID][m] >= 0) or (RdMY[ID][m] >= 0) or (RdMSize[ID][m] > 0) or (RdMTicks[ID][m] > 0) or
+      (RdMZoom[ID][m] > 0) then
       AllDefault := False;
-  BE_Pref_Begin(PChar(PrefKey[ID]));
-  if not AllDefault then
+  if AllDefault then
   begin
-    BE_Pref_Add(HudPOn[ID]);
-    BE_Pref_Add(HudPX[ID]);
-    BE_Pref_Add(HudPY[ID]);
-    BE_Pref_Add(Round(HudPScale[ID] * 10000));
-    BE_Pref_Add(HudPStyle[ID]);
-    BE_Pref_Add(DmgPOn[ID]);
-    BE_Pref_Add(RdPOn[ID]);
-    BE_Pref_Add(RdPMode[ID]);
-    BE_Pref_Add(0);
-    BE_Pref_Add(RdMX[ID][OVL_LIST]);
-    BE_Pref_Add(RdMY[ID][OVL_LIST]);
-    BE_Pref_Add(Round(RdMSize[ID][OVL_LIST] * 1000));
-    BE_Pref_Add(0);
-    BE_Pref_Add(Round(RdPZoom[ID] * 1000));
-    BE_Pref_Add(RdPShow[ID]);
-    BE_Pref_Add(RdMX[ID][OVL_CIRCLE]);
-    BE_Pref_Add(RdMY[ID][OVL_CIRCLE]);
-    BE_Pref_Add(Round(RdMSize[ID][OVL_CIRCLE] * 1000));
-    BE_Pref_Add(RdPTeam[ID]);
-    for m := 0 to 3 do
-      BE_Pref_Add(RdMTicks[ID][m]);
-    BE_Pref_Add(RdPOutline[ID]);
+    BE_Pref_Save(PChar(PrefKey[ID]), 0, PfI);
+    Exit;
   end;
-  BE_Pref_Commit();
+  PfI[0] := HudPOn[ID];
+  PfI[1] := HudPX[ID];
+  PfI[2] := HudPY[ID];
+  PfI[3] := Round(HudPScale[ID] * 10000);
+  PfI[4] := HudPStyle[ID];
+  PfI[5] := DmgPOn[ID];
+  PfI[6] := RdPOn[ID];
+  PfI[7] := RdPMode[ID];
+  PfI[8] := 0;
+  PfI[9] := RdMX[ID][OVL_LIST];
+  PfI[10] := RdMY[ID][OVL_LIST];
+  PfI[11] := Round(RdMSize[ID][OVL_LIST] * 1000);
+  PfI[12] := 0;
+  PfI[13] := 0;
+  PfI[14] := RdPShow[ID];
+  PfI[15] := RdMX[ID][OVL_CIRCLE];
+  PfI[16] := RdMY[ID][OVL_CIRCLE];
+  PfI[17] := Round(RdMSize[ID][OVL_CIRCLE] * 1000);
+  PfI[18] := RdPTeam[ID];
+  for m := 0 to 3 do
+    PfI[19 + m] := RdMTicks[ID][m];
+  PfI[23] := RdPOutline[ID];
+  for m := 0 to 3 do
+    PfI[24 + m] := Round(RdMZoom[ID][m] * 1000);
+  PfI[28] := Round(RdPMarks[ID] * 1000);
+  PfI[29] := Round(RdPEdge[ID] * 1000);
+  PfI[30] := Round(RdMSize[ID][OVL_LABELS] * 1000);
+  PfI[31] := Round(RdMSize[ID][OVL_ARROWS] * 1000);
+  BE_Pref_Save(PChar(PrefKey[ID]), 32, PfI);
 end;
 
 { The values of a player in the store (data/players.bdb): hud, x, y, scale*10000, style, dmg, radar,
   radar mode+1, the radar ticks of older releases, list x, list y, list size*1000, 0 (was the hit
   markers), radar zoom*1000, radar show+1, circle x, circle y, circle size*1000, team mates shown,
-  the ticks of list, labels, circle and ring, the map outline; 0 or -1 = the server default, older
-  players have fewer. }
+  the ticks of list, labels, circle and ring, the map outline, the zoom*1000 of list, labels, circle
+  and ring, the circle marks*1000, the circle edge*1000, labels size*1000, ring size*1000; 0 or -1 =
+  the server default, older players have fewer. }
 procedure PrefsLoad(ID: Integer);
 var
   n, m, Cnt: Integer;
   S, Key: string;
-  V: array[0..23] of Integer;
+  V: array[0..31] of Integer;
   Copied: Boolean;
 begin
   PrefsClear(ID);
@@ -3551,15 +3689,16 @@ begin
     end;
   if Cnt = 0 then
     Exit;
-  for n := 0 to 23 do
+  for n := 0 to 31 do
     V[n] := 0;
   V[9] := -1;
   V[10] := -1;
   V[15] := -1;
   V[16] := -1;
-  for n := 0 to 23 do
+  Cnt := BE_Pref_Load(PChar(Key), PfI);
+  for n := 0 to 31 do
     if n < Cnt then
-      V[n] := BE_Pref_Get(PChar(Key), n);
+      V[n] := PfI[n];
   if Cnt <= 15 then
   begin
     V[15] := V[9];
@@ -3590,10 +3729,22 @@ begin
   RdMY[ID][OVL_CIRCLE] := V[16];
   if V[17] > 0 then
     RdMSize[ID][OVL_CIRCLE] := V[17] * 0.001;
-  if (V[13] >= 100) and (V[13] <= 4000) then
-    RdPZoom[ID] := V[13] * 0.001;
-  if (V[14] >= 1) and (V[14] <= 3) then
+  if Cnt <= 24 then
+    for m := 0 to 3 do
+      V[24 + m] := V[13];
+  for m := 0 to 3 do
+    if (V[24 + m] >= 100) and (V[24 + m] <= 4000) then
+      RdMZoom[ID][m] := V[24 + m] * 0.001;
+  if (V[28] >= 100) and (V[28] <= 5000) then
+    RdPMarks[ID] := V[28] * 0.001;
+  if (V[29] >= 100) and (V[29] <= 5000) then
+    RdPEdge[ID] := V[29] * 0.001;
+  if (V[14] >= 1) and (V[14] <= 5) then
     RdPShow[ID] := V[14];
+  if V[30] > 0 then
+    RdMSize[ID][OVL_LABELS] := V[30] * 0.001;
+  if V[31] > 0 then
+    RdMSize[ID][OVL_ARROWS] := V[31] * 0.001;
   if (V[18] >= 0) and (V[18] <= 2) then
     RdPTeam[ID] := V[18];
   for m := 0 to 3 do
@@ -3681,7 +3832,7 @@ procedure HudDraw(ID: Integer; Force: Boolean);
 var
   P: TActivePlayer;
   H: Single;
-  Pct, S, X, Y: Integer;
+  Pct, S, X, Y, Vs: Integer;
   T: string;
   C: Longint;
   Sc: Single;
@@ -3706,23 +3857,33 @@ begin
   S := HudPStyle[ID];
   if (S < 1) or (S > STYLE_COUNT) then
     S := HudDefStyle;
-  T := HudStyleText[S];
-  if HudHasPct[S] then
-    T := ReplaceAll(T, '{pct}', IntToStr(Pct));
-  if HudHasHp[S] then
-    T := ReplaceAll(T, '{hp}', IntToStr(Round(H)));
-  if HudHasMax[S] then
-    T := ReplaceAll(T, '{max}', IntToStr(Round(MaxHealth)));
-  if HudHasBar[S] then
-    T := ReplaceAll(T, '{bar}', BarCache[Round(Pct * HudBarLen * 0.01)]);
-  if HudHasVest[S] then
-    T := ReplaceAll(T, '{vest}', IntToStr(Round(P.Vest)));
-  if HudHasRegen[S] then
+  if BeOk then
   begin
-    if Regenerating[ID] then
-      T := ReplaceAll(T, '{regen}', HudRegenMark)
-    else
-      T := ReplaceAll(T, '{regen}', '');
+    Vs := 0;
+    if HudHasVest[S] then
+      Vs := Round(P.Vest);
+    T := BE_HudText(S, Pct, Round(H), Round(MaxHealth), Vs, BoolInt(Regenerating[ID]));
+  end
+  else
+  begin
+    T := HudStyleText[S];
+    if HudHasPct[S] then
+      T := ReplaceAll(T, '{pct}', IntToStr(Pct));
+    if HudHasHp[S] then
+      T := ReplaceAll(T, '{hp}', IntToStr(Round(H)));
+    if HudHasMax[S] then
+      T := ReplaceAll(T, '{max}', IntToStr(Round(MaxHealth)));
+    if HudHasBar[S] then
+      T := ReplaceAll(T, '{bar}', BarCache[Round(Pct * HudBarLen * 0.01)]);
+    if HudHasVest[S] then
+      T := ReplaceAll(T, '{vest}', IntToStr(Round(P.Vest)));
+    if HudHasRegen[S] then
+    begin
+      if Regenerating[ID] then
+        T := ReplaceAll(T, '{regen}', HudRegenMark)
+      else
+        T := ReplaceAll(T, '{regen}', '');
+    end;
   end;
   C := HudColorAt[Pct];
   { low health: its own colour, blinking with the second one }
@@ -4251,6 +4412,11 @@ begin
   VY := P.Y - LOS_HEIGHT - 2;
   TX := PL[Target].X;
   TY := PL[Target].Y - LOS_HEIGHT;
+  if MapOk then
+  begin
+    Result := BE_Sees(VX, VY, P.MouseAimX, P.MouseAimY, TX, TY, LOS_RANGE, 0) = 1;
+    Exit;
+  end;
   DX := TX - VX;
   DY := TY - VY;
   AX := P.MouseAimX - VX;
@@ -4612,9 +4778,23 @@ end;
 { the zoom: more range, smaller marks (1 = the settings) }
 function RadarZoom(ID: Integer): Single;
 begin
-  Result := RdPZoom[ID];
+  Result := RdMZoom[ID][RadarMode(ID)];
   if Result <= 0 then
     Result := 1;
+end;
+
+function RadarMarksOf(ID: Integer): Single;
+begin
+  Result := RdPMarks[ID];
+  if Result <= 0 then
+    Result := 1;
+end;
+
+function RadarEdgeOf(ID: Integer): Single;
+begin
+  Result := RdPEdge[ID];
+  if Result <= 0 then
+    Result := OvlEdgeScale;
 end;
 
 { how far the radar reaches: Range, a little more for a bigger radar ([Radar] SizeAffectsRange),
@@ -4635,7 +4815,10 @@ begin
     R := OvlRangeRing;
   if R <= 0 then
     R := OvlRange;
-  Result := R * (1 + (RadarSize(ID) - 1) * OvlSizeRange) * RadarZoom(ID);
+  if (M = OVL_LIST) or (M = OVL_CIRCLE) then
+    Result := R * (1 + (RadarSize(ID) - 1) * OvlSizeRange) * RadarZoom(ID)
+  else
+    Result := R * RadarZoom(ID);
   if Result < 50 then
     Result := 50;
 end;
@@ -4817,8 +5000,12 @@ begin
         BE_SnapExtra(b, W, Tg, Pg);
       end;
     end;
-  if Extra then
-    FlagSnap();
+  if OvlFlags then
+    if Extra or (Tick - FlagSnapTick >= 6) or (Tick < FlagSnapTick) then
+    begin
+      FlagSnapTick := Tick;
+      FlagSnap();
+    end;
   BE_SnapEnd(Tick);
 end;
 
@@ -4842,6 +5029,76 @@ begin
     else if Kind = OP_WORLD then
       P.WorldText(Layer, T, Delay, Color, Sc, X, Y);
   end;
+end;
+
+procedure OpsCache(n: Integer);
+var
+  k: Integer;
+begin
+  if n > 256 then
+    n := 256;
+  for k := 0 to n - 1 do
+    OpT[k] := BE_Op(k, OpKind[k], OpLayer[k], OpDelay[k], OpColor[k], OpSc[k], OpX[k], OpY[k]);
+end;
+
+procedure OpsCachedTo(A, n: Integer);
+var
+  k: Integer;
+  P: TActivePlayer;
+begin
+  if not ActiveSlot[A] then
+    Exit;
+  P := PL[A];
+  if n > 256 then
+    n := 256;
+  for k := 0 to n - 1 do
+    if OpKind[k] = OP_BIG then
+      P.BigText(OpLayer[k], OpT[k], OpDelay[k], OpColor[k], OpSc[k], Round(OpX[k]), Round(OpY[k]))
+    else if OpKind[k] = OP_WORLD then
+      P.WorldText(OpLayer[k], OpT[k], OpDelay[k], OpColor[k], OpSc[k], OpX[k], OpY[k]);
+end;
+
+procedure TrSend(i, T, m: Integer);
+var
+  k: Integer;
+begin
+  if m <= 0 then
+    Exit;
+  if TrAud[i] = TA_ME then
+  begin
+    OpsSend(i, m);
+    Exit;
+  end;
+  if TrAud[i] = TA_SELF then
+  begin
+    if T >= 1 then
+      OpsSend(T, m);
+    Exit;
+  end;
+  OpsCache(m);
+  if TrAud[i] = TA_SELFME then
+  begin
+    OpsCachedTo(i, m);
+    if (T >= 1) and (T <> i) then
+      OpsCachedTo(T, m);
+    Exit;
+  end;
+  for k := 1 to TopSlot do
+    if ActiveSlot[k] then
+      if HumanOf[k] or DebugBots then
+        OpsCachedTo(k, m);
+end;
+
+function TrAudName(A: Integer): string;
+begin
+  if A = TA_SELF then
+    Result := 'only that player sees it'
+  else if A = TA_SELFME then
+    Result := 'you and that player see it'
+  else if A = TA_PUBLIC then
+    Result := 'everybody sees it'
+  else
+    Result := 'only you see it';
 end;
 
 procedure RadarUserSync(A: Integer);
@@ -4868,6 +5125,8 @@ begin
   BE_RadarUser(A, IsOn, M, RadarShowOf(A), X, Y, RadarSize(A), RadarZoom(A), Mk, Ed);
   BE_RadarOpt(A, RO_FRIENDS, BoolInt(RadarTeamOf(A)));
   BE_RadarOpt(A, RO_OUTLINE, BoolInt(RadarOutlineOf(A)));
+  BE_RadarOpt(A, RO_MARKS, Round(RadarMarksOf(A) * 1000));
+  BE_RadarOpt(A, RO_EDGE, Round(RadarEdgeOf(A) * 1000));
   RdEvery[A] := RadarTicks(A);
   RdNeed[A] := 4;
 end;
@@ -5178,21 +5437,25 @@ end;
 
 procedure TrStop(ID: Integer);
 var
-  n: Integer;
+  n, T: Integer;
 begin
-  if TrWatch[ID] > 0 then
+  T := TrWatch[ID];
+  if T > 0 then
     TrCount := TrCount - 1;
+  if BeOk then
+  begin
+    n := BE_TrajHide(ID, 255);
+    if T > 0 then
+      TrSend(ID, T, n)
+    else if ActiveSlot[ID] then
+      OpsSend(ID, n);
+  end;
   TrWatch[ID] := 0;
   TrBullet[ID] := 0;
   TrCursor[ID] := False;
+  TrAud[ID] := TA_ME;
   if TrCount < 0 then
     TrCount := 0;
-  if BeOk then
-    if ActiveSlot[ID] then
-    begin
-      n := BE_TrajHide(ID, 255);
-      OpsSend(ID, n);
-    end;
 end;
 
 function TrFollowStep(i, T, Tick: Integer; P: TActivePlayer): Integer;
@@ -5286,7 +5549,7 @@ begin
           m := BE_TrajStep(i, Tick, TrBudget, -1, 0, 0, 0, 0, 0, 0, AX, AY, Cur);
           if m < 0 then
             m := BE_TrajPass(i, Tick, TrBudget, 0, -1, AX, AY, Cur);
-          OpsSend(i, m);
+          TrSend(i, T, m);
           StatTraj := StatTraj + m;
           Continue;
         end;
@@ -5298,7 +5561,7 @@ begin
               if m >= 0 then
               begin
                 TrDue[i] := After(Tick, TrFollowTicks);
-                OpsSend(i, m);
+                TrSend(i, T, m);
                 StatTraj := StatTraj + m;
                 Continue;
               end;
@@ -5312,7 +5575,8 @@ begin
           AX := P.MouseAimX;
           AY := P.MouseAimY;
           if T <> i then
-            Cur := 1;
+            if TrAud[i] <> TA_SELF then
+              Cur := 1;
           W := P.Primary.WType;
           if (W < 0) or (W > 16) or (W = 12) then
             W := -1;
@@ -5362,7 +5626,7 @@ begin
           end;
           m := BE_TrajPass(i, Tick, TrBudget, Vis, Hit, AX, AY, Cur);
         end;
-        OpsSend(i, m);
+        TrSend(i, T, m);
         StatTraj := StatTraj + m;
       end;
 end;
@@ -5828,6 +6092,14 @@ begin
         if P.KeyJetpack or ((P.KeyLeft or P.KeyRight) and P.OnGround) then
           Flags := Flags + SF_RUNNING;
       end;
+      if W = 10 then
+      begin
+        if P.KeyJetpack then
+          if P.Jets > 0 then
+            Flags := Flags or SF_JET;
+        if P.Flagger then
+          Flags := Flags or SF_FLAG;
+      end;
       n := BE_Shot(W, SX, SY, SVX, SVY, DX, DY, AbAcc[i] * 0.01, Tick * 17 + i * 131, Flags, Style, HitM);
       if not BulletRoom(n) then
         Continue;
@@ -5844,6 +6116,13 @@ begin
         end;
       BE_GunFired(i, Tick);
       StatShots := StatShots + n;
+      if AbPush then
+        if (W = 5) or (W = 10) then
+        begin
+          BE_ShotPush(X, Y);
+          if (Abs(X) > 0.001) or (Abs(Y) > 0.001) then
+            P.SetVelocity(SVX + X, SVY + Y);
+        end;
       if not Inf then
         if W = WEP_KNIFE then
         begin
@@ -5976,6 +6255,8 @@ begin
     EdY[ID] := Y;
     EdScale[ID] := S;
     RdMark[ID] := S;
+    if (EdMode[ID] = OVL_LABELS) or (EdMode[ID] = OVL_ARROWS) then
+      RdMark[ID] := 0;
     if not OvlOn[ID] then
     begin
       RdPOn[ID] := PREF_ON;
@@ -6081,6 +6362,14 @@ begin
         SizeStep := 1.05;
         if RadarMode(i) = OVL_CIRCLE then
           SizeStep := 1.02;
+        if (EdMode[i] = OVL_LABELS) or (EdMode[i] = OVL_ARROWS) then
+        begin
+          SizeStep := 1.1;
+          L := False;
+          R := False;
+          U := False;
+          D := False;
+        end;
         ShowTicks := 10;
       end
       else
@@ -6292,6 +6581,13 @@ end;
 { a text of [Assists], [MultiKill] ...: the tokens replaced (count and seconds are the same number) }
 function ExText(S, Player, Other: string; Points, Pct, Count, Need: Integer): string;
 begin
+  if BeOk then
+  begin
+    Result := BE_Fill(S, '{player}'#1 + Player + #1'{killer}'#1 + Player + #1'{victim}'#1 + Other + #1'{saved}'#1 +
+      Other + #1'{points}'#1 + IntToStr(Points) + #1'{pct}'#1 + IntToStr(Pct) + #1'{count}'#1 + IntToStr(Count) +
+      #1'{seconds}'#1 + IntToStr(Count) + #1'{need}'#1 + IntToStr(Need));
+    Exit;
+  end;
   Result := ReplaceAll(S, '{player}', Player);
   Result := ReplaceAll(Result, '{killer}', Player);
   Result := ReplaceAll(Result, '{victim}', Other);
@@ -6741,22 +7037,17 @@ end;
   typed after /adminlog is never written. }
 procedure LogLine(ID: Integer; Text: string);
 var
-  T, F: string;
+  F: string;
 begin
   if not LgEnabled then
     Exit;
   if not BeOk then
     Exit;
-  T := FormatDateTime('hh:nn:ss', Now) + '  ' + Text;
-  F := LgFolder + FormatDateTime('yyyy-mm-dd', Now) + '.txt';
-  BE_Log(PChar(F), PChar(T));
+  F := '';
   if (ID >= 1) and (ID <= 32) then
     if LgWatched[ID] then
-    begin
-      F := LgFolder + 'watched/' + LgWatchName[ID] + '.txt';
-      T := FormatDateTime('yyyy-mm-dd ', Now) + T;
-      BE_Log(PChar(F), PChar(T));
-    end;
+      F := LgWatchName[ID];
+  BE_LogStamp(PChar(LgFolder), PChar(Text), PChar(F));
 end;
 
 { a file name out of a player name: letters, digits, - and _ stay }
@@ -7097,8 +7388,9 @@ end;
 procedure CmdInfo(ID: Integer);
 var
   i, Left: Integer;
-  S: string;
+  S, Pairs: string;
 begin
+  Pairs := '';
   Left := Game.TimeLeft;
   if Left < 0 then
     Left := 0;
@@ -7107,20 +7399,16 @@ begin
     S := InText[i];
     if Pos('{', S) > 0 then
     begin
-      S := ReplaceAll(S, '{server}', Game.ServerName);
-      S := ReplaceAll(S, '{version}', Game.ServerVersion);
-      S := ReplaceAll(S, '{address}', InAddress);
-      S := ReplaceAll(S, '{port}', IntToStr(Game.ServerPort));
-      S := ReplaceAll(S, '{style}', InStyle);
-      S := ReplaceAll(S, '{prevmap}', PrevMap);
-      S := ReplaceAll(S, '{map}', Game.CurrentMap);
-      S := ReplaceAll(S, '{nextmap}', Game.NextMap);
-      S := ReplaceAll(S, '{ff}', iif(Game.FriendlyFire, 'True', 'False'));
-      S := ReplaceAll(S, '{realistic}', iif(Game.Realistic, 'True', 'False'));
-      S := ReplaceAll(S, '{survival}', iif(Game.Survival, 'True', 'False'));
-      S := ReplaceAll(S, '{advance}', iif(Game.Advance, 'True', 'False'));
-      S := ReplaceAll(S, '{timelimit}', IntToStr(Game.TimeLimit div 3600) + 'm');
-      S := ReplaceAll(S, '{timeleft}', IntToStr(Left div 60) + 'min ' + IntToStr(Left mod 60) + 's');
+      if Pairs = '' then
+        Pairs := '{server}'#1 + Game.ServerName + #1'{version}'#1 + Game.ServerVersion + #1'{address}'#1 + InAddress +
+          #1'{port}'#1 + IntToStr(Game.ServerPort) + #1'{style}'#1 + InStyle + #1'{prevmap}'#1 + PrevMap + #1'{map}'#1 +
+          Game.CurrentMap + #1'{nextmap}'#1 + Game.NextMap + #1'{ff}'#1 + iif(Game.FriendlyFire, 'True', 'False') +
+          #1'{realistic}'#1 + iif(Game.Realistic, 'True', 'False') + #1'{survival}'#1 + iif(Game.Survival, 'True',
+          'False') + #1'{advance}'#1 + iif(Game.Advance, 'True', 'False') + #1'{timelimit}'#1 +
+          IntToStr(Game.TimeLimit div 3600) + 'm' + #1'{timeleft}'#1 + IntToStr(Left div 60) + 'min ' +
+          IntToStr(Left mod 60) + 's';
+      if BeOk then
+        S := BE_Fill(S, Pairs);
     end;
     if S = '' then
       S := ' ';
@@ -7857,6 +8145,8 @@ begin
   BE_RadarText(RT_LIST_LINE, OvlListLine);
   BE_RadarText(RT_NOBODY, OvlNobody);
   BE_RadarInt(RI_LIST_COLOR_BY, OvlListColorBy);
+  BE_RadarInt(RI_REALISTIC, BoolInt(Game.Realistic));
+  BE_RadarFloat(RF_RING_LETTER, OvlRingLetter);
   BE_RadarInt(RI_LABEL_COLOR_BY, OvlLabelColorBy);
   BE_RadarInt(RI_LIST_LINE_LAYER, OvlListLineLayer);
   BE_RadarInt(RI_FLAGS, BoolInt(OvlFlags));
@@ -7872,7 +8162,6 @@ begin
   BE_RadarFloat(RF_RANGE_CIRCLE, OvlRangeCircle);
   BE_RadarFloat(RF_RANGE_RING, OvlRangeRing);
   BE_RadarFloat(RF_LIST_SPACING, OvlListSpacing);
-  BE_RadarFloat(RF_OUTLINE_STEP, OvlOutlineStep);
   BE_RadarFloat(RF_OUTLINE_MOVE, OvlOutlineMove);
   BE_RadarFloat(RF_OUTLINE_GRID, OvlOutlineGrid);
   BE_RadarText(RT_FLAG_RED, OvlFlagRedName);
@@ -7900,6 +8189,7 @@ begin
   BE_MoveSet(MF_STEER, TpSteer);
   BE_MoveSet(MF_HOP_MAX, TpHopMax);
   BE_MoveSet(MF_FLY_VEL_MAX, TpFlyVelMax);
+  BE_MoveSet(MF_FLY_HOPS, BoolInt(TpFlyHops));
   BE_MoveSet(MF_FLY_HOP_TICKS, TpFlyHopTicks);
   BE_MoveSet(MF_FLY_HOP_MAX, TpFlyHopMax);
   BE_MoveSet(MF_ACCEL, TpAccel);
@@ -8217,27 +8507,31 @@ begin
     if not Ok then
     begin
       Say(ID, 'The radar reaches ' + IntToStr(Round(RadarRange(ID))) + ' pixels (zoom ' + FloatStr(RadarZoom(ID), 2) +
-        '). Use: ' + Cmd + ' zoom <0.5-4> - more reaches further, the circle marks get smaller.', ColorGood);
+        '). Use: ' + Cmd + ' zoom <0.5-4> - more reaches further (each mode has its own).', ColorGood);
       Exit;
     end;
     if V < 0.5 then
       V := 0.5;
     if V > 4 then
       V := 4;
-    RdPZoom[ID] := V;
+    RdMZoom[ID][RadarMode(ID)] := V;
     if Abs(V - 1) < 0.001 then
-      RdPZoom[ID] := 0;
+      RdMZoom[ID][RadarMode(ID)] := 0;
     RadarDirty(ID);
     PrefsSave(ID);
-    Say(ID, 'Radar zoom ' + FloatStr(V, 2) + ': it reaches ' + IntToStr(Round(RadarRange(ID))) + ' pixels.', ColorGood);
+    Say(ID, 'Radar (' + RadarModeName(RadarMode(ID)) + ') zoom ' + FloatStr(V, 2) + ': it reaches ' +
+      IntToStr(Round(RadarRange(ID))) + ' pixels.', ColorGood);
   end
   else if W = 'show' then
   begin
     M := ShowOf(Rest);
     if M < 0 then
     begin
-      Say(ID, 'The radar shows: ' + ShowName(RadarShowOf(ID)) + '. Use: ' + Cmd + ' show all|seenall|seen - seen = the' +
-        ' players you or a living team mate can see, seenall = dead team mates count too.', ColorGood);
+      Say(ID, 'The radar shows: ' + ShowName(RadarShowOf(ID)) + '. Use: ' + Cmd + ' show all|seen|seenall|seenreal|' +
+        'seenallreal', ColorGood);
+      Say(ID, 'seen = the enemies you or a living team mate can see (on a realistic server: in front, no wall ' +
+        'between; otherwise: on the screen), seenall = dead team mates count too, seenreal / seenallreal = always ' +
+        'in front with no wall between.', ColorGood);
       Exit;
     end;
     if not OvlAllowed[ID] then
@@ -8320,9 +8614,7 @@ begin
   end
   else if W = 'edit' then
   begin
-    if (RadarMode(ID) = OVL_LABELS) or (RadarMode(ID) = OVL_ARROWS) then
-      Say(ID, 'The editor moves the list and the circle; the labels and the ring stay by the players.', ColorBad)
-    else if TeamOf[ID] = TEAM_SPECTATOR then
+    if TeamOf[ID] = TEAM_SPECTATOR then
       Say(ID, 'The editor works only while you play.', ColorBad)
     else
       EditorStart(ID, ED_RADAR);
@@ -8369,17 +8661,45 @@ begin
     if V > 4 then
       V := 4;
     M := RadarMode(ID);
-    if (M <> OVL_LIST) and (M <> OVL_CIRCLE) then
-    begin
-      Say(ID, 'Only the list and the circle have a size.', ColorBad);
-      Exit;
-    end;
     RdMSize[ID][M] := V;
     if Abs(V - 1) < 0.001 then
       RdMSize[ID][M] := 0;
     RadarDirty(ID);
     PrefsSave(ID);
     Say(ID, 'Radar (' + RadarModeName(M) + ') size ' + FloatStr(V, 2) + '.', ColorGood);
+  end
+  else if (W = 'marks') or (W = 'edge') then
+  begin
+    V := ParseFloat(Rest, Ok);
+    if not Ok then
+    begin
+      if W = 'marks' then
+        Say(ID, 'Circle marks x' + FloatStr(RadarMarksOf(ID), 2) + '. Use: ' + Cmd + ' marks <0.3-3> - the size of the ' +
+          'players'' marks in the circle (1 = normal)', ColorGood)
+      else
+        Say(ID, 'Circle edge x' + FloatStr(RadarEdgeOf(ID), 2) + '. Use: ' + Cmd + ' edge <0.3-3> - the size of the ' +
+          'dots on the edge of the circle (1.2 = 20% bigger)', ColorGood);
+      Exit;
+    end;
+    if V < 0.3 then
+      V := 0.3;
+    if V > 3 then
+      V := 3;
+    if W = 'marks' then
+    begin
+      RdPMarks[ID] := V;
+      if Abs(V - 1) < 0.001 then
+        RdPMarks[ID] := 0;
+    end
+    else
+    begin
+      RdPEdge[ID] := V;
+      if Abs(V - OvlEdgeScale) < 0.001 then
+        RdPEdge[ID] := 0;
+    end;
+    RadarDirty(ID);
+    PrefsSave(ID);
+    Say(ID, 'Circle ' + W + ' x' + FloatStr(V, 2) + '.', ColorGood);
   end
   else if W = 'reset' then
   begin
@@ -8398,14 +8718,17 @@ begin
       Cmd + ' reset', ColorGood);
     Say(ID, Cmd + ' tick <n> - update every n ticks (60 = 1 s); ' + Cmd + ' edit - move and resize it with the keys',
       ColorGood);
-    Say(ID, Cmd + ' pos <x> <y>; ' + Cmd + ' size <n>; ' + Cmd + ' zoom <n> - reach further (smaller circle marks)',
-      ColorGood);
-    Say(ID, Cmd + ' show all|seenall|seen - only the players you or your team can see; ' + Cmd +
+    Say(ID, Cmd + ' pos <x> <y>; ' + Cmd + ' size <n> (labels: the letters, ring: the dots); ' + Cmd +
+      ' zoom <n> - reach further', ColorGood);
+    if RadarModeOk(ID, OVL_CIRCLE) then
+      Say(ID, Cmd + ' marks <n>, ' + Cmd + ' edge <n> - the players'' marks and the edge dots of the circle (a bigger ' +
+        'size with smaller marks = a finer circle)', ColorGood);
+    Say(ID, Cmd + ' show all|seen|seenall|seenreal|seenallreal - only the players you or your team can see; ' + Cmd +
       ' team on|off - team mates too', ColorGood);
     if OvlOutline then
       if RadarModeOk(ID, OVL_CIRCLE) then
         Say(ID, Cmd + ' outline on|off - a simple outline of the walls in the circle', ColorGood);
-    Say(ID, 'The place, the size and the update rate are kept for each mode.', ColorGood);
+    Say(ID, 'The place, the size, the zoom and the update rate are kept for each mode.', ColorGood);
   end;
 end;
 
@@ -8709,7 +9032,7 @@ end;
 
 procedure CmdTraj(ID: Integer; Args: string; Console: Boolean);
 var
-  T: Integer;
+  T, Aud: Integer;
   W, Rest, M: string;
   CurOnly: Boolean;
 begin
@@ -8731,21 +9054,18 @@ begin
     Say(ID, 'Trajectory off.', ColorGood);
     Exit;
   end;
-  if (W = 'cursor') or (W = 'mouse') then
-  begin
-    Say(ID, 'Use: /trajectory <player> cursor - that player''s cursor only (they do not see it)', ColorBad);
-    Exit;
-  end;
-  CurOnly := False;
   if W = '' then
   begin
     if TeamOf[ID] = TEAM_SPECTATOR then
     begin
-      Say(ID, 'Use: /trajectory <player> [cursor] - the flight of that player''s bullets or only the cursor; ' +
-        '/trajectory off', ColorBad);
+      Say(ID, 'Use: /trajectory <player> [cursor] [me|self|selfme|public] - the flight of that player''s bullets ' +
+        '(cursor: only the cursor); me = only you see it, self = only that player, selfme = both, public = ' +
+        'everybody; /trajectory off', ColorBad);
       Exit;
     end;
     T := ID;
+    CurOnly := False;
+    Aud := TA_ME;
   end
   else
   begin
@@ -8757,17 +9077,33 @@ begin
       Exit;
     end;
     T := TgtList[0];
+    CurOnly := False;
+    Aud := TA_ME;
     M := LowerCase(Trim(TakeArg(Rest)));
-    CurOnly := (M = 'cursor') or (M = 'mouse');
-    if CurOnly then
-      if T = ID then
+    while M <> '' do
+    begin
+      if (M = 'cursor') or (M = 'mouse') then
+        CurOnly := True
+      else if M = 'me' then
+        Aud := TA_ME
+      else if M = 'self' then
+        Aud := TA_SELF
+      else if (M = 'selfme') or (M = 'meself') or (M = 'both') then
+        Aud := TA_SELFME
+      else if (M = 'public') or (M = 'all') then
+        Aud := TA_PUBLIC
+      else
       begin
-        Say(ID, 'Your own cursor is on your screen already.', ColorBad);
+        Say(ID, 'Use: /trajectory <player> [cursor] [me|self|selfme|public]', ColorBad);
         Exit;
       end;
+      M := LowerCase(Trim(TakeArg(Rest)));
+    end;
+    if (T = ID) and (Aud = TA_SELFME) then
+      Aud := TA_ME;
   end;
   if TrWatch[ID] = T then
-    if TrCursor[ID] = CurOnly then
+    if (TrCursor[ID] = CurOnly) and (TrAud[ID] = Aud) then
     begin
       TrStop(ID);
       Say(ID, 'Trajectory off.', ColorGood);
@@ -8777,18 +9113,20 @@ begin
     TrStop(ID);
   TrWatch[ID] := T;
   TrCursor[ID] := CurOnly;
+  TrAud[ID] := Aud;
   TrBullet[ID] := 0;
   TrShotAt[ID] := -1000000;
   TrAmmo[ID] := 0;
   TrDue[ID] := 0;
   TrCount := TrCount + 1;
   if CurOnly then
-    Say(ID, 'Watching the cursor of ' + PL[T].Name + ' (only you see it). /trajectory off', ColorGood)
+    Say(ID, 'Watching the cursor of ' + PL[T].Name + ' (' + TrAudName(Aud) + '). /trajectory off', ColorGood)
   else if T = ID then
-    Say(ID, 'Trajectory on: where the bullets of your weapon fly (green = where they hit). /trajectory off', ColorGood)
+    Say(ID, 'Trajectory on: where the bullets of your weapon fly (green = where they hit; ' + TrAudName(Aud) +
+      '). /trajectory off', ColorGood)
   else
-    Say(ID, 'Trajectory on: where the bullets of ' + PL[T].Name + ' fly (green = where they hit; only you see ' +
-      'it). /trajectory off', ColorGood);
+    Say(ID, 'Trajectory on: where the bullets of ' + PL[T].Name + ' fly (green = where they hit; ' + TrAudName(Aud) +
+      '). /trajectory off', ColorGood);
 end;
 
 function AbKeyName(): string;
@@ -9730,12 +10068,34 @@ begin
   Say(ID, 'Vest ' + IntToStr(N) + '%: ' + TgtDesc() + '.', ColorGood);
 end;
 
+function AcScoreColor(Sc: Integer): Longint;
+begin
+  if Sc >= AcNotifyScore then
+    Result := AcColorBad
+  else if Sc > 0 then
+    Result := AcColorNote
+  else
+    Result := AcColorOk;
+end;
+
+procedure AcAllScore(T: Integer; var Sc, Games: Integer);
+var
+  S: string;
+  p: Integer;
+begin
+  S := BE_AcText(T, PChar(AcKey(T)), 5, Game.TickCount);
+  p := Pos('|', S);
+  Sc := StrToIntDef(Copy(S, 1, p - 1), 0);
+  Games := StrToIntDef(Copy(S, p + 1, Length(S)), 1);
+end;
+
 procedure CmdSuspects(ID: Integer; Args: string);
 var
-  i, k, n, Best, BestSc: Integer;
+  i, k, n, Best, BestSc, AllSc, Games: Integer;
   Sc: array[1..32] of Integer;
   Done: array[1..32] of Boolean;
   All: Boolean;
+  Brief: string;
 begin
   All := LowerCase(Trim(Args)) = 'all';
   n := 0;
@@ -9757,11 +10117,11 @@ begin
   end;
   if n = 0 then
   begin
-    Say(ID, 'Nobody looks suspicious now (/suspects all shows everybody).', ColorGood);
+    Say(ID, 'Nobody looks suspicious in this game (/suspects all shows everybody).', AcColorOk);
     Exit;
   end;
-  Say(ID, 'Anti-cheat, this game (/acstats <player> for details, /acreview <player> for the last events):',
-    ColorGood);
+  Say(ID, '== Anti-cheat: this game | all games of the computer (/acstats <player>, /acreview <player>) ==',
+    AcColorHead);
   for k := 1 to n do
   begin
     Best := 0;
@@ -9776,37 +10136,53 @@ begin
     if Best = 0 then
       Break;
     Done[Best] := True;
-    Say(ID, '  ' + PL[Best].Name + ' (' + IntToStr(Best) + '): ' + BE_AcText(Best, '', 0, Game.TickCount),
-      iif(Sc[Best] >= AcNotifyScore, ColorBad, ColorGood));
+    AcAllScore(Best, AllSc, Games);
+    Brief := BE_AcText(Best, '', 0, Game.TickCount);
+    Say(ID, '  ' + PL[Best].Name + ' (' + IntToStr(Best) + '): ' + Brief + '  | ' + IntToStr(AllSc) + '% in ' +
+      IntToStr(Games) + ' game' + iif(Games = 1, '', 's'), AcScoreColor(Sc[Best]));
   end;
 end;
 
-procedure SayLines(ID: Integer; Prefix, Text: string; Color: Longint);
+procedure SayAcLines(ID: Integer; Text: string);
 var
   p: Integer;
+  L: string;
+  C: Longint;
 begin
   while Text <> '' do
   begin
     p := Pos(#10, Text);
     if p = 0 then
     begin
-      Say(ID, Prefix + Text, Color);
-      Exit;
+      L := Text;
+      Text := '';
+    end
+    else
+    begin
+      L := Copy(Text, 1, p - 1);
+      Delete(Text, 1, p);
     end;
-    Say(ID, Prefix + Copy(Text, 1, p - 1), Color);
-    Delete(Text, 1, p);
+    if L = '' then
+      Continue;
+    C := AcColorOk;
+    if L[1] = '2' then
+      C := AcColorBad
+    else if L[1] = '1' then
+      C := AcColorNote;
+    Delete(L, 1, 1);
+    Say(ID, '  ' + L, C);
   end;
 end;
 
 procedure CmdAcStats(ID: Integer; Args: string);
 var
-  k, T, Tick: Integer;
+  k, T, Tick, Sc, AllSc, Games: Integer;
   Rest: string;
 begin
   Rest := Args;
   if Trim(Rest) = '' then
   begin
-    Say(ID, 'Use: /acstats <player> - what the anti-cheat measured (this game and all games)', ColorBad);
+    Say(ID, 'Use: acstats <player> - what the anti-cheat measured, this game and all games of the computer', ColorBad);
     Exit;
   end;
   if not PickTargets(ID, TakeArg(Rest), True, False, False) then
@@ -9815,22 +10191,24 @@ begin
   for k := 0 to TgtCount - 1 do
   begin
     T := TgtList[k];
-    Say(ID, '== ' + PL[T].Name + ' (' + IntToStr(T) + '), ping ' + IntToStr(PL[T].Ping) + ' ==', ColorGood);
-    Say(ID, 'This game: ' + BE_AcText(T, '', 0, Tick), iif(BE_AcScore(T) >= AcNotifyScore, ColorBad, ColorGood));
-    SayLines(ID, '  ', BE_AcText(T, '', 1, Tick), ColorGood);
-    Say(ID, 'All ' + BE_AcText(T, PChar(AcKey(T)), 2, Tick), ColorGood);
+    Sc := BE_AcScore(T);
+    AcAllScore(T, AllSc, Games);
+    Say(ID, '== ' + PL[T].Name + ' (' + IntToStr(T) + '), ping ' + IntToStr(PL[T].Ping) + ' - suspicion ' + IntToStr(Sc) +
+      '% in this game, ' + IntToStr(AllSc) + '% in ' + IntToStr(Games) + ' game' + iif(Games = 1, '', 's') + ' ==',
+      AcScoreColor(Sc));
+    SayAcLines(ID, BE_AcText(T, PChar(AcKey(T)), 1, Tick));
   end;
 end;
 
 procedure CmdAcReview(ID: Integer; Args: string);
 var
-  k, T: Integer;
+  k, T, p: Integer;
   Rest, L: string;
 begin
   Rest := Args;
   if Trim(Rest) = '' then
   begin
-    Say(ID, 'Use: /acreview <player> - the last things the anti-cheat noticed in this game', ColorBad);
+    Say(ID, 'Use: acreview <player> - the last things the anti-cheat noticed in this game, newest first', ColorBad);
     Exit;
   end;
   if not PickTargets(ID, TakeArg(Rest), True, False, False) then
@@ -9840,11 +10218,24 @@ begin
     T := TgtList[k];
     L := BE_AcText(T, '', 4, Game.TickCount);
     if L = '' then
-      Say(ID, PL[T].Name + ': nothing noticed in this game.', ColorGood)
-    else
     begin
-      Say(ID, '== ' + PL[T].Name + ', newest first ==', ColorGood);
-      SayLines(ID, '  ', L, ColorGood);
+      Say(ID, PL[T].Name + ': nothing noticed in this game.', AcColorOk);
+      Continue;
+    end;
+    Say(ID, '== ' + PL[T].Name + ' (' + IntToStr(T) + '): the last things noticed, newest first ==', AcColorHead);
+    while L <> '' do
+    begin
+      p := Pos(#10, L);
+      if p = 0 then
+      begin
+        Say(ID, '  ' + L, AcColorBad);
+        L := '';
+      end
+      else
+      begin
+        Say(ID, '  ' + Copy(L, 1, p - 1), AcColorBad);
+        Delete(L, 1, p);
+      end;
     end;
   end;
 end;
@@ -9857,11 +10248,20 @@ var
 begin
   Rest := Args;
   Who := TakeArg(Rest);
-  Forever := LowerCase(Trim(Rest)) = 'forever';
+  Forever := (LowerCase(Trim(Rest)) = 'forever') or (LowerCase(Trim(Rest)) = 'all');
   if Who = '' then
   begin
-    Say(ID, 'Use: /acclear <player|all> [forever] - forget what the anti-cheat saw (forever: all games too)',
-      ColorBad);
+    Say(ID, 'Use: /acclear <player|all> [all] - forget what the anti-cheat saw (all: every game too; /acclear all ' +
+      'all: everybody and the whole history, also of players who are not here)', ColorBad);
+    Exit;
+  end;
+  if (LowerCase(Who) = 'all') and Forever then
+  begin
+    for k := 1 to TopSlot do
+      if ActiveSlot[k] then
+        BE_AcReset(k);
+    k := BE_AcForgetAll();
+    Say(ID, 'Anti-cheat: everybody forgotten, the whole history (' + IntToStr(k) + ' computers).', ColorGood);
     Exit;
   end;
   if not PickTargets(ID, Who, True, False, False) then
@@ -9881,10 +10281,10 @@ end;
 
 procedure CmdSpeed(ID: Integer; Args: string);
 var
-  k, T: Integer;
+  k, T, M: Integer;
   W, Rest, V: string;
   F: Single;
-  Ok, NewOn: Boolean;
+  Ok, NewOn, Given: Boolean;
 begin
   if not BeOk then
   begin
@@ -9895,34 +10295,42 @@ begin
   W := TakeArg(Rest);
   if W = '' then
   begin
-    Say(ID, 'Use: /speed <player|all|me> [<1.1-5>|off] - run and fly faster (2 = twice as fast)', ColorBad);
+    Say(ID, 'Use: /speed <player|all|me> [<1.1-5>|off] [all|ground|jump] - run and fly faster (2 = twice as ' +
+      'fast); ground = only on the ground, jump = the ground and a stronger jump', ColorBad);
     Exit;
   end;
   if not PickTargets(ID, W, True, False, False) then
     Exit;
+  F := SpDefault;
+  M := SpModeDef;
+  Given := False;
+  NewOn := True;
   V := LowerCase(Trim(TakeArg(Rest)));
-  if V <> '' then
+  while V <> '' do
+  begin
     if V[Length(V)] = 'x' then
       Delete(V, Length(V), 1);
-  F := SpDefault;
-  if V = '' then
-  begin
-    NewOn := True;
-    if (TgtCount = 1) and (not TgtMany) then
-      NewOn := not SpOn[TgtList[0]];
-  end
-  else if (V = 'off') or (V = '0') or (V = '1') then
-    NewOn := False
-  else
-  begin
-    F := ParseFloat(V, Ok);
-    if (not Ok) or (F < 1.1) or (F > 5) then
+    if SpeedModeOf(V) >= 0 then
+      M := SpeedModeOf(V)
+    else if (V = 'off') or (V = '0') or (V = '1') then
+      NewOn := False
+    else
     begin
-      Say(ID, 'The speed is 1.1 to 5 (or off).', ColorBad);
-      Exit;
+      F := ParseFloat(V, Ok);
+      if (not Ok) or (F < 1.1) or (F > 5) then
+      begin
+        Say(ID, 'The speed is 1.1 to 5 (or off); the kind all, ground or jump.', ColorBad);
+        Exit;
+      end;
+      Given := True;
     end;
-    NewOn := True;
+    V := LowerCase(Trim(TakeArg(Rest)));
   end;
+  if NewOn and (not Given) then
+    if (TgtCount = 1) and (not TgtMany) then
+      if SpOn[TgtList[0]] then
+        if SpMode[TgtList[0]] = M then
+          NewOn := False;
   for k := 0 to TgtCount - 1 do
   begin
     T := TgtList[k];
@@ -9932,6 +10340,8 @@ begin
         SpCount := SpCount + 1;
       SpOn[T] := True;
       SpFactor[T] := F;
+      SpMode[T] := M;
+      SpWasGround[T] := False;
     end
     else if SpOn[T] then
     begin
@@ -9942,7 +10352,7 @@ begin
   if SpCount < 0 then
     SpCount := 0;
   if NewOn then
-    Say(ID, 'Speed x' + FloatStr(F, 1) + ': ' + TgtDesc() + '.', ColorGood)
+    Say(ID, 'Speed x' + FloatStr(F, 1) + ' ' + SpeedModeName(M) + ': ' + TgtDesc() + '.', ColorGood)
   else
     Say(ID, 'Normal speed: ' + TgtDesc() + '.', ColorGood);
 end;
@@ -9951,7 +10361,8 @@ procedure SpeedTick(Tick: Integer);
 var
   i, Dir: Integer;
   P: TActivePlayer;
-  VX, VY, NX, NY, Top, Step: Single;
+  VX, VY, NX, NY, Top, Step, K: Single;
+  OnG: Boolean;
 begin
   if Tick mod 2 <> 0 then
     Exit;
@@ -9967,37 +10378,51 @@ begin
       end;
       if not P.Alive then
         Continue;
-      Dir := 0;
-      if P.KeyRight then
-        Dir := 1;
-      if P.KeyLeft then
-        Dir := Dir - 1;
+      OnG := P.OnGround;
       VX := P.VelX;
       VY := P.VelY;
       NX := VX;
       NY := VY;
-      if Dir <> 0 then
+      if OnG or (SpMode[i] = SPM_ALL) then
       begin
-        Top := SpRun * SpFactor[i];
-        if not P.OnGround then
-          Top := Top * 0.8;
-        if Top > 11 then
-          Top := 11;
-        if Dir * VX < Top then
+        Dir := 0;
+        if P.KeyRight then
+          Dir := 1;
+        if P.KeyLeft then
+          Dir := Dir - 1;
+        if Dir <> 0 then
         begin
-          Step := 0.5 * SpFactor[i];
-          if Dir * VX + Step > Top then
-            Step := Top - Dir * VX;
-          NX := VX + Dir * Step;
+          Top := SpRun * SpFactor[i];
+          if not OnG then
+            Top := Top * 0.8;
+          if Top > 11 then
+            Top := 11;
+          if Dir * VX < Top then
+          begin
+            Step := 0.5 * SpFactor[i];
+            if Dir * VX + Step > Top then
+              Step := Top - Dir * VX;
+            NX := VX + Dir * Step;
+          end;
         end;
       end;
-      if P.KeyJetpack then
-        if P.Jets > 0 then
+      if SpMode[i] = SPM_ALL then
+        if P.KeyJetpack then
+          if P.Jets > 0 then
+          begin
+            NY := VY - SpJet * (SpFactor[i] - 1) * 2;
+            if NY < -11 then
+              NY := -11;
+          end;
+      if SpMode[i] = SPM_JUMP then
+        if (not OnG) and SpWasGround[i] and (VY < -1) then
         begin
-          NY := VY - SpJet * (SpFactor[i] - 1) * 2;
+          K := 1 + (SpFactor[i] - 1) * SpJumpShare;
+          NY := VY * K;
           if NY < -11 then
             NY := -11;
         end;
+      SpWasGround[i] := OnG;
       if (Abs(NX - VX) > 0.05) or (Abs(NY - VY) > 0.05) then
       begin
         P.SetVelocity(NX, NY);
@@ -10043,13 +10468,13 @@ begin
   if (TgtCount <> 1) or (Text = '') then
   begin
     if Team then
-      Say(ID, 'Use: /sayteamas <player> <text> - the team mates of that player see it as their team chat', ColorBad)
+      Say(ID, 'Use: /sayteam <player> <text> - the team mates of that player see it as their team chat', ColorBad)
     else
       Say(ID, 'Use: /sayas <player> <text> - everybody sees it as that player''s chat', ColorBad);
     Exit;
   end;
   T := TgtList[0];
-  WriteLn(TAG + AdminName(ID) + ' used ' + iif(Team, '/sayteamas', '/sayas') + ' as ' + PL[T].Name + ': ' + Text);
+  WriteLn(TAG + AdminName(ID) + ' used ' + iif(Team, '/sayteam', '/sayas') + ' as ' + PL[T].Name + ': ' + Text);
   if not Team then
   begin
     C := SayChatColor;
@@ -10068,48 +10493,48 @@ begin
     Say(ID, 'Sent to the team of ' + PL[T].Name + ': ' + Text, ColorGood);
 end;
 
-procedure CmdWeaponMod(ID: Integer; Args: string);
+procedure LoadWepSeen(Command: string);
 var
-  Name, Path: string;
-  n, i: Integer;
+  S, W: string;
 begin
-  Name := Trim(Args);
-  if Name = '' then
-  begin
-    Say(ID, 'Use: /weaponmod <name> - loads ' + WmFolder + '<name>.ini (for example weapons, weapons_realistic)',
-      ColorBad);
+  S := Trim(Command);
+  if S = '' then
     Exit;
-  end;
-  if (Pos('..', Name) > 0) or (Pos('/', Name) > 0) or (Pos('\', Name) > 0) or (Pos(' ', Name) > 0) then
-  begin
-    Say(ID, 'Only a file name, without a folder.', ColorBad);
+  if S[1] = '/' then
+    Delete(S, 1, 1);
+  W := LowerCase(FirstWord(S));
+  if W <> 'loadwep' then
     Exit;
-  end;
-  if LowerCase(Copy(Name, Length(Name) - 3, 4)) = '.ini' then
-    Delete(Name, Length(Name) - 3, 4);
-  Path := WmFolder + Name + '.ini';
-  if not File.Exists(Path) then
+  W := Trim(AfterFirstWord(S));
+  if W = '' then
   begin
-    Say(ID, 'Not found: ' + Path, ColorBad);
-    Exit;
+    if Game.Realistic then
+      W := 'weapons_realistic'
+    else
+      W := 'weapons';
   end;
-  if not Game.LoadWeap(Name) then
+  if LowerCase(Copy(W, Length(W) - 3, 4)) = '.ini' then
+    Delete(W, Length(W) - 3, 4);
+  WmPending := 'configs/' + W + '.ini';
+end;
+
+procedure LoadWepSync();
+var
+  n, i, R: Integer;
+begin
+  R := BoolInt(Game.Realistic);
+  n := BE_WeaponsLoad(PChar(WmPending), R);
+  if n > 0 then
   begin
-    Say(ID, 'The server did not load ' + Path + '.', ColorBad);
-    Exit;
-  end;
-  if BeOk then
-  begin
-    n := BE_WeaponsLoad(PChar(Path), BoolInt(Game.Realistic));
-    if n > 0 then
-    begin
-      WmLoaded := Path;
-      WpRefresh();
-    end;
+    WmLoaded := WmPending;
+    WpRefresh();
     for i := 1 to TopSlot do
       AcAmmoTouched(i);
-  end;
-  SayAll('Weapons: ' + Name + ' (by ' + AdminName(ID) + ').', ColorGood);
+    WriteLn(TAG + 'weapons for the trajectory and the aimbot: ' + WmLoaded);
+  end
+  else
+    WriteLn(TAG + 'loadwep: ' + WmPending + ' not found for the library, it keeps the old weapons');
+  WmPending := '';
 end;
 
 procedure CmdSlay(ID: Integer; Args: string);
@@ -10281,7 +10706,6 @@ begin
     C_SPEED: CmdSpeed(ID, Args);
     C_SAYAS: CmdSayAs(ID, Args, False);
     C_SAYTEAM: CmdSayAs(ID, Args, True);
-    C_WEAPONMOD: CmdWeaponMod(ID, Args);
     C_KILL: CmdSlay(ID, Args);
     C_TELEMOUSE: CmdTele(ID, Console, TP_MOMENTUM, Args);
     C_FLYMOUSE: CmdTele(ID, Console, TP_FLY, '');
@@ -11019,6 +11443,13 @@ begin
     except
       StageError('speed');
     end;
+  if WmPending <> '' then
+    try
+      LoadWepSync();
+    except
+      WmPending := '';
+      StageError('weapons');
+    end;
   if Tick >= DuePoll then
   begin
     DuePoll := After(Tick, 30);
@@ -11129,6 +11560,8 @@ var
   ID, Cmd: Integer;
 begin
   Result := False;
+  if BeOk then
+    LoadWepSeen(Command);
   if LgEnabled then
     if LgAdmins then
       if Player = nil then
@@ -11268,8 +11701,8 @@ end;
 procedure OnKillEv(Killer, Victim: TActivePlayer; BulletId: Byte);
 var
   K, V, Tick, W: Integer;
-  S, Wep: string;
-  Dealt2: Single;
+  S, Wep, DS: string;
+  Dealt2, KH: Single;
 begin
   K := Killer.ID;
   V := Victim.ID;
@@ -11303,15 +11736,23 @@ begin
         Dealt2 := Dealt[V][K];
         if Dealt2 > MaxHealth then
           Dealt2 := MaxHealth;
-        S := KiText;
-        S := ReplaceAll(S, '{killer}', Killer.Name);
-        S := ReplaceAll(S, '{weapon}', Wep);
-        S := ReplaceAll(S, '{pct}', IntToStr(HealthPct(Killer.Health)));
-        S := ReplaceAll(S, '{hp}', IntToStr(Round(Killer.Health)));
+        KH := Killer.Health;
         if DmgPercent then
-          S := ReplaceAll(S, '{dealt}', IntToStr(Round(Dealt2 * 100 / MaxHealth)) + '%')
+          DS := IntToStr(Round(Dealt2 * 100 / MaxHealth)) + '%'
         else
-          S := ReplaceAll(S, '{dealt}', IntToStr(Round(Dealt2)));
+          DS := IntToStr(Round(Dealt2));
+        if BeOk then
+          S := BE_Fill(KiText, '{killer}'#1 + Killer.Name + #1'{weapon}'#1 + Wep + #1'{pct}'#1 +
+            IntToStr(HealthPct(KH)) + #1'{hp}'#1 + IntToStr(Round(KH)) + #1'{dealt}'#1 + DS)
+        else
+        begin
+          S := KiText;
+          S := ReplaceAll(S, '{killer}', Killer.Name);
+          S := ReplaceAll(S, '{weapon}', Wep);
+          S := ReplaceAll(S, '{pct}', IntToStr(HealthPct(KH)));
+          S := ReplaceAll(S, '{hp}', IntToStr(Round(KH)));
+          S := ReplaceAll(S, '{dealt}', DS);
+        end;
         Say(V, S, KiColor);
       end;
 
@@ -11473,6 +11914,7 @@ begin
   TrDue[ID] := 0;
   TrBullet[ID] := 0;
   TrCursor[ID] := False;
+  TrAud[ID] := TA_ME;
   HumanOf[ID] := PL[ID].Human;
   SnapExtraTick := -1000000;
   SnapIdx[ID] := -1;
@@ -11641,13 +12083,7 @@ begin
   AbAmmoW[ID] := -1;
   AbAmmoTick[ID] := -1000000;
   AbManualAt[ID] := -1000000;
-  if TrWatch[ID] > 0 then
-  begin
-    TrWatch[ID] := 0;
-    TrCount := TrCount - 1;
-  end;
-  TrBullet[ID] := 0;
-  TrCursor[ID] := False;
+  TrStop(ID);
   for i := 1 to TopSlot do
     if TrWatch[i] = ID then
       if i <> ID then

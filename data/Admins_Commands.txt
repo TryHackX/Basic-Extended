@@ -6,7 +6,8 @@ ____________________________________Admin Commands______________________________
 /search, /checkp, /checkd, /privacy, /resetallplayersstats, /resetallmapsstats       |
 /backupcreate <backup name>, /restorebackup <backup name>, /statusa <name*>          |
 /removeolderthan <data> (/removeolderthan 18.01.2021 or /removeolderthan 2021.01.18) |
-/radar [help|mode|tick|edit|zoom|show], /steamadmin, /be_status, /be_test, /be_bench |
+/radar [help|mode|tick|edit|zoom|show|size|marks|edge|outline|team]                  |
+/steamadmin, /be_status, /be_test, /be_bench                                         |
 <player> = id, name or part of it ("with spaces"), me, all, others, alpha, bravo,    |
   charlie, delta, spec, bots, humans                                                 |
 /explode <player> [kind], /bigexplode <player>, /nuke <player>                       |
@@ -20,10 +21,13 @@ ____________________________________Admin Commands______________________________
 /dmgfix <player> <+20%|-10%|150%|x2|off>, /dmgtaken <player> <...>                   |
 /tele, /teletomouse [inherit|fixed], /flytomouse (reload key: tap = jump, hold =     |
   fly where the cursor points, inherit = faster the longer you hold)                 |
-/trajectory [player|off], /trajectory <player> cursor (only the cursor, only for you)|
+/trajectory [player [cursor] [me|self|selfme|public]|off] (cursor = only the         |
+  cursor; me = only you, self = only that player, selfme = both, public = all)       |
 /aimbot [on|off|cursor|nearest|radius [px]|acc <0-100>|extra <min-max>|law <rule>]   |
   /aimbot colliders on|off, /aimbot radius edit|save|cancel (circle at the cursor)   |
-/speed <player> [1.1-5|off], /slay <player>, /weaponmod <name>                       |
-/sayas <player> <text>, /sayteamas <player> <text> (as that player's chat)           |
-/suspects [all], /acstats <player>, /acreview <player>, /acclear <player|all>        |
+/speed <player> [1.1-5|off] [all|ground|jump], /slay <player>                        |
+/sayas <player> <text>, /sayteam <player> <text> (as that player's chat)             |
+/loadwep <name> (the server): the library reads configs/<name>.ini as well           |
+/acclear <player|all> [all], /acclear all all (everybody, the whole history)         |
+Everybody: /suspects [all], /acstats <player>, /acreview <player> (or with !)        |
 _____________________________________________________________________________________|

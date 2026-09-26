@@ -70,6 +70,12 @@ begin
   Check(S2.Load, 'loaded');
   Check(S2.Size = 1, 'one key in the file');
   Check(S2.Get('S123', 11) = 1000, 'value survives the file');
+  S2.Put('ac:H1', Vals([1, 2]));
+  S2.Put('ac:H2', Vals([3]));
+  S2.Put('acx', Vals([4]));
+  Check(S2.DeletePrefix('ac:') = 2, 'two keys with the prefix removed');
+  Check((S2.Count('ac:H1') = 0) and (S2.Count('acx') = 1) and (S2.Count('S123') = 15), 'the other keys stay');
+  Check(S2.DeletePrefix('') = 0, 'an empty prefix removes nothing');
   S2.Free;
 
   { a broken file: the .bak is read instead }

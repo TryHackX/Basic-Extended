@@ -5,4 +5,5 @@ __________Commands_List:___________________________________________________
 ?nextmap  ?lastmap       !map                   !maps        !allmaps     |
 !nextmap  !lastmap       !map <part|full name>  !randommap   !vote        |
 !hp       !hp help       !dmg      !maplist     ?map         !cmd         |
+!suspects !suspects all  !acstats <*>           !acreview <*>             |
 __________________________________________________________________________|

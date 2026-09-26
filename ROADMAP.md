@@ -1,9 +1,29 @@
 # Basic-Extended - plan rozbudowy
 
-Stan po wersji 3.4 i propozycje na kolejne wersje, od najbardziej opłacalnych. Każdy punkt ma
+Stan po wersji 3.5 i propozycje na kolejne wersje, od najbardziej opłacalnych. Każdy punkt ma
 krótkie uzasadnienie i szacunek pracy (S - godziny, M - dzień, L - kilka dni).
 
-## Co już jest (3.4)
+## Co już jest (3.5)
+
+- `/speed <gracz> <x> [all|ground|jump]`: przyspieszenie wszędzie, tylko na ziemi albo na ziemi i w
+  wyskoku z ziemi (`SpeedJumpShare`), w powietrzu już nie.
+- `/weaponmod` usunięte - biblioteka śledzi serwerowe `/loadwep` i czyta ten sam plik broni.
+- `/flytomouse` domyślnie bez skoków: płynny lot do limitu prędkości gry (15.5 po przekątnej);
+  skoki powyżej limitu tylko z `FlyHops = 1`.
+- Anty-cheat: `/suspects`, `/acstats`, `/acreview` domyślnie dla wszystkich (`/` i `!`), tabela
+  "ta gra | wszystkie gry" z kolorami, `/suspects` z wynikiem tej gry i wszystkich gier,
+  `/acclear all all` (wszyscy, cała historia).
+- Trajektoria: `/trajectory <gracz> [cursor] [me|self|selfme|public]` - kto widzi kropki.
+- Radar: filtry `seenreal` / `seenallreal` i wykrywanie trybu realistic (`seen` liczy wtedy linię
+  wzroku), zoom osobno dla każdego trybu, edytor dla labels i ring (rozmiar), `!radar marks` i
+  `!radar edge` (`CircleEdgeScale`) dla płynniejszego koła, `CircleMovePixels = 0`, zarys ścian
+  promieniami (lidar), niesiona flaga bez drugiego `F` na nosicielu, stały rozmiar liter ringu.
+- `/sayteam`, odrzut Spas-12 i Minigun przy strzałach aimbota (`Recoil`), dźwięk rzutu noża.
+- Więcej pracy w DLL: szablony wiadomości (`BE_Fill`), tekst HUD i pasek, liczby, kolory, linie
+  logów, preferencje graczy jednym wywołaniem, widoczność dla numerów obrażeń, nazwy broni.
+- `Example configs/`: ctf, inf, htf, tm, dm, rscs (survival + realistic), clean.
+
+## Wcześniej (3.4)
 
 - Aimbot: poprawiony `/aimbot acc` (dzielenie całkowite dawało 0% dla wszystkiego poniżej 100),
   tryb `radius` (tylko wrogowie w kole wokół kursora, bez przeskakiwania na dalekich graczy) z
@@ -18,8 +38,8 @@ krótkie uzasadnienie i szacunek pracy (S - godziny, M - dzień, L - kilka dni).
 - Radar: grupy (pełni użytkownicy / wszyscy) z własnymi trybami, domyślnym trybem, filtrem i limitem
   odświeżania, `AdminsFull`, zasięg każdego trybu, kolory linii listy (drużyna/zdrowie/odległość),
   flagi poza bazą we wszystkich trybach, zarys mapy w kole (`!radar outline`).
-- Nowe komendy: `/speed`, `/sayas`, `/sayteamas`, `/weaponmod`, `/slay`; `[Permissions]` - kto może
-  używać każdej komendy i czy przez `/`, `!` czy oba.
+- Nowe komendy: `/speed`, `/sayas`, `/sayteamas`, `/slay`; `[Permissions]` - kto może używać każdej
+  komendy i czy przez `/`, `!` czy oba.
 
 ## 1. Wydajność
 
@@ -64,9 +84,8 @@ rundy turniejowe z gotowością drużyn. Każdy tryb to M.
 
 - Broń zabójstwa z aimbota (Deagle zamiast prawdziwej broni, także w ZitroStats): `Map.CreateBullet`
   daje pociskowi pierwszą broń z danym stylem pocisku. Naprawa wymaga zapisu do pamięci serwera
-  (numer broni pocisku) - to "most" do procesu serwera; narzędzie zablokowało tę zmianę.
-- Odrzut SPAS-12 i Minigun przy strzałach aimbota oraz dźwięk rzutu noża: zmiana w `be_ballistic`
-  została zablokowana razem z powyższym.
+  (numer broni pocisku) - to "most" do procesu serwera; narzędzie, w którym powstaje kod, blokuje
+  tę zmianę (można ją dopuścić regułą uprawnień w ustawieniach Claude Code albo zrobić ręcznie).
 
 ## Czego nie da się zrobić ze skryptu
 

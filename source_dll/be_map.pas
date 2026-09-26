@@ -23,16 +23,6 @@ function MapPointSolid(X, Y: Single; Flags, Team: LongInt): Boolean;
 function MapColliders: LongInt;
 function MapColliderHit(AX, AY, BX, BY: Single): Boolean;
 
-type
-  TMapEdge = record
-    X1, Y1, X2, Y2: Single;
-    K1, K2: Int64;
-  end;
-
-var
-  MapEdges: array of TMapEdge;
-  MapEdgeCount: LongInt = 0;
-
 implementation
 
 uses
@@ -192,8 +182,6 @@ begin
   SetLength(ColY, 0);
   SetLength(ColR, 0);
   ColN := 0;
-  SetLength(MapEdges, 0);
-  MapEdgeCount := 0;
 end;
 
 function MapColliders: LongInt;
@@ -209,120 +197,6 @@ end;
 function MapPolys: LongInt;
 begin
   Result := PolyN;
-end;
-
-function VKey(X, Y: Single): Int64;
-begin
-  Result := (Int64(Round(X * 4)) shl 32) xor (Int64(Round(Y * 4)) and $FFFFFFFF);
-end;
-
-function EdgeLess(const A, B: TMapEdge): Boolean;
-begin
-  Result := (A.K1 < B.K1) or ((A.K1 = B.K1) and (A.K2 < B.K2));
-end;
-
-procedure SortEdges(var E: array of TMapEdge; L, R: LongInt);
-var
-  i, j: LongInt;
-  P, T: TMapEdge;
-begin
-  while L < R do
-  begin
-    i := L;
-    j := R;
-    P := E[(L + R) div 2];
-    repeat
-      while EdgeLess(E[i], P) do
-        Inc(i);
-      while EdgeLess(P, E[j]) do
-        Dec(j);
-      if i <= j then
-      begin
-        T := E[i];
-        E[i] := E[j];
-        E[j] := T;
-        Inc(i);
-        Dec(j);
-      end;
-    until i > j;
-    if j - L < R - i then
-    begin
-      if L < j then
-        SortEdges(E, L, j);
-      L := i;
-    end
-    else
-    begin
-      if i < R then
-        SortEdges(E, i, R);
-      R := j;
-    end;
-  end;
-end;
-
-function Blocks(T: Byte; Flags, Team: LongInt): Boolean; forward;
-
-procedure BuildEdges;
-var
-  E: array of TMapEdge;
-  i, j, k, n, m: LongInt;
-  X1, Y1, X2, Y2: Single;
-  A, B: Int64;
-begin
-  SetLength(E, PolyN * 3);
-  n := 0;
-  for i := 1 to PolyN do
-    if Blocks(Polys[i].T, MR_PLAYER or MR_BULLET, 0) then
-      for j := 1 to 3 do
-      begin
-        k := j mod 3 + 1;
-        X1 := Polys[i].X[j];
-        Y1 := Polys[i].Y[j];
-        X2 := Polys[i].X[k];
-        Y2 := Polys[i].Y[k];
-        A := VKey(X1, Y1);
-        B := VKey(X2, Y2);
-        if A = B then
-          Continue;
-        if A > B then
-        begin
-          E[n].X1 := X2;
-          E[n].Y1 := Y2;
-          E[n].X2 := X1;
-          E[n].Y2 := Y1;
-          E[n].K1 := B;
-          E[n].K2 := A;
-        end
-        else
-        begin
-          E[n].X1 := X1;
-          E[n].Y1 := Y1;
-          E[n].X2 := X2;
-          E[n].Y2 := Y2;
-          E[n].K1 := A;
-          E[n].K2 := B;
-        end;
-        Inc(n);
-      end;
-  if n > 1 then
-    SortEdges(E, 0, n - 1);
-  SetLength(MapEdges, n);
-  m := 0;
-  i := 0;
-  while i < n do
-  begin
-    j := i + 1;
-    while (j < n) and (E[j].K1 = E[i].K1) and (E[j].K2 = E[i].K2) do
-      Inc(j);
-    if j = i + 1 then
-    begin
-      MapEdges[m] := E[i];
-      Inc(m);
-    end;
-    i := j;
-  end;
-  SetLength(MapEdges, m);
-  MapEdgeCount := m;
 end;
 
 function MapLoad(const Path: AnsiString): LongInt;
@@ -408,7 +282,6 @@ begin
   PolyN := n;
   Loaded := True;
   Result := n;
-  BuildEdges;
   m := TakeInt(R);
   if R.Bad or (m < 0) or (m > 500) then
     Exit;

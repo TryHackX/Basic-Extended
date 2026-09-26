@@ -60,6 +60,7 @@ type
     function Get(const Key: AnsiString; Index: LongInt): LongInt;
     { no values = the key is removed }
     procedure Put(const Key: AnsiString; const V: TBEValues);
+    function DeletePrefix(const Prefix: AnsiString): LongInt;
     function Size: LongInt;
     { True when a change waits longer than DelayMs for the disk }
     function Due(DelayMs: QWord): Boolean;
@@ -395,6 +396,32 @@ begin
     if not FDirty then
       FDirtySince := GetTickCount64;
     FDirty := True;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TBEStore.DeletePrefix(const Prefix: AnsiString): LongInt;
+var
+  i: LongInt;
+begin
+  Result := 0;
+  if Prefix = '' then
+    Exit;
+  FLock.Enter;
+  try
+    for i := FKeys.Count - 1 downto 0 do
+      if Copy(FKeys[i], 1, Length(Prefix)) = Prefix then
+      begin
+        FKeys.Delete(i);
+        Inc(Result);
+      end;
+    if Result > 0 then
+    begin
+      if not FDirty then
+        FDirtySince := GetTickCount64;
+      FDirty := True;
+    end;
   finally
     FLock.Leave;
   end;

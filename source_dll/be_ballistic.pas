@@ -28,6 +28,8 @@ const
   SF_PRONE = 2;
   SF_AIRBORNE = 4;
   SF_RUNNING = 8;
+  SF_JET = 16;
+  SF_FLAG = 32;
 
 type
   TWeaponStat = record
@@ -44,6 +46,8 @@ var
   PathCount: LongInt = 0;
   ShotX, ShotY, ShotVX, ShotVY: array[0..MAX_SHOT - 1] of Single;
   ShotCount: LongInt = 0;
+  ShotPushX: Single = 0;
+  ShotPushY: Single = 0;
 
 procedure WeaponsDefault(Realistic: Boolean);
 function WeaponsLoad(const Path: AnsiString; Realistic: Boolean): LongInt;
@@ -70,7 +74,7 @@ const
     'Flamer', 'Rambo Bow', 'Flamed Arrows');
   Sounds: array[0..WEAPONS - 1] of AnsiString = ('colt1911-fire.wav', 'deserteagle-fire.wav', 'mp5-fire.wav',
     'ak74-fire.wav', 'steyraug-fire.wav', 'spas12-fire.wav', 'ruger77-fire.wav', 'm79-fire.wav', 'barretm82-fire.wav',
-    'm249-fire.wav', 'minigun-fire.wav', 'slash.wav', 'chainsaw-r.wav', 'law.wav', 'flamer.wav', 'bow-fire.wav',
+    'm249-fire.wav', 'minigun-fire.wav', 'throwgun.wav', 'chainsaw-r.wav', 'law.wav', 'flamer.wav', 'bow-fire.wav',
     'bow-fire.wav');
   NDamage: array[0..WEAPONS - 1] of Single = (1.49, 1.81, 1.01, 1.11, 0.71, 1.22, 2.49, 1550, 4.45, 0.85, 0.468,
     2150, 50, 1550, 19, 12, 8);
@@ -588,6 +592,8 @@ var
   Pellets: Boolean;
 begin
   ShotCount := 0;
+  ShotPushX := 0;
+  ShotPushY := 0;
   Result := 0;
   if not ValidWeapon(W) then
     Exit;
@@ -634,6 +640,31 @@ begin
   end;
   BX := DX * Sp + SVX * Inh;
   BY := DY * Sp + SVY * Inh;
+  if Weapon[W].Style = STYLE_SHOTGUN then
+  begin
+    ShotPushX := -BX * 0.0412;
+    ShotPushY := -BY * 0.041;
+  end
+  else if W = 10 then
+  begin
+    if (Flags and SF_JET) <> 0 then
+    begin
+      ShotPushX := BX * 0.0012;
+      ShotPushY := BY * 0.0009;
+    end
+    else
+    begin
+      ShotPushX := BX * 0.0082;
+      ShotPushY := BY * 0.0078;
+    end;
+    if (Flags and SF_FLAG) <> 0 then
+    begin
+      ShotPushX := ShotPushX * 0.5;
+      ShotPushY := ShotPushY * 0.7;
+    end;
+    ShotPushX := -ShotPushX * 0.6;
+    ShotPushY := -ShotPushY;
+  end;
   n := 1;
   SpreadW := 0;
   if Weapon[W].Style = STYLE_SHOTGUN then

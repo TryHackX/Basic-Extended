@@ -4,7 +4,8 @@ program test_engine;
 
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
-  Classes, SysUtils, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac;
+  Classes, SysUtils, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac,
+  be_util;
 
 var
   Failed: LongInt = 0;
@@ -125,7 +126,7 @@ begin
   RadarInt(RI_TEAMGAME, 1);
   WClear;
   WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 50, 0, 0, 100, 100, 0, 0);
-  WAdd(2, WF_ALIVE, 2, 80, TAG_FLAG, 0, 0, 0, 240, 100, 0, 0);
+  WAdd(2, WF_ALIVE, 2, 80, 0, 0, 0, 0, 240, 100, 0, 0);
   WAdd(5, WF_ALIVE, 1, 70, 0, 0, 0, 0, 300, 100, 0, 0);
   WLoad(1400);
   WorldName(5, 'Mate');
@@ -142,6 +143,14 @@ begin
   Check((k >= 0) and (Ops[k].Y > Ops[FindOp(KIND_BIG, 180)].Y), 'second line lower');
   k := FindOp(KIND_BIG, 182);
   Check((k >= 0) and (Pos('Red flag', Ops[k].Text) > 0), 'dropped flag listed, the one in base not');
+  WClear;
+  WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 50, 0, 0, 100, 100, 0, 0);
+  WAdd(2, WF_ALIVE, 2, 80, TAG_FLAG, 0, 0, 0, 900, 100, 0, 0);
+  WAdd(5, WF_ALIVE, 1, 70, 0, 0, 0, 0, 300, 100, 0, 0);
+  WLoad(1500);
+  n := RadarPass(1, 1500, 20);
+  Check(FindOp(KIND_BIG, 182) >= 0, 'a carried flag (a blue flagger far from the old place) is not listed');
+  Check((FindOp(KIND_BIG, 182) < 0) or (Ops[FindOp(KIND_BIG, 182)].Text = ' '), 'its line is taken away');
   WorldFlag(0, 1, 0, 0, 0);
   WorldFlag(1, 2, 0, 0, 0);
   RadarInt(RI_TEAMGAME, 0);
@@ -372,7 +381,16 @@ begin
   WAdd(4, WF_ALIVE, 1, 80, 0, 0, 0, 0, 350, 500, 0, 0);
   WLoad(5000);
   RadarUser(1, 1, OVL_LIST, SHOW_SEEN, 0, 0, 1, 1, 1, 0);
-  Check(VisNeeded, 'vision needed');
+  Check(not VisNeeded, 'no rays for seen on a normal server (the screen rule)');
+  Check(Shows(1, 2, SHOW_SEEN), 'enemy on the screen seen without rays');
+  WAdd(6, WF_ALIVE, 2, 80, 0, 0, 0, 0, 3000, 500, 0, 0);
+  WLoad(5000);
+  Check(not Shows(1, 6, SHOW_SEEN), 'enemy far off the screen not seen');
+  RadarUser(1, 1, OVL_LIST, SHOW_SEEN_REAL, 0, 0, 1, 1, 1, 0);
+  Check(VisNeeded, 'seenreal needs rays on a normal server');
+  RadarInt(RI_REALISTIC, 1);
+  RadarUser(1, 1, OVL_LIST, SHOW_SEEN, 0, 0, 1, 1, 1, 0);
+  Check(VisNeeded, 'vision needed on a realistic server');
   Cnt := 0;
   while VisNext(5000, S, B, X1, Y1, X2, Y2) do
   begin
@@ -383,6 +401,7 @@ begin
   Check(Shows(1, 2, SHOW_SEEN), 'enemy in front of the aim seen');
   Check(not Shows(1, 3, SHOW_SEEN) or VisMine[4, 3], 'enemy behind only through a team mate');
   Check(Shows(1, 4, SHOW_SEEN), 'team mate always shown');
+  RadarInt(RI_REALISTIC, 0);
   RadarInt(RI_TEAMGAME, 0);
 end;
 
@@ -484,6 +503,17 @@ begin
   end;
   Check((FlyX > 7.5) and (FlyX <= 11), 'fly reaches FlyMax, each axis at most 11: ' + FloatToStr(FlyX));
   MoveSet(MF_FLY_MAX, 30);
+  MoveReset(9);
+  MoveStep(9, 400, TP_FLY, VAR_FIXED, 0, 1, 0, 1, 0, 0, 0, 0, 0, 2000, 0, OX, OY, OVX, OVY);
+  n := 0;
+  for T := 401 to 460 do
+  begin
+    A := MoveStep(9, T, TP_FLY, VAR_FIXED, 1, 1, 0, 1, 0, 0, 0, 11, 0, 2000, 0, OX, OY, OVX, OVY);
+    if (A and MA_MOVE) <> 0 then
+      Inc(n);
+  end;
+  Check(n = 0, 'no jumps without FlyHops: ' + IntToStr(n));
+  MoveSet(MF_FLY_HOPS, 1);
   MoveReset(10);
   MoveStep(10, 500, TP_FLY, VAR_FIXED, 0, 1, 0, 1, 0, 0, 0, 0, 0, 2000, 0, OX, OY, OVX, OVY);
   n := 0;
@@ -499,6 +529,7 @@ begin
     PX := PX + 11;
   end;
   Check((n >= 8) and (PX > 60 * 11 + 500), 'fly above 11 a tick with jumps: ' + IntToStr(n) + ' ' + FloatToStr(PX));
+  MoveSet(MF_FLY_HOPS, 0);
   MoveSet(MF_FLY_MAX, 11);
 end;
 
@@ -816,7 +847,7 @@ end;
 procedure TestMap(const Dir: AnsiString);
 var
   P: array[0..4] of TTestPoly;
-  n, i: LongInt;
+  n, i, A, T: LongInt;
   OX, OY, DX, DY, MaxX, HitX: Single;
   Found: Boolean;
 begin
@@ -847,7 +878,24 @@ begin
   Check(MapRay(900, 150, 1100, 150, MR_BULLET or MR_COLLIDER, 0), 'collider stops the bullet');
   Check(not MapRay(900, 150, 1100, 150, MR_BULLET, 0), 'collider ignored without the flag');
   Check(not MapRay(900, 170, 1100, 170, MR_BULLET or MR_COLLIDER, 0), 'collider radius is a 1.7th');
-  Check(MapEdgeCount >= 4, 'outline edges: ' + IntToStr(MapEdgeCount));
+  WClear;
+  WAdd(1, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 400, 150, 300, 160, 0, 0);
+  WLoad(7000);
+  RadarReset(1);
+  RadarInt(RI_OUTLINE, 1);
+  RadarInt(RI_OUTLINE_DOTS, 16);
+  RadarFloat(RF_RANGE, 400);
+  RadarOpt(1, RO_OUTLINE, 1);
+  RadarUser(1, 1, OVL_CIRCLE, SHOW_ALL, 10, 110, 1, 1, 1, 0);
+  n := RadarPass(1, 7000, 100);
+  A := 0;
+  for T := 0 to n - 1 do
+    if (Ops[T].Kind = KIND_BIG) and (Ops[T].Layer >= 40) and (Ops[T].Layer < 56) then
+      Inc(A);
+  Check(A >= 2, 'outline dots where the rays hit the walls: ' + IntToStr(A));
+  RadarOpt(1, RO_OUTLINE, 0);
+  RadarFloat(RF_RANGE, 700);
+  RadarReset(1);
   Muzzle(0, 0, 1000, -11.4, 0, OX, OY, DX, DY);
   Check(Near(OX, 1.3, 0.05) and Near(OY, -13.4, 0.05) and Near(DX, 1, 0.001), 'standing muzzle');
   Muzzle(0, 0, -1000, -1.6, SF_PRONE, OX, OY, DX, DY);
@@ -965,7 +1013,9 @@ begin
   Check(Pos('start-up 1/3 too fast', AcBrief(Tot)) > 0, 'brief: ' + AcBrief(Tot));
   Check(Pos('1 of 3 shots too fast (fastest 0, average 14 ticks)', AcDetail(Tot)) > 0, 'detail: ' + AcDetail(Tot));
   Check(AcFindings(Tot) = 2, 'findings: ' + IntToStr(AcFindings(Tot)));
-  Check(Pos('s ago: Sniper', AcReview(3, 600)) > 0, 'review: ' + AcReview(3, 600));
+  Check(Pos('s ago - Barrett', AcReview(3, 600)) > 0, 'review: ' + AcReview(3, 600));
+  Check((Pos('2Start-up (Barrett, LAW): 1 of 3 too fast', AcTable(Tot, Tot)) = 1) and
+    (Pos(#10 + '2Shots closer', AcTable(Tot, Tot)) > 0), 'table: ' + AcTable(Tot, Tot));
   AcReset(7);
   AcAmmo(7, 1000, 3, 40);
   AcAmmo(7, 1030, 3, 36);
@@ -1019,6 +1069,48 @@ begin
   AcSet(AC_ENABLED, 0);
 end;
 
+procedure TestUtil;
+var
+  S, T: AnsiString;
+begin
+  Check(Fill('{a} and {b}{a}', '{a}'#1'x'#1'{b}'#1'yy') = 'x and yyx', 'fill replaces every pair');
+  Check(Fill('plain', '{a}'#1'x') = 'plain', 'fill leaves a text without tokens');
+  Check(Fill('{a}{c}', '{a}'#1'1'#1'{c}'#1) = '1', 'the last value may be empty');
+  HudStyle(2, '{bar} {pct}% {hp}/{max} v{vest}{regen}');
+  HudBar('#', '-', 4);
+  HudRegen('+');
+  Check(HudText(2, 50, 75, 150, 20, 1) = '##-- 50% 75/150 v20+', 'hud style with bar and regen');
+  Check(HudText(2, 130, 150, 150, 0, 0) = '#### 100% 150/150 v0', 'hud percent clamped');
+  Check(HudText(9, 10, 1, 1, 0, 0) = '10%', 'unknown style falls back to the first');
+  HudStyle(1, '{pct}%');
+  Check(HudText(1, 42, 1, 1, 0, 0) = '42%', 'the first style');
+  HudBar('|', '.', 10);
+  S := StampLine('abc');
+  Check((Length(S) = 13) and (Copy(S, 3, 1) = ':') and (Copy(S, 9, 5) = '  abc'), 'log line stamped');
+  T := DayFile('logs/');
+  Check((Copy(T, 1, 5) = 'logs/') and (Length(T) = 19) and (Copy(T, 16, 4) = '.txt'), 'day file name');
+  Check(FloatText(-0.004, 2) = '0.00', 'no minus for zero');
+  Check(FloatText(12.345, 1) = '12.3', 'one decimal');
+  Check(FloatText(-3.5, 0) = '-4', 'rounded');
+end;
+
+procedure TestPush;
+var
+  Sp: Single;
+begin
+  WeaponsDefault(False);
+  Sp := ShotSpeed(5);
+  BuildShot(5, 0, 0, 0, 0, 1, 0, 0, 1, 0);
+  Check(Near(ShotPushX, -Sp * 0.0412, 0.001) and Near(ShotPushY, 0, 0.001), 'spas pushes back');
+  Sp := ShotSpeed(10);
+  BuildShot(10, 0, 0, 0, 0, 0, 1, 0, 1, 0);
+  Check(Near(ShotPushY, -Sp * 0.0078, 0.001), 'minigun pushes back');
+  BuildShot(10, 0, 0, 0, 0, 1, 0, 0, 1, SF_JET or SF_FLAG);
+  Check(Near(ShotPushX, -Sp * 0.0012 * 0.5 * 0.6, 0.0005), 'minigun while jetting with the flag');
+  BuildShot(3, 0, 0, 0, 0, 1, 0, 0, 1, 0);
+  Check((ShotPushX = 0) and (ShotPushY = 0), 'other weapons do not push');
+end;
+
 procedure TestFx;
 var
   k: LongInt;
@@ -1054,6 +1146,8 @@ begin
   TestMap(Dir);
   TestAc;
   TestFx;
+  TestUtil;
+  TestPush;
   WriteLn(Passed, ' passed, ', Failed, ' failed');
   if Failed > 0 then
     Halt(1);

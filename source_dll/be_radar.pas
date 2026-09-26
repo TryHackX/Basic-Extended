@@ -62,11 +62,14 @@ const
   RI_FLAG_BLUE = 39;
   RI_FLAG_OTHER = 40;
   RI_LABEL_COLOR_BY = 41;
+  RI_REALISTIC = 42;
   LC_NONE = 0;
   LC_TEAM = 1;
   LC_HEALTH = 2;
   LC_DISTANCE = 3;
   RO_OUTLINE = 2;
+  RO_MARKS = 3;
+  RO_EDGE = 4;
   OUTLINE_MAX = 64;
 
   RF_RANGE = 1;
@@ -89,9 +92,9 @@ const
   RF_RANGE_CIRCLE = 22;
   RF_RANGE_RING = 23;
   RF_LIST_SPACING = 24;
-  RF_OUTLINE_STEP = 25;
   RF_OUTLINE_MOVE = 26;
   RF_OUTLINE_GRID = 27;
+  RF_RING_LETTER = 28;
 
   RT_RING = 1;
   RT_SELF = 2;
@@ -137,6 +140,7 @@ type
     Mode, Show, PX, PY: LongInt;
     Size, Zoom, MarkSize: Single;
     Friends, Outline: Boolean;
+    Marks, Edge: Single;
     Sent: TTextSet;
     RingBand: array[1..BE_PLAYERS] of LongInt;
     OGen, OCount: LongInt;
@@ -210,7 +214,6 @@ var
   OutlineDots: LongInt = 24;
   OutlineLayer: LongInt = 40;
   OutlineColor: LongInt = $707070;
-  OutlineStep: Single = 40;
   OutlineMove: Single = 2;
   OutlineGrid: Single = 24;
   OutlineChar: AnsiString = '.';
@@ -226,6 +229,7 @@ var
   RangeLabels: Single = 0;
   RangeCircle: Single = 0;
   RangeRing: Single = 0;
+  RingLetter: Single = 0.03;
 
 function FloatText(V: Double; Decimals: LongInt): AnsiString;
 var
@@ -342,6 +346,7 @@ begin
     RI_RING_COLOR_BY: if (Value >= RC_TEAM) and (Value <= RC_HEALTH) then RingColorBy := Value;
     RI_LIST_COLOR_BY: if (Value >= LC_NONE) and (Value <= LC_DISTANCE) then ListColorBy := Value;
     RI_LABEL_COLOR_BY: if (Value >= LC_NONE) and (Value <= LC_DISTANCE) then LabelColorBy := Value;
+    RI_REALISTIC: WRealistic := Value <> 0;
     RI_LIST_LINE_LAYER: ListLineLayer := Value;
     RI_FLAGS: ShowFlags := Value <> 0;
     RI_OUTLINE: OutlineAllowed := Value <> 0;
@@ -379,9 +384,9 @@ begin
     RF_RANGE_CIRCLE: RangeCircle := Value;
     RF_RANGE_RING: RangeRing := Value;
     RF_LIST_SPACING: if Value > 0.5 then ListSpacing := Value;
-    RF_OUTLINE_STEP: if Value >= 5 then OutlineStep := Value;
     RF_OUTLINE_MOVE: if Value >= 0 then OutlineMove := Value;
     RF_OUTLINE_GRID: if Value >= 1 then OutlineGrid := Value;
+    RF_RING_LETTER: if Value > 0.002 then RingLetter := Value;
   end;
 end;
 
@@ -441,6 +446,8 @@ begin
   case Key of
     RO_FRIENDS: Users[ID].Friends := Value <> 0;
     RO_OUTLINE: Users[ID].Outline := Value <> 0;
+    RO_MARKS: Users[ID].Marks := Value * 0.001;
+    RO_EDGE: Users[ID].Edge := Value * 0.001;
   end;
 end;
 
@@ -470,7 +477,10 @@ begin
   Result := 50;
   if not ValidID(ID) then
     Exit;
-  Result := RangeOf(Users[ID].Mode) * (1 + (Users[ID].Size - 1) * SizeRange) * Users[ID].Zoom;
+  if (Users[ID].Mode = OVL_LIST) or (Users[ID].Mode = OVL_CIRCLE) then
+    Result := RangeOf(Users[ID].Mode) * (1 + (Users[ID].Size - 1) * SizeRange) * Users[ID].Zoom
+  else
+    Result := RangeOf(Users[ID].Mode) * Users[ID].Zoom;
   if Result < 50 then
     Result := 50;
 end;
@@ -486,9 +496,20 @@ begin
     Exit;
   for b := 1 to BE_PLAYERS do
     if WP[b].Active and WP[b].Alive and (WP[b].Tag = TAG_FLAG) then
-      if Sqr(WP[b].X - WFlags[f].X) + Sqr(WP[b].Y - WFlags[f].Y) < 3600 then
+    begin
+      if (WFlags[f].Team < 1) or (WFlags[f].Team > 2) or (WP[b].Team <> WFlags[f].Team) then
         Exit;
+      if Sqr(WP[b].X - WFlags[f].X) + Sqr(WP[b].Y - WFlags[f].Y) < 6400 then
+        Exit;
+    end;
   Result := True;
+end;
+
+function UserScale(V: Single): Single;
+begin
+  Result := V;
+  if Result <= 0.001 then
+    Result := 1;
 end;
 
 function FlagColorOf(f: LongInt): LongInt;
@@ -764,14 +785,15 @@ end;
 procedure LayoutLabels(A: LongInt);
 var
   b: LongInt;
-  ax, ay, bx, by, R2, Em, X, Y: Single;
+  ax, ay, bx, by, R2, Em, X, Y, Ls: Single;
   T, Tg: AnsiString;
 begin
   ax := WP[A].X;
   ay := WP[A].Y;
   R2 := RadarRange(A);
   R2 := R2 * R2;
-  Em := LabelScale * WORLD_EM;
+  Ls := QScale(LabelScale * Users[A].MarkSize);
+  Em := Ls * WORLD_EM;
   for b := 1 to BE_PLAYERS do
     if Wanted(A, b) then
     begin
@@ -785,7 +807,7 @@ begin
         T := T + ' [' + Tg + ']';
       X := WP[b].X - TextAdvance(T) * Em / 2;
       Y := WP[b].Y - LabelOffset;
-      WantText(KIND_WORLD, LabelLayer + b - 1, T, X, Y, LabelScale, MarkColorOf(A, b, LabelColorBy,
+      WantText(KIND_WORLD, LabelLayer + b - 1, T, X, Y, Ls, MarkColorOf(A, b, LabelColorBy,
         Sqrt(bx * bx + by * by) / Sqrt(R2), HealthColor(WP[b].Pct)), MarkDisplay, LabelMove, 16 + b);
     end;
   for b := 0 to 2 do
@@ -798,7 +820,7 @@ begin
       T := FlagNameOf(b);
       X := WFlags[b].X - TextAdvance(T) * Em / 2;
       Y := WFlags[b].Y - LabelOffset;
-      WantText(KIND_WORLD, LabelLayer + BE_PLAYERS + b, T, X, Y, LabelScale, FlagColorOf(b), MarkDisplay, LabelMove,
+      WantText(KIND_WORLD, LabelLayer + BE_PLAYERS + b, T, X, Y, Ls, FlagColorOf(b), MarkDisplay, LabelMove,
         60 + b);
     end;
 end;
@@ -854,18 +876,39 @@ begin
     Result := ArrowSteps - 1;
 end;
 
+function RayHit(X1, Y1, X2, Y2: Single; Team: LongInt; out HX, HY: Single): Boolean;
+var
+  Lo, Hi, Mid: Single;
+  k: LongInt;
+begin
+  Result := MapRay(X1, Y1, X2, Y2, MR_PLAYER, Team);
+  HX := X2;
+  HY := Y2;
+  if not Result then
+    Exit;
+  Lo := 0;
+  Hi := 1;
+  for k := 1 to 9 do
+  begin
+    Mid := (Lo + Hi) / 2;
+    if MapRay(X1, Y1, X1 + (X2 - X1) * Mid, Y1 + (Y2 - Y1) * Mid, MR_PLAYER, Team) then
+      Hi := Mid
+    else
+      Lo := Mid;
+  end;
+  HX := X1 + (X2 - X1) * Hi;
+  HY := Y1 + (Y2 - Y1) * Hi;
+end;
+
 procedure LayoutOutline(A: LongInt; CX, CY, R, Rng, Sc: Single);
 var
-  QX, QY, S, MinX, MaxX, MinY, MaxY, L, T, PX, PY, DX, DY, Step, Lim: Single;
-  i, k, n, Cnt, j, Cell: LongInt;
-  CandX, CandY: array[0..511] of Single;
-  Cells: array[0..511] of LongInt;
-  Dup: Boolean;
+  QX, QY, S, Ang, HX, HY: Single;
+  j, n: LongInt;
   U: ^TRadarUser;
 begin
   U := @Users[A];
   QX := Round(WP[A].X / OutlineGrid) * OutlineGrid;
-  QY := Round(WP[A].Y / OutlineGrid) * OutlineGrid;
+  QY := Round((WP[A].Y - LOS_HEIGHT) / OutlineGrid) * OutlineGrid;
   if (U^.OGen <> MapGeneration) or (U^.OQX <> QX) or (U^.OQY <> QY) or (U^.OSize <> R) or (U^.OZoom <> Rng) or
     (U^.OPX <> CX) or (U^.OPY <> CY) then
   begin
@@ -877,66 +920,18 @@ begin
     U^.OPX := CX;
     U^.OPY := CY;
     S := R / Rng;
-    MinX := QX - Rng;
-    MaxX := QX + Rng;
-    MinY := QY - Rng;
-    MaxY := QY + Rng;
-    Lim := Rng * Rng * 0.94;
-    Cnt := 0;
-    for i := 0 to MapEdgeCount - 1 do
+    n := 0;
+    for j := 0 to OutlineDots - 1 do
     begin
-      if Cnt >= 512 then
-        Break;
-      with MapEdges[i] do
+      Ang := 2 * Pi * j / OutlineDots;
+      if RayHit(QX, QY, QX + Cos(Ang) * Rng, QY + Sin(Ang) * Rng, WP[A].Team, HX, HY) then
       begin
-        if ((X1 < MinX) and (X2 < MinX)) or ((X1 > MaxX) and (X2 > MaxX)) or ((Y1 < MinY) and (Y2 < MinY)) or
-          ((Y1 > MaxY) and (Y2 > MaxY)) then
-          Continue;
-        L := Sqrt(Sqr(X2 - X1) + Sqr(Y2 - Y1));
-        n := Trunc(L / OutlineStep) + 1;
-        for k := 0 to n do
-        begin
-          T := k / n;
-          PX := X1 + (X2 - X1) * T;
-          PY := Y1 + (Y2 - Y1) * T;
-          DX := PX - QX;
-          DY := PY - QY;
-          if DX * DX + DY * DY > Lim then
-            Continue;
-          Cell := (Round((CX + DX * S) / 3) and $FFFF) shl 16 or (Round((CY + DY * S) / 3) and $FFFF);
-          Dup := False;
-          for j := 0 to Cnt - 1 do
-            if Cells[j] = Cell then
-            begin
-              Dup := True;
-              Break;
-            end;
-          if Dup then
-            Continue;
-          if Cnt >= 512 then
-            Break;
-          Cells[Cnt] := Cell;
-          CandX[Cnt] := CX + DX * S;
-          CandY[Cnt] := CY + DY * S;
-          Inc(Cnt);
-        end;
+        U^.OX[n] := CX + (HX - QX) * S;
+        U^.OY[n] := CY + (HY - QY) * S;
+        Inc(n);
       end;
     end;
-    U^.OCount := 0;
-    if Cnt > 0 then
-    begin
-      Step := Cnt / OutlineDots;
-      if Step < 1 then
-        Step := 1;
-      j := 0;
-      while (j < OutlineDots) and (Round(j * Step) < Cnt) do
-      begin
-        U^.OX[j] := CandX[Round(j * Step)];
-        U^.OY[j] := CandY[Round(j * Step)];
-        Inc(j);
-      end;
-      U^.OCount := j;
-    end;
+    U^.OCount := n;
   end;
   for j := 0 to U^.OCount - 1 do
     BigMark(OutlineLayer + j, OutlineChar, OutlineColor, QScale(Sc * 0.7), U^.OX[j], U^.OY[j], OutlineMove);
@@ -945,7 +940,7 @@ end;
 procedure LayoutCircle(A: LongInt);
 var
   b, k: LongInt;
-  R, Sc, CX, CY, ax, ay, DX, DY, D, Ang, Rng: Single;
+  R, Sc, Se, Base, CX, CY, ax, ay, DX, DY, D, Ang, Rng: Single;
   Ch: AnsiString;
   C: LongInt;
   Friend: Boolean;
@@ -953,14 +948,16 @@ var
 begin
   U := @Users[A];
   R := CircleR * U^.Size;
-  Sc := QScale(CircleScale * U^.MarkSize / Sqrt(U^.Zoom));
+  Base := CircleScale * U^.MarkSize / Sqrt(U^.Zoom);
+  Sc := QScale(Base * UserScale(U^.Marks));
+  Se := QScale(Base * UserScale(U^.Edge));
   CX := U^.PX + R;
   CY := U^.PY + R;
   Rng := RadarRange(A);
   for k := 0 to CircleDots - 1 do
   begin
     Ang := 2 * Pi * k / CircleDots;
-    BigMark(CircleLayer + k, RingChar, RingColor, Sc, CX + R * Cos(Ang), CY + R * Sin(Ang), 0);
+    BigMark(CircleLayer + k, RingChar, RingColor, Se, CX + R * Cos(Ang), CY + R * Sin(Ang), 0);
   end;
   BigMark(CircleLayer + RING_MAX, SelfChar, SelfColor, Sc, CX, CY, 0);
   if U^.Editing then
@@ -991,8 +988,12 @@ begin
       else if ShowFar and (D > 0.001) then
       begin
         if WP[b].Tag = TAG_NONE then
+        begin
           Ch := FarChar;
-        BigMark(CircleLayer + RING_MAX + b, Ch, C, Sc, CX + DX / D * R, CY + DY / D * R, CircleMove);
+          BigMark(CircleLayer + RING_MAX + b, Ch, C, Se, CX + DX / D * R, CY + DY / D * R, CircleMove);
+        end
+        else
+          BigMark(CircleLayer + RING_MAX + b, Ch, C, Sc, CX + DX / D * R, CY + DY / D * R, CircleMove);
       end;
     end;
   for k := 0 to 2 do
@@ -1015,7 +1016,7 @@ end;
 procedure LayoutRing(A: LongInt);
 var
   b, k, Best, Cnt, Band: LongInt;
-  cx, cy, DX, DY, D, Ux, Uy, Rng, BestD, Lead, Sc, T: Single;
+  cx, cy, DX, DY, D, Ux, Uy, Rng, BestD, Lead, Sc, T, Outer: Single;
   C: LongInt;
   D2: array[1..BE_PLAYERS] of Single;
   Picked: array[1..BE_PLAYERS] of Boolean;
@@ -1033,6 +1034,7 @@ begin
   cx := WP[A].X + WP[A].VX * Lead;
   cy := WP[A].Y + WP[A].VY * Lead - LOS_HEIGHT;
   Rng := RadarRange(A);
+  Outer := ArrowOuter * U^.MarkSize;
   for b := 1 to BE_PLAYERS do
   begin
     D2[b] := -1;
@@ -1091,7 +1093,7 @@ begin
       T := Band / (ArrowSteps - 1)
     else
       T := 0;
-    Sc := QScale(RingNearScale + (RingFarScale - RingNearScale) * T);
+    Sc := QScale((RingNearScale + (RingFarScale - RingNearScale) * T) * U^.MarkSize);
     case RingColorBy of
       RC_DISTANCE: C := ArrowColor(Band);
       RC_HEALTH: C := HealthColor(WP[b].Pct);
@@ -1105,10 +1107,10 @@ begin
     if WP[b].Tag <> TAG_NONE then
     begin
       Ch := TagText(WP[b].Tag);
-      Sc := QScale(Sc * TagScale);
+      Sc := QScale(RingLetter * U^.MarkSize * (1 + TagScale * (1 - T)));
     end;
     k := ArrowLayer + b - 1;
-    WorldMark(k, Ch, C, Sc, cx + Ux * ArrowOuter, cy + Uy * ArrowOuter, ArrowMove, 0);
+    WorldMark(k, Ch, C, Sc, cx + Ux * Outer, cy + Uy * Outer, ArrowMove, 0);
   end;
   for k := 0 to 2 do
     if FlagShown(k) then
@@ -1121,9 +1123,9 @@ begin
       T := D / Rng;
       if T > 1 then
         T := 1;
-      Sc := QScale(RingNearScale + (RingFarScale - RingNearScale) * T);
-      WorldMark(ArrowLayer + BE_PLAYERS + k, FlagMark, FlagColorOf(k), Sc, cx + DX / D * ArrowOuter,
-        cy + DY / D * ArrowOuter, ArrowMove, 0);
+      Sc := QScale(RingLetter * U^.MarkSize * (1 + TagScale * (1 - T)));
+      WorldMark(ArrowLayer + BE_PLAYERS + k, FlagMark, FlagColorOf(k), Sc, cx + DX / D * Outer,
+        cy + DY / D * Outer, ArrowMove, 0);
     end;
 end;
 

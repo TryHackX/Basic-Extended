@@ -40,6 +40,7 @@ const
   MF_FLY_HOP_TICKS = 22;
   MF_FLY_HOP_MAX = 23;
   MF_FLY_VEL_MAX = 24;
+  MF_FLY_HOPS = 25;
 
 procedure MoveSet(Key: LongInt; Value: Single);
 function MoveStep(ID, Tick, Mode, Variant, Key, Alive, Ping, Team, Opts: LongInt; X, Y, VX, VY: Single;
@@ -97,7 +98,8 @@ var
   HopMax: Single = 600;
   FlyHopTicks: Single = 4;
   FlyHopMax: Single = 160;
-  FlyVelMax: Single = 11;
+  FlyVelMax: Single = 15.5;
+  FlyHops: Boolean = False;
 
 procedure MoveSet(Key: LongInt; Value: Single);
 begin
@@ -125,6 +127,7 @@ begin
     MF_FLY_HOP_TICKS: FlyHopTicks := Value;
     MF_FLY_HOP_MAX: FlyHopMax := Value;
     MF_FLY_VEL_MAX: FlyVelMax := Value;
+    MF_FLY_HOPS: FlyHops := Value <> 0;
   end;
 end;
 
@@ -420,6 +423,11 @@ begin
         M^.CmdX := M^.CmdX + (TX - M^.CmdX) * Clamp(FlySmooth, 0.05, 1);
         M^.CmdY := M^.CmdY + (TY - M^.CmdY) * Clamp(FlySmooth, 0.05, 1);
         LimitSpeed(M^.CmdX, M^.CmdY, FlyMax);
+        if not FlyHops then
+        begin
+          LimitSpeed(M^.CmdX, M^.CmdY, Clamp(FlyVelMax, 1, 15.5));
+          ClampAxes(M^.CmdX, M^.CmdY);
+        end;
         OVX := M^.CmdX;
         OVY := M^.CmdY;
         LimitSpeed(OVX, OVY, Clamp(FlyVelMax, 1, 15.5));

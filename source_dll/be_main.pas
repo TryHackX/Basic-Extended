@@ -28,10 +28,10 @@ library basicext_dll;
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   {$IFDEF WINDOWS}Windows,{$ENDIF}
-  SysUtils, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac;
+  SysUtils, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac, be_util;
 
 const
-  BE_API_VERSION = 4;
+  BE_API_VERSION = 5;
   GET_MODULE_HANDLE_EX_FLAG_PIN = 1;
   GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = 4;
 {$IFNDEF WINDOWS}
@@ -485,23 +485,23 @@ begin
     AcTotals(ID, T);
     case Kind of
       0: AcBuf := AcBrief(T);
-      1: AcBuf := AcDetail(T);
-      2, 3:
+      1, 2, 3, 5:
         begin
           K := Str(Key, 200);
           AcStored(K, S);
           if S[T_SESSIONS] < 0 then
             S[T_SESSIONS] := 0;
           AcMerge(S, T);
-          if Kind = 2 then
-          begin
-            if S[T_SESSIONS] = 1 then
-              AcBuf := '1 game: ' + AcBrief(S)
-            else
-              AcBuf := IntToStr(S[T_SESSIONS]) + ' games: ' + AcBrief(S);
-          end
-          else
-            AcBuf := AcDetail(S);
+          case Kind of
+            1: AcBuf := AcTable(T, S);
+            2:
+              if S[T_SESSIONS] = 1 then
+                AcBuf := '1 game: ' + AcBrief(S)
+              else
+                AcBuf := IntToStr(S[T_SESSIONS]) + ' games: ' + AcBrief(S);
+            3: AcBuf := AcDetail(S);
+            5: AcBuf := IntToStr(AcScoreOf(S)) + '|' + IntToStr(S[T_SESSIONS]);
+          end;
         end;
       4: AcBuf := AcReview(ID, Tick);
     end;
@@ -562,6 +562,19 @@ begin
     Store.Put(K, V);
     Worker.Wake;
   except
+  end;
+end;
+
+function BE_AcForgetAll(): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if Store = nil then
+      Exit;
+    Result := Store.DeletePrefix('ac:');
+    Worker.Wake;
+  except
+    Result := 0;
   end;
 end;
 
@@ -805,6 +818,10 @@ end;
 
 var
   ReplaceBuf: AnsiString = '';
+  FillBuf: AnsiString = '';
+  FloatBuf: AnsiString = '';
+  HudBuf: AnsiString = '';
+  NameBuf: AnsiString = '';
 
 function BE_Replace(Text, Find, Repl: PChar): PChar; cdecl;
 begin
@@ -814,6 +831,195 @@ begin
     ReplaceBuf := Str(Text, 65536);
   end;
   Result := PChar(ReplaceBuf);
+end;
+
+function BE_Fill(Text, Pairs: PChar): PChar; cdecl;
+begin
+  try
+    FillBuf := Fill(Str(Text, 65536), Str(Pairs, 65536));
+  except
+    FillBuf := Str(Text, 65536);
+  end;
+  Result := PChar(FillBuf);
+end;
+
+function BE_FloatStr(V: Single; Decimals: LongInt): PChar; cdecl;
+begin
+  try
+    if Decimals < 0 then
+      Decimals := 0;
+    if Decimals > 6 then
+      Decimals := 6;
+    FloatBuf := FloatText(V, Decimals);
+  except
+    FloatBuf := '0';
+  end;
+  Result := PChar(FloatBuf);
+end;
+
+function BE_MixColor(A, B: LongInt; T: Single): LongInt; cdecl;
+begin
+  Result := A;
+  try
+    Result := MixColor(A, B, T);
+  except
+  end;
+end;
+
+procedure BE_HudStyle(Style: LongInt; Template: PChar); cdecl;
+begin
+  try
+    HudStyle(Style, Str(Template, 1024));
+  except
+  end;
+end;
+
+procedure BE_HudBar(Full, Empty: PChar; Len: LongInt); cdecl;
+begin
+  try
+    HudBar(Str(Full, 16), Str(Empty, 16), Len);
+  except
+  end;
+end;
+
+procedure BE_HudRegen(Mark: PChar); cdecl;
+begin
+  try
+    HudRegen(Str(Mark, 64));
+  except
+  end;
+end;
+
+function BE_HudText(Style, Pct, Hp, MaxHp, Vest, Regen: LongInt): PChar; cdecl;
+begin
+  try
+    HudBuf := HudText(Style, Pct, Hp, MaxHp, Vest, Regen);
+  except
+    HudBuf := '';
+  end;
+  Result := PChar(HudBuf);
+end;
+
+procedure BE_LogStamp(Folder, Text, Watched: PChar); cdecl;
+var
+  F, T, W: AnsiString;
+begin
+  try
+    if Writer = nil then
+      Exit;
+    F := Str(Folder, 900);
+    T := StampLine(Str(Text, 8000));
+    Writer.Add(DayFile(F), T);
+    W := Str(Watched, 100);
+    if W <> '' then
+      Writer.Add(F + 'watched/' + W + '.txt', FormatDateTime('yyyy-mm-dd ', Now) + T);
+    Worker.Wake;
+  except
+  end;
+end;
+
+function BE_Pref_Load(Key: PChar; V: PLongArr): LongInt; cdecl;
+var
+  K: AnsiString;
+  n, i: LongInt;
+begin
+  Result := 0;
+  try
+    if (Store = nil) or (V = nil) then
+      Exit;
+    K := Str(Key, 200);
+    n := Store.Count(K);
+    if n > 256 then
+      n := 256;
+    for i := 0 to n - 1 do
+      V^[i] := Store.Get(K, i);
+    Result := n;
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_Pref_Save(Key: PChar; Count: LongInt; V: PLongArr); cdecl;
+var
+  Vals: TBEValues;
+  i: LongInt;
+begin
+  try
+    if (Store = nil) or (V = nil) then
+      Exit;
+    if Count < 0 then
+      Count := 0;
+    if Count > BE_MAX_VALUES then
+      Count := BE_MAX_VALUES;
+    SetLength(Vals, Count);
+    for i := 0 to Count - 1 do
+      Vals[i] := V^[i];
+    Store.Put(Str(Key, 200), Vals);
+    Worker.Wake;
+  except
+  end;
+end;
+
+function BE_Sees(VX, VY, AimX, AimY, TX, TY: Single; Range: Single; Team: LongInt): LongInt; cdecl;
+var
+  DX, DY: Single;
+begin
+  Result := 1;
+  try
+    DX := TX - VX;
+    DY := TY - VY;
+    if DX * (AimX - VX) + DY * (AimY - VY) <= 0 then
+    begin
+      Result := 0;
+      Exit;
+    end;
+    if DX * DX + DY * DY > Range * Range then
+    begin
+      Result := 0;
+      Exit;
+    end;
+    if MapReady then
+      if MapRay(VX, VY, TX, TY, 0, Team) then
+        Result := 0;
+  except
+    Result := 1;
+  end;
+end;
+
+function BE_WeaponName(Num: LongInt): PChar; cdecl;
+begin
+  try
+    case Num of
+      0: NameBuf := 'USSOCOM';
+      1: NameBuf := 'Desert Eagles';
+      2: NameBuf := 'HK MP5';
+      3: NameBuf := 'Ak-74';
+      4: NameBuf := 'Steyr AUG';
+      5: NameBuf := 'Spas-12';
+      6: NameBuf := 'Ruger 77';
+      7: NameBuf := 'M79';
+      8: NameBuf := 'Barrett M82A1';
+      9: NameBuf := 'FN Minimi';
+      10: NameBuf := 'XM214 Minigun';
+      11: NameBuf := 'Combat Knife';
+      12: NameBuf := 'Chainsaw';
+      13: NameBuf := 'M72 LAW';
+      14: NameBuf := 'Flamer';
+      15: NameBuf := 'Rambo Bow';
+      16: NameBuf := 'Flamed Arrows';
+      30: NameBuf := 'Stationary gun';
+      50: NameBuf := 'Grenade';
+      51: NameBuf := 'Cluster grenade';
+      52: NameBuf := 'Cluster';
+      53: NameBuf := 'Thrown knife';
+      255: NameBuf := 'Hands';
+    else
+      NameBuf := 'unknown';
+    end;
+  except
+    NameBuf := 'unknown';
+  end;
+  Result := PChar(NameBuf);
 end;
 
 procedure BE_SupConfig(Radius, RadiusBig: Single; ScanTicks, TeamBullets, FriendlyFire, TeamGame: LongInt); cdecl;
@@ -1035,6 +1241,17 @@ begin
   except
     ShotCount := 0;
     Result := 0;
+  end;
+end;
+
+procedure BE_ShotPush(var PX, PY: Single); cdecl;
+begin
+  PX := 0;
+  PY := 0;
+  try
+    PX := ShotPushX;
+    PY := ShotPushY;
+  except
   end;
 end;
 
@@ -1296,6 +1513,7 @@ exports
   BE_AcAmmoReset,
   BE_AcSave,
   BE_AcForget,
+  BE_AcForgetAll,
   BE_Name,
   BE_Vis,
   BE_VisReset,
@@ -1318,6 +1536,18 @@ exports
   BE_Op,
   BE_TextWidth,
   BE_Replace,
+  BE_Fill,
+  BE_FloatStr,
+  BE_MixColor,
+  BE_HudStyle,
+  BE_HudBar,
+  BE_HudRegen,
+  BE_HudText,
+  BE_LogStamp,
+  BE_Pref_Load,
+  BE_Pref_Save,
+  BE_Sees,
+  BE_WeaponName,
   BE_SupConfig,
   BE_SupPlayers,
   BE_SupBullet,
@@ -1337,6 +1567,7 @@ exports
   BE_Solve,
   BE_Shot,
   BE_ShotGet,
+  BE_ShotPush,
   BE_GunTick,
   BE_GunFired,
   BE_GunReset,

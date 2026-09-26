@@ -71,6 +71,7 @@ function AcFindings(const T: TAcTotals): LongInt;
 procedure AcAmmo(ID, Tick, W, Ammo: LongInt);
 procedure AcAmmoReset(ID: LongInt);
 function AcReview(ID, Tick: LongInt): AnsiString;
+function AcTable(const T, A: TAcTotals): AnsiString;
 
 implementation
 
@@ -170,6 +171,8 @@ begin
   end;
 end;
 
+function Nm(ID: LongInt): AnsiString; forward;
+
 procedure Report(ID, Kind: LongInt; const Text: AnsiString);
 var
   k: LongInt;
@@ -188,7 +191,7 @@ begin
     Inc(QCount);
   Incidents[k].ID := ID;
   Incidents[k].Kind := Kind;
-  Incidents[k].Text := Text;
+  Incidents[k].Text := Nm(ID) + ': ' + Text;
 end;
 
 function AcNext(out ID, Kind: LongInt; out Text: AnsiString): Boolean;
@@ -319,7 +322,7 @@ begin
       if Gap < Need - Slack then
       begin
         Inc(R^.T[T_SU_BAD]);
-        Report(Shooter, AK_STARTUP, Nm(Shooter) + ': ' + WName(W) + ' fired ' + IntToStr(Gap) +
+        Report(Shooter, AK_STARTUP, WName(W) + ' fired ' + IntToStr(Gap) +
           ' ticks after the key (needs ' + IntToStr(Need) + ')');
         Result := AK_STARTUP;
       end;
@@ -330,7 +333,7 @@ begin
     if (dt >= 3) and (dt < Round(Weapon[W].Interval * RateFrac) - 2) then
     begin
       Inc(R^.T[T_RATE]);
-      Report(Shooter, AK_RATE, Nm(Shooter) + ': ' + WName(W) + ' shots ' + IntToStr(dt) + ' ticks apart (needs ' +
+      Report(Shooter, AK_RATE, WName(W) + ' shots ' + IntToStr(dt) + ' ticks apart (needs ' +
         IntToStr(Weapon[W].Interval) + ')');
       Result := AK_RATE;
     end;
@@ -346,7 +349,7 @@ begin
     if (R^.HurtW = W) and (R^.HurtTick > 0) and (Fire - R^.HurtTick >= 0) and (Fire - R^.HurtTick <= BinkTicks) then
     begin
       Inc(R^.T[T_BINK_HITS]);
-      Report(Shooter, AK_BINK, Nm(Shooter) + ': ' + WName(W) + ' hit ' + IntToStr(Fire - R^.HurtTick) +
+      Report(Shooter, AK_BINK, WName(W) + ' hit ' + IntToStr(Fire - R^.HurtTick) +
         ' ticks after being hit (bink)');
       if Result = 0 then
         Result := AK_BINK;
@@ -396,7 +399,7 @@ begin
         Inc(R^.T[T_JUMPS]);
         if Round(D) > R^.T[T_JUMP_MAX] then
           R^.T[T_JUMP_MAX] := Round(D);
-        Report(ID, AK_JUMP, Nm(ID) + ': moved ' + IntToStr(Round(D)) + ' px in ' + IntToStr(dt) + ' ticks (at most ' +
+        Report(ID, AK_JUMP, 'moved ' + IntToStr(Round(D)) + ' px in ' + IntToStr(dt) + ' ticks (at most ' +
           IntToStr(Round(Allowed)) + ')');
         R^.SpDist := 0;
         R^.SpTicks := 0;
@@ -410,7 +413,7 @@ begin
           if R^.SpDist / R^.SpTicks > SpeedLimit then
           begin
             Inc(R^.T[T_SPEED]);
-            Report(ID, AK_SPEED, Nm(ID) + ': ' + IntToStr(Round(R^.SpDist / R^.SpTicks)) + ' px a tick for ' +
+            Report(ID, AK_SPEED, IntToStr(Round(R^.SpDist / R^.SpTicks)) + ' px a tick for ' +
               IntToStr(R^.SpTicks) + ' ticks (the game allows ' + IntToStr(Round(MAX_STEP)) + ')');
           end;
           R^.SpDist := 0;
@@ -462,7 +465,7 @@ begin
     if (Shots > MaxShots) and (Ammo > 0) then
     begin
       Inc(R^.T[T_AMMO]);
-      Report(ID, AK_AMMO, Nm(ID) + ': ' + WName(W) + ' used ' + IntToStr(Shots) + ' rounds in ' + IntToStr(dt) +
+      Report(ID, AK_AMMO, WName(W) + ' used ' + IntToStr(Shots) + ' rounds in ' + IntToStr(dt) +
         ' ticks (at most ' + IntToStr(MaxShots) + ')');
     end;
     if Ammo = 0 then
@@ -474,13 +477,28 @@ begin
       (Tick - R^.AmEmpty < Round(Weapon[W].Reload * RateFrac) - 12) then
     begin
       Inc(R^.T[T_RELOAD]);
-      Report(ID, AK_RELOAD, Nm(ID) + ': ' + WName(W) + ' reloaded in ' + IntToStr(Tick - R^.AmEmpty) +
+      Report(ID, AK_RELOAD, WName(W) + ' reloaded in ' + IntToStr(Tick - R^.AmEmpty) +
         ' ticks (needs ' + IntToStr(Weapon[W].Reload) + ')');
     end;
     R^.AmEmpty := -1;
   end;
   R^.AmAmmo := Ammo;
   R^.AmTick := Tick;
+end;
+
+function Ago(Ticks: LongInt): AnsiString;
+var
+  Sec: LongInt;
+begin
+  Sec := Ticks div 60;
+  if Sec < 0 then
+    Sec := 0;
+  if Sec < 60 then
+    Result := IntToStr(Sec) + ' s ago'
+  else if Sec < 3600 then
+    Result := IntToStr(Sec div 60) + ' min ' + IntToStr(Sec mod 60) + ' s ago'
+  else
+    Result := IntToStr(Sec div 3600) + ' h ' + IntToStr((Sec mod 3600) div 60) + ' min ago';
 end;
 
 function AcReview(ID, Tick: LongInt): AnsiString;
@@ -498,8 +516,91 @@ begin
         Continue;
       if Result <> '' then
         Result := Result + #10;
-      Result := Result + IntToStr((Tick - RecentTick[j]) div 60) + ' s ago: ' + RecentText[j];
+      Result := Result + Ago(Tick - RecentTick[j]) + ' - ' + RecentText[j];
     end;
+end;
+
+function Pct(A, B: LongInt): AnsiString;
+begin
+  Result := '0%';
+  if B > 0 then
+    Result := IntToStr(Round(100 * A / B)) + '%';
+end;
+
+function Sev(Bad: Boolean): AnsiString;
+begin
+  if Bad then
+    Result := '2'
+  else
+    Result := '0';
+end;
+
+function RatioSev(A, B: LongInt): AnsiString;
+begin
+  Result := '0';
+  if B >= 5 then
+  begin
+    if A / B >= 0.6 then
+      Result := '2'
+    else if A / B >= 0.3 then
+      Result := '1';
+  end
+  else if A > 0 then
+    Result := '1';
+end;
+
+function StartupText(const X: TAcTotals): AnsiString;
+begin
+  if X[T_SU_N] = 0 then
+    Result := 'not measured'
+  else
+  begin
+    Result := IntToStr(X[T_SU_BAD]) + ' of ' + IntToStr(X[T_SU_N]) + ' too fast';
+    if X[T_SU_MIN] >= 0 then
+      Result := Result + ' (fastest ' + IntToStr(X[T_SU_MIN]) + ', average ' + IntToStr(Round(X[T_SU_SUM] / X[T_SU_N])) +
+        ' ticks)';
+  end;
+end;
+
+function TimesText(N: LongInt): AnsiString;
+begin
+  if N = 0 then
+    Result := 'none'
+  else
+    Result := IntToStr(N) + 'x';
+end;
+
+function AcTable(const T, A: TAcTotals): AnsiString;
+var
+  L: AnsiString;
+
+  procedure Line(const S, Text: AnsiString);
+  begin
+    if L <> '' then
+      L := L + #10;
+    L := L + S + Text;
+  end;
+
+begin
+  L := '';
+  Line(Sev(T[T_SU_BAD] > 0), 'Start-up (Barrett, LAW): ' + StartupText(T) + '  | all games: ' + StartupText(A));
+  Line(Sev(T[T_RATE] > 0), 'Shots closer than the weapon allows: ' + TimesText(T[T_RATE]) + '  | all games: ' +
+    TimesText(A[T_RATE]));
+  Line(Sev(T[T_AMMO] + T[T_RELOAD] > 0), 'Magazine emptied too fast: ' + TimesText(T[T_AMMO]) + ', reloaded too fast: ' +
+    TimesText(T[T_RELOAD]) + '  | all games: ' + TimesText(A[T_AMMO]) + ', ' + TimesText(A[T_RELOAD]));
+  if T[T_JUMPS] > 0 then
+    Line('2', 'Teleports: ' + IntToStr(T[T_JUMPS]) + 'x (longest ' + IntToStr(T[T_JUMP_MAX]) + ' px)  | all games: ' +
+      TimesText(A[T_JUMPS]))
+  else
+    Line('0', 'Teleports: none  | all games: ' + TimesText(A[T_JUMPS]));
+  Line(Sev(T[T_SPEED] > 0), 'Moving too fast: ' + TimesText(T[T_SPEED]) + '  | all games: ' + TimesText(A[T_SPEED]));
+  Line(RatioSev(T[T_BINK_HITS], T[T_B_HITS]), 'Barrett hits right after being hit (no bink?): ' +
+    IntToStr(T[T_BINK_HITS]) + ' of ' + IntToStr(T[T_B_HITS]) + ' (' + Pct(T[T_BINK_HITS], T[T_B_HITS]) +
+    ')  | all games: ' + Pct(A[T_BINK_HITS], A[T_B_HITS]) + ' of ' + IntToStr(A[T_B_HITS]));
+  Line(RatioSev(T[T_MOVE_HITS], T[T_M_HITS]), 'Barrett/Ruger hits while running or jumping: ' +
+    IntToStr(T[T_MOVE_HITS]) + ' of ' + IntToStr(T[T_M_HITS]) + ' (' + Pct(T[T_MOVE_HITS], T[T_M_HITS]) +
+    ')  | all games: ' + Pct(A[T_MOVE_HITS], A[T_M_HITS]) + ' of ' + IntToStr(A[T_M_HITS]));
+  Result := L;
 end;
 
 function Ratio(A, B: LongInt): Single;
