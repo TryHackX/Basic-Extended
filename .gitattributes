@@ -1,0 +1,7 @@
+# LF in the repository, the platform's own line ends on checkout; the Windows scripts always CRLF, the shell
+# scripts always LF (a ZIP from GitHub gets them right too)
+* text=auto
+*.bat text eol=crlf
+*.sh text eol=lf
+*.dll binary
+*.so binary

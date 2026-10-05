@@ -1,0 +1,769 @@
+# Basic-Extended 4.0
+
+The complete server essentials, Battlefield 3-style health regeneration, dynamic damage numbers, tactical radar, and administration suite for **Soldat Dedicated Server 2.8.2 (Soldat 1.7.1)** running **ScriptCore 3**.
+
+Author: **Dominik (TryHackX)** — MIT License. Designed for high-performance servers, running natively alongside [ZitroStats](https://github.com/TryHackX/ZitroStats-Core) and [AntiFake-Extended](https://github.com/TryHackX/AntiFake-Extended).
+
+---
+
+## Contents
+
+1. [Overview & Architecture](#overview--architecture)
+2. [Key Features](#key-features)
+3. [Directory Structure](#directory-structure)
+4. [Installation](#installation)
+5. [Commands Reference](#commands-reference)
+6. [Modules & Mechanics](#modules--mechanics)
+   - [Health HUD & In-Game Editor](#health-hud--in-game-editor)
+   - [BF3 Health Regeneration & Suppression](#bf3-health-regeneration--suppression)
+   - [Limited Ammunition & Looting](#limited-ammunition--looting)
+   - [Damage Numbers & Hit Flash](#damage-numbers--hit-flash)
+   - [Tactical Radar & Overlays](#tactical-radar--overlays)
+   - [Admin Tools: Teleport, Trajectory, Aimbot, Explosions](#admin-tools-teleport-trajectory-aimbot-explosions)
+   - [Anti-Cheat Statistics](#anti-cheat-statistics)
+   - [Command Permissions](#command-permissions)
+   - [Map Geometry in the Library](#map-geometry-in-the-library)
+   - [Steam ID Admin Rights & Moderation](#steam-id-admin-rights--moderation)
+   - [Combat Extras & Class Mechanics](#combat-extras--class-mechanics)
+   - [Flash Grenades & Guided Rockets](#flash-grenades--guided-rockets)
+   - [Team Kill Guard](#team-kill-guard)
+   - [Mines & Claymores](#mines--claymores)
+   - [Bleeding, Bandages & First-Aid Kits](#bleeding-bandages--first-aid-kits)
+   - [Downed & Revive](#downed--revive)
+   - [Spotting & Bounties](#spotting--bounties)
+   - [Server Community Tools](#server-community-tools)
+   - [Shop & Supply Crates](#shop--supply-crates)
+   - [Battlefield Classes, Battle Points & Resupply](#battlefield-classes-battle-points--resupply)
+   - [Insurgents](#insurgents)
+7. [Configuration (`settings.ini`)](#configuration-settingsini)
+8. [Building from Source](#building-from-source)
+9. [Troubleshooting](#troubleshooting)
+10. [Roadmap](ROADMAP.md)
+
+---
+
+## Overview & Architecture
+
+**Basic-Extended** unites and replaces four legacy server scripts into a single, high-performance PascalScript + native Cdecl library architecture:
+- **Basic 2.0.2** (commands, timers, admin utilities, map rotation)
+- **Info** (`/info`, map statistics, anti-cheat reporting hints, tips)
+- **DamageDisplay 1.6** (floating damage numbers, hit feedback)
+- **BFRegeneration 0.0.3** (Battlefield 3 health regeneration, suppression, kit suppression)
+
+It brings back the owner's other scripts too, rebuilt for ScriptCore 3, each switched on and off on its own: Assist,
+CallMedic, DoubleKillsBonus, FirstBlood, Godmode, Logger, Medic, Posthumous, Reservation, Savior, SelfKillBonus and
+TimeToKill (the combat extras and the basics), FlashNades and ExtraRocket, Mines, the tk script (the team kill guard),
+Shop 3.3 (the shop and the supply drops), the Battlefield mod (classes, battle points, resupply) and the Taliban mod
+(the insurgents).
+
+```text
+Soldat Dedicated Server (Game Thread)
+  |  events: OnDamage, OnKill, OnTick, OnCommand, OnSpeak, OnSteamAuth
+  v
+main.pas (ScriptCore 3 bridge)
+  |  reads the game state once per pass (one call per player into the library), sends only the
+  |  texts the library asks for, does what only the game can do (move, bullets, objects)
+  v
+basicext_dll.dll / .so (native code)
+     Map geometry (the .pms polygons and sectors, ray casts exactly like the server's)
+     Radar engine (list / labels / circle / ring layout, exact glyph metrics of the game font)
+     Text diff engine (per-player sent state, only changed texts go out, per-tick and per-second caps)
+     Team vision (what the players see: the screen, or ray casts through the walls)
+     Teleport / flight controller (tap, hold steering with camera-lag compensation, dead zone)
+     Ballistics (weapons.ini, muzzle position, bullet paths clipped to the view, lead solver,
+                 fire rate / magazine / reload, the game's inaccuracy model, explosion patterns)
+     Anti-cheat statistics (start-up, fire interval, jumps, bink, movement accuracy, head hits)
+     Suppression (swept bullet tests against the hurt players)
+     Server hooks (CreateBullet, CreateThing: every shot and dropped weapon as the server makes it)
+     Memory bridge (the server's own tables: a bullet's weapon, where and when it counts as fired -
+                 the kills' distance and air time; the soldiers' skeletons - eyes, head, body)
+     Team kill eyes (every shot's line against the skeletons: aimed at a mate, crossfire, a spray)
+     Mines (landmines and claymores against the skeletons: tripwires, cones, finding, taking apart,
+                 shots, chains, the marks of each player)
+     Limited ammunition (the magazine followed from the reported counts and the hooked shots; with
+                 [General] MemoryReads every soldier's weapon and keys read from the server's records -
+                 the ammunition of all of them is one call a tick)
+     HUD lines (where each of the nine lines stands, what each player's game shows, the refreshes)
+     Text helpers (message templates, HUD text and bar, numbers, colours, log lines, weapon names,
+                 the blood line's wound list, a chat line weighed for [AntiSpam])
+     TBEStore (BEDB binary storage, memory-mapped preference lookups)
+     TBEWriter + Worker Thread (asynchronous logger and whole files such as the mutes, disk IO every 2s
+                 without holding server ticks)
+```
+
+### Why It Keeps the Server Fast:
+- **Zero Disk Stalls on the Game Thread:** Preferences and player coordinates are kept in memory. The native library (`basicext_dll`) runs its own background worker that writes `players.bdb` and append-only text logs without delaying game physics ticks.
+- **Library Module Pinning:** The DLL/SO pins itself in memory (`GET_MODULE_HANDLE_EX_FLAG_PIN` / `RTLD_NODELETE`), allowing seamless in-game `/recompile` reloading without crashing background threads.
+- **Packet & Console Flooding Prevention:** Commands and system messages are queued and metered (`LinesPerTick`, `BroadcastLinesPerTick`, `TEXTS_PER_TICK`) to prevent client-side network choking and engine freezes.
+- **Selective Processing:** Heavy collision checks (e.g. bullet suppression scans) operate exclusively when hurt players are waiting for regeneration and scan only active bullet IDs.
+- **Math in Native Code:** PascalScript is slow (an array element or a property costs about a microsecond, as much as a call into the library), so every layout, distance, colour, ballistic, ray cast and movement calculation runs in `basicext_dll`. The script reads each player once per pass and hands the values over with one call; the library reads the map itself and answers ray casts in about a microsecond. `/be_bench` measures these costs on the running server, `/be_prof` the time of every part of the tick.
+- **The Soldiers Read From Memory (`[General] MemoryReads`):** the library finds where the server keeps each soldier's weapons, keys and aim (by matching what the script reads on two soldiers), checks one soldier against the script's own values every second and switches the reading off for good at the first difference; while it is on, the ammunition of every soldier is one library call a tick instead of a few property reads per soldier (about 60 microseconds a tick for 10 bots). `/be_status` tells which way it works.
+- **Diffed Text Updates:** Every radar, trajectory and damage text is compared with what the player already has; unchanged texts are not sent again, small moves under a threshold are ignored, and each player gets at most `TextsPerTick` / `MaxTextsPerSecond` radar texts and all of them together `TextsPerTickAll` a tick (the users take turns). The HUD lines are placed and diffed in the library too (only the lines that changed are built again; bots get none).
+
+---
+
+## Key Features
+
+- **Dynamic Health HUD:** BigText on-screen display with smooth color interpolation (Green $\to$ Yellow $\to$ Red), low-health flashing, customizable layouts, and an **interactive in-game live editor** (`!hp edit`).
+- **Battlefield 3-style Health Regeneration:** Health regenerates gradually after a delay, accelerating over time. Nearby enemy bullet passes apply **Suppression**, pausing regeneration.
+- **Dynamic Damage Numbers:** WorldText numbers floating above hit targets (`sum`, `column`, or `hit` modes). Automatically hides damage numbers through walls when playing in Realistic Mode (Line of Sight checks).
+- **Tactical Radar / ESP Overlay:** Four modes: `list` (HUD text with the distance in meters, as the kill screen shows it, each line coloured by team, health or distance), `labels` (overhead player tags), `circle` (circular mini-map with an optional outline of the walls around you; each player may scale the marks and the edge dots), and `ring` (a dot on a ring around your soldier for each nearby player: the size is the distance, `F` marks a flag carrier). Dropped flags are shown in every mode. Vision filters (`all`, `seen`, `seenall`, and `seenreal` / `seenallreal` with ray casts through the walls - in realistic mode `seen` casts rays too), team mates on or off, every mode keeps its own place, size, zoom, update rate and reach, and each group (full users / everybody) has its own modes, default, filter and speed limit.
+- **Admin Tools:** click / hold teleport that steers after the cursor, smooth flight to the cursor (optionally above the game's speed limit with short jumps), the bullet trajectory of any player (following a Barrett bullet the camera follows) or only their cursor, seen by you, that player, both or everybody, an aimbot that uses the weapon's real magazine, reload and inaccuracy (cursor, radius or nearest target, extra shots after a kill, LAW rules, colliders, Spas-12 and Minigun recoil), a speed booster (everywhere, on the ground, or the ground and a stronger jump), chat and team chat lines as another player, the library follows the server's `/loadwep`, 14 kinds of explosions, and commands that take `all`, teams or names: give weapons with ammo, bonuses, stationary guns, infinite ammo, damage and vest changes.
+- **Limited Ammunition (`[Ammo]`, `[AmmoHud]`, `[Looting]`):** every weapon comes with a reserve, in spare magazines or one pool of rounds; the magazine in the weapon is refilled only from it, an early reload keeps the rounds left, `!mag <n>` loads a chosen magazine, `!repack` puts partial magazines together, an empty weapon with nothing left is taken away (or kept empty), the chainsaw burns fuel, and a dead soldier's magazines lie with his weapon for whoever picks it up or loots it. The ammunition is shown on the health line or in its own text with colours and a blinking NO AMMO.
+- **Anti-Cheat Statistics:** Barrett start-up time, fire rate, magazine and reload speed, teleports, speed, hits under bink and while moving - per game and for all games of a computer (by the hardware id, so players without Steam too); `/suspects`, `/acstats` (a table of every check) and `/acreview` for every player by default, so anybody can check a suspect; a log of every finding and an optional vote kick.
+- **Command Permissions (`[Permissions]`):** every command can be for everybody, the admins, the console only or nobody, typed with `/`, `!` or both.
+- **Example configs (`Example configs/`):** 19 ready `settings.ini` files - `default`, `ctf`, `inf`, `htf`, `tm`, `dm`, `rscs` (realistic + survival + CTF), `rs`, `rsa` (with the advance mode), `rsdm`, `shop`, `tw` (trench war), `ttw` (tactical trench war), `battlefield`, `insurgents`, `hardcore`, `casual`, `clean` and `light`; every value a set changes is marked with a `; SET` line, the "hack" tools are only for admins (or off), the anti-cheat for everybody.
+- **Killing Sprees (`[Spree]`):** the old sprees are back, switched off by default (ZitroStats has its own).
+- **Steam ID Authentication:** Assigns admin permissions verified directly against Steam Web tickets (`[Admin] Steam-1`, `Steam-2` ... in `settings.ini`), eliminating HWID spoofing vulnerabilities.
+- **Modular Combat Extras:** Optional assists, multikill announcements, first blood rewards, savior bonuses, suicide penalties, posthumous martyrdom grenade drops, and medic classes.
+- **Team Kill Guard (`[TeamKill]`, off by default):** every hit on a team mate and every team kill gives points by how meant it looked - the library follows the line of every shot against the soldiers' skeletons (aimed at the mate, crossfire, a blast near enemies); a spray at a mate blocks the shooter's fire at the team at once; a ladder of penalties (warning, blocked and mirrored fire, slay, kick, growing bans), points that melt with time and follow the player by his Steam id, and the victim's old `!1`-`!4` decision.
+- **Mines and Claymores (`[Mines]`, off by default):** enemy kills and captures earn landmines and claymores; a landmine lies hidden and goes off under the first enemy who steps on it (jump over one you know about), a claymore is seen by everybody with its red tripwire and throws a cone of shells where its owner looked; enemies find mines by crouching near them and take them apart, a bullet sets a claymore off, and mines set each other off - the owner's old Mines script, grown up.
+- **Bleeding (`[Bleeding]`, off by default):** a hit may open a wound - light, heavy or arterial, by the damage and by the place it hit (the head, the torso or the legs, found on the soldier's skeleton the way the server finds it). The blood runs out, too little of it drains the health and brings shocks (frozen, a black screen), and at the end the soldier bleeds out - his health drains faster and faster, so a bandage still saves him; the kill is the one's who opened the worst wound. Bandages (in percent, used by the wound, put on by staying low and still, or while falling freely) and first-aid kits; a medic bandages his mates; a bulletproof vest keeps the torso from bleeding; light wounds stop by themselves after a random time.
+- **Downed & Revive (`[Downed]`, off by default, made for survival):** a hit that would kill puts the soldier down instead (not a headshot, not a hit far over his health): a team mate staying low next to him gets him up and stops his bleeding, his own first-aid kit gets him up too, or his time runs out - every end is a kill of the one who put him down, with his weapon.
+- **Spotting & Bounties (`[Spotting]`, `[Bounty]`, off by default):** Battlefield-like spotting - `/spot` (bound to a key) or the reload key with a full magazine puts the enemy nearest to your aim on your team's radar, and with `World = 1` a mark over him; a price on the head of whoever kills a lot, collected by the enemy who kills him (points, health, magazines, mines, flashes, bandage, kits).
+- **Server Community Tools:** spawn protection with a mark over the protected soldier; private messages (`/pm`, `/r`, blocks that follow the player); notes and reports for the admins with a blacklist; chat flood control with warnings and timed mutes that follow the player and never stay by accident; coloured admin lines and announcements; `!p` / `!up` pauses with a countdown; a ban journal for `/unbanlast <n | time>`; the maps list managed with parts of map names; `/warn`.
+- **Shop & Supply Crates (`[Shop]`, `[Supply]`, off by default):** the owner's old Shop script rewritten - an economy of the map or a global one that follows the player by his Steam id, earnings by the game mode (kills by the weapon, headshots, assists, damage, captures, survival rounds with a loss streak, bounties; nothing without an opponent in the game, `[General] Opponents`), and a shop of weapons, magazines, grenades and flashes, mines and claymores, Javelins, medical items, a stationary gun, a UAV, explosive AP rounds for the Barrett and supply drops. `BuyOnly` makes the weapon menu what a player owns (made for Advance and survival: what a survivor holds stays his). Supply crates come down by parachute and open for whoever stays low next to them.
+- **Battlefield Classes, Battle Points & Resupply (`[Classes]`, `[Points]`, `[Resupply]`, off by default):** the owner's Battlefield mod rebuilt - every soldier of a team plays a class (Assault, Medic, Support, Engineer, Sniper, Recon, and five more ready to add: Grenadier, Marksman, Mechanic, Spy, Commando): the weapons of his menu, what he carries at the respawn, perks that work by themselves (healing, vest repair, magazines for the mates around, faster revives and bandages, longer spots, critical hits, more wounds, health back for hits) and two skills on `!skill` / `!skill2` - the bots use theirs too - (a rally point, a healthpack, a grenade kit, a stationary gun, a mortar falling from the sky, a UAV, a sensor, C4 set off with `/c4`, a supply crate, patching himself up, his own ammunition, taking the weapon out of an enemy's hands, a barrage on the enemies his team sees, a gunship, a cloak), and the engineer finds the enemy mines around him. The class is what a soldier is and carries; the shop still sells everything - what he pays for is his. The class is chosen with `!class` (freely, or so that a team's classes stay mixed), or rolled at every death, every survival round or once for the whole map, balanced so that every player of a team gets to try every class; every value may differ in realistic and survival games, so the classes fit team matches, CTF and RSCS alike. Battle points are a score of their own with a feed (damage, kills, headshots, assists, flags, revives, healing, ammunition given, spot kills ...) and both teams' lists at the map's end; a soldier who stays low at his base gets his magazines back.
+- **Insurgents (`[Insurgents]`, off by default):** the owner's Taliban mod of 2014 with neutral names - one team (or both) fights as the insurgents, and every soldier of it wears a suicide vest. Holding crouch + jump (or `/detonate`) counts it down with a beep and a mark that everybody near sees; then it goes off - a blast inside the enemies around him and one of eight patterns of blasts, shells, pellets and flames - and every kill is his. Counterplay: not right after a respawn, not at an enemy spawn, not with a flag, and killing him first stops it (a dead man's switch may still set it off, never after a headshot). Bots use their vests too. With `[Classes]` the insurgents play classes of their own (Hawk, Healer, Thief, Saboteur, Spotter, Leader, Raider, Mortarman), each with its vest.
+- **Steam Bans, Ban Names, Team Balance & Lag Guard (`[SteamBan]`, `[BanJournal]`, `[Teams]`, `[LagGuard]`):** `/bansteam` bans a Steam account (a list of the script, caught again at every confirmation of the account); the ban journal names the player of every ban and `/unbanname` lifts his bans; the team words follow the balance rule, and `AutoBalance` moves a dead player of the bigger team; `[LagGuard]` (off by default) measures every connection - the average ping, the spread and the warps - tells the player before the server's ping kick, `/lag` lists them, and may move a bad connection to the spectators (it never kicks).
+- **Survival Carry-Over (`[Ammo] SurvivalCarry`, `SurvivalLock`):** a player alive at the end of a survival round keeps his magazines, bandage, first-aid kits and the Javelins he fired for the next round; a weapon he has no rounds left for is locked in his weapon menu until he dies.
+- **Flash Grenades and Guided Rockets (`[FlashNades]`, `[ExtraRocket]`, off by default):** a player chooses whether his next grenade is a normal one or a flash that blinds everybody who sees it (a white screen that fades); the flash is taken out of the server just before it goes off, so it neither hurts nor pushes, and a white ring marks it in the air. With the LAW, crouch + reload lock a Javelin on the nearest enemy in sight: an extra rocket that leaves the tube, ignites and flies after him with real missile physics (slow it turns tight, fast it turns wide) - over cover and down on him when there is room. Both come from the owner's older FlashNades and ExtraRocket scripts, rebuilt on the server hooks and without any `Sleep`.
+
+---
+
+## Directory Structure
+
+```text
+soldatserver/
+|-- logs/basic-extended/             created automatically for daily logs
+|   `-- watched/                     individual logs for watched players
+`-- scripts/
+    `-- Basic-Extended/
+        |-- main.pas                 ScriptCore 3 script
+        |-- config.ini               the script's entry for ScriptCore 3 (name, main file, libraries)
+        |-- basicext_dll.dll         32-bit Windows native library
+        |-- basicext_dll.so          32-bit Linux native library
+        |-- settings.ini             the configuration, with every list (rules, messages, command
+        |                            lists, reserved slots, Steam admins, watched players)
+        |-- README.md, ROADMAP.md, LICENSE
+        |-- Example configs/         19 ready settings.ini files (ctf, rscs, tw, battlefield ...)
+        |-- data/                    what the script writes (made when it is needed)
+        |   |-- players.bdb          binary player preferences database (and the shop's
+        |   |                        global wallets)
+        |   |-- granted_admins.txt   the IPs the script put into remote.txt
+        |   `-- anticheat.log        the anti-cheat's findings (and the logs and lists of the modules)
+        `-- source_dll/              Free Pascal source for basicext_dll, its tests and build scripts
+```
+
+---
+
+## Installation
+
+1. Copy the `Basic-Extended` folder into your server's `scripts/` directory:
+   ```text
+   soldatserver/scripts/Basic-Extended/
+   ```
+   The folder keeps exactly this name: the script loads its library from `scripts/Basic-Extended/`. A ZIP downloaded from GitHub unpacks to `Basic-Extended-4.0.0` - rename it.
+2. ScriptCore 3 loads every folder of `scripts/` that has a `config.ini`; this one names the script (`BasicExtended`, `main.pas`) and asks for `Sandboxed = 0` and `AllowDlls = 1`. Allow the libraries in the server too: `server.ini`, section `[ScriptCore3]`, `AllowDlls=1`.
+3. Both libraries come with the script: `basicext_dll.dll` for Windows and `basicext_dll.so` for Linux (32-bit, like the server). Build the `.so` again with `sh source_dll/build.sh` only when it does not load on your system (see [Building from Source](#building-from-source)).
+4. Optional: copy a set of `Example configs/` over `settings.ini` (`default` is every module at the code's default; its `README.md` says what each set changes).
+5. Start the server. The console shows `[Basic-Extended] 4.0 started` and the modules that are on; `/be_status` tells how the library works.
+
+### Upgrading
+
+1. Stop the server and copy `settings.ini` and `data/` somewhere safe.
+2. Replace `main.pas`, `basicext_dll.dll` and `basicext_dll.so`, `config.ini`, `source_dll/`, `Example configs/` and the documents. The script and the library must come from the same release (`BE_API` 23): with another library the script does not start and says so in the console.
+3. Keep your `settings.ini`: a key it does not have takes the code's default, so every option of the release works at once; `Example configs/default/settings.ini` has them all with their descriptions.
+4. Delete `main.psb` and start the server - a `/recompile` keeps the old library loaded.
+
+---
+
+## Commands Reference
+
+### Player Commands (Chat `!` or `?`)
+
+| Command | Arguments | Description |
+| :--- | :--- | :--- |
+| `!cmd`, `!command` | *none* | Displays available server commands and extra script links. |
+| `!rules`, `!rul` | *none* | Displays server rules. |
+| `!hp`, `!health` | `[on\|off\|style\|size\|pos <x> <y>\|pos reset\|edit\|reset]` | Toggles or configures the health display. `!hp edit` opens the visual editor, `!hp pos reset` gives back the server's place and size. |
+| `!dmg`, `!damage` | *none* | Toggles floating damage numbers over targets. |
+| `!radar` | `[on\|off\|mode\|tick\|zoom\|show\|team\|outline\|marks\|edge\|edit\|pos\|size\|reset]` | Configures the tactical radar (if public). The modes of the player's group (`[Radar] PublicModes`). Place, size, zoom and rate are kept for each mode. |
+| `!ammo`, `/ammo` | *none* | The magazine in the weapon and what is left for it (spare magazines or the reserve). |
+| `!mag`, `/mag` | `[n]` | The spare magazines; `!mag <n>` reloads now with that one (the magazine in the weapon goes back into the pouch). |
+| `!repack`, `/repack` | *none* | Puts the partial spare magazines together, one magazine every `RepackSecondsPerMagazine` after `RepackStartSeconds` without shooting; a shot, a reload or another weapon stops it. |
+| `!ammohud`, `/ammohud` | `[on\|off\|pos <x> <y>\|pos reset\|size <n>\|edit\|reset]` | The ammunition's own text (`[Ammo] HudAppend = 2`): place, size, the editor. |
+| `!rate`, `!ratio`, `!kd` | `[player]` | Displays kill/death ratio and flag capture statistics. |
+| `!ping` | `[player]` | Checks ping of self or another player. |
+| `!track`, `!t` | `[player]` | Tracks ping of a player over several seconds and reports average/max (with `[LagGuard]` on: the spread and the warps of his connection too). |
+| `!time`, `!date` | *none* | Displays current server date and time. |
+| `!whois`, `!whoisadmin` | *none* | Lists connected In-Game and TCP server admins. |
+| `!admin`, `!calladmin` | `[message]` | Calls connected admins or sends an alert to the server console. |
+| `!medic`, `!med` | *none* | Enlists as team medic (class mode) or requests medical extraction (call mode). |
+| `!j`, `!start`, `!play` | *none* | Joins the active game (auto-balances to smaller team). |
+| `!s`, `!spec` | *none* | Moves player to spectator team. |
+| `!maplist`, `!listmaps`| *none* | Lists all maps in server rotation. |
+| `?map`, `?nextmap`, `?lastmap` | *none* | Displays current, upcoming, and previous map names. |
+| `!suspects`, `/suspects` | `[all]` | Anti-cheat: the players of this game by suspicion (`all`: everybody), with the suspicion over all games of their computer. |
+| `!acstats`, `/acstats` | `<player>` | A table of every anti-cheat check: this game and all games of that computer. |
+| `!acreview`, `/acreview` | `<player>` | The last things the anti-cheat noticed, newest first. |
+| `!set`, `!change` (or `/`) | *none* | `[FlashNades]`: the next grenade is the other type (a normal grenade or a flash). |
+| `!n`, `!nade`, `!cc1`, `/smoke` | *none* | `[FlashNades]`: the next grenade is a normal one (`/smoke` is the game's Alt+1 taunt; `cc1` and `smoke` are `!skill`'s while `[Classes]` is on). |
+| `!f`, `!fla`, `!flash`, `!cc2`, `/tabac` | *none* | `[FlashNades]`: flash on/off for the next grenade (`/tabac` is the game's Alt+2 taunt; `cc2` and `tabac` are `!skill2`'s while `[Classes]` is on). |
+| `!flashhelp` | *none* | How the flash grenades work on this server. |
+| `!rocket`, `!rockets` | *none* | `[ExtraRocket]`: the guided rockets left and how they are used (keys, lock, flight). |
+| `!tk`, `!banpoints` | *none* | `[TeamKill]`: your team kill points, the steps of the ladder, this map's team kills and team damage. |
+| `!1` `!forgive`, `!2` `!punish`, `!3`, `!4` `!nextround` | *none* | `[TeamKill]`: the victim of a team kill decides - forgive, kill him (and points), points only, kill him next round (survival). |
+| `!mine` (`/mine`) | *none* | `[Mines]`: plants a landmine at your feet (also: the game's throw of the flag - jump + crouch). |
+| `!claymore`, `!clay` | *none* | `[Mines]`: plants a claymore looking where you aim (also: jump + crouch lying down). |
+| `!mines` | *none* | `[Mines]`: what you carry, the kills to the next ones, how to plant, find and take apart. |
+| `!spot` (`/spot`) | *none* | `[Spotting]`: spots the enemy nearest to your aim for your team (bind it in the game's console: `bind "f" "/spot"`); the reload key with a full magazine does the same (`Keys = reload`). |
+| `!bandage`, `!band` (`/bandage`) | *none* | `[Bleeding]`: bandages your worst wound your bandage can cover - stay still (and low); with `AutoBandage = 1` it starts by itself. |
+| `!kit`, `!firstaid`, `!medkit` (`/kit`) | *none* | `[Bleeding]`: your first-aid kit - every wound closed, blood and health back; while down it gets you up (crouch). |
+| `!giveup` (`/giveup`) | *none* | `[Downed]`: ends your time down at once (bind it: `bind "g" "/giveup"`). |
+| `!bounty`, `!bounties` | *none* | `[Bounty]`: the prices on heads now. |
+| `/pm`, `/msg` | `<player> <text>` | `[PrivateMessages]`: a private message (the player by id, whole name or a unique part of it). Only with `/` - a `!` line is seen by everybody. |
+| `/r`, `/reply` | `<text>` | `[PrivateMessages]`: answers the last one who wrote to you. |
+| `/pmmute`, `/pmunmute` | `[player]` | `[PrivateMessages]`: no private messages from anybody (or from one player); `/pmunmute` takes it back. |
+| `/note` | `<text>` | `[Notes]`: a note for the admins (they read it with `/comments`). |
+| `/report` | `<player> <text>` | `[Notes]`: a note about a player, with his ids. |
+| `!p`, `!pause` (`/pause`) | *none* | `[Pause]`: pauses the game (admins; everybody with `Players = 1`). |
+| `!up`, `!unpause` (`/unpause`) | *none* | `[Pause]`: the game goes on after a countdown (`PlayersUnpause` decides who may). |
+| `!shop`, `!store` (`/shop`) | `[weapons\|ammo\|equipment\|special\|all]` | `[Shop]`: the categories, or the items of one with their numbers and prices. |
+| `!buy`, `!b` (`/buy`) | `<word or number>` | `[Shop]`: buys an item (bind a key in the game's console: `bind "F5" "/buy ak"`). |
+| `!money`, `!cash` | *none* | `[Shop]`: your money (of this map, or your account). |
+| `!pay` | `<player> <amount>` | `[Shop]`: money for a team mate (`Transfer`). |
+| `!sell` | *none* | `[Shop]` `Sell = 1`: sells the weapon in your hands bought in this life. |
+| `!class` (`/class`) | `[name\|number]` | `[Classes]`: your class, its weapons and skills; with a name or a number (`Assign = choice` or `limited`) the class of your next life - at once within `ChangeSeconds` of a respawn while you have used nothing yet. |
+| `!classes`, `!classlist`, `!listclass` | *none* | `[Classes]`: every class of this game mode with the players of your team in it, its limit and its weapons. |
+| `!skill`, `!skill2` (`/skill`, `/skill2`; also `/cc1`, `/cc2`, and the game's own Alt+1 / Alt+2 taunts `/smoke`, `/tabac`) | *none* | `[Classes]`: your class's first or second skill (or bind keys in the game's console: `bind "c" "/skill"`, `bind "v" "/skill2"`). Where the classes are idle these words switch the grenade type of `[FlashNades]`. |
+| `!c4` (`/c4`) | *none* | `[Classes]`: sets off your C4 charges (the `c4` skill puts them on enemies; bind it: `bind "x" "/c4"`). |
+| `!detonate`, `!det` (`/detonate`) | *none* | `[Insurgents]`: counts your vest down (again: stops it); bind it: `bind "b" "/detonate"`. |
+| `!insurgents`, `!ins`, `!vesthelp` | *none* | `[Insurgents]`: how the vest works on this server, and the pattern of yours. |
+| `!score` | *none* | `[Points]`: your battle points of this map and your place. |
+| `!scores`, `!scoreboard` | *none* | `[Points]`: the best players of each team. |
+
+### Admin Commands (`/` in game or Server Console)
+
+| Command | Arguments | Description |
+| :--- | :--- | :--- |
+| `/admincommands` | *none* | Displays the admin command list (`[AdminCommandList] Line-N`). |
+| `/steamadmin` | `[add\|del <player\|SteamID>]` | Lists or modifies the Steam admins (it writes `[Admin] Steam-N` of `settings.ini`). |
+| `/radar`, `/overlay` | `[mode\|tick\|zoom\|show\|team\|outline\|marks\|edge\|edit\|pos\|size]` | Configures the radar of full users (`FullModes`, all four modes by default). |
+| `/tele`, `/tp` | *none* | Toggles click-to-teleport (jump to cursor on configured key). |
+| `/teletomouse`, `/ttm` | `[inherit\|fixed]` | Tap the key = jump to the cursor and keep flying; hold it = fly where the cursor points (turning round too), jumping towards it. `inherit`: the longer you hold, the faster you fly (up to `InheritMax`). |
+| `/flytomouse`, `/ftm` | *none* | Toggles flight toward the cursor while holding the key (faster when it is further, hovering when it is on you; up to the game's speed limit, `FlyHops = 1` for more with short jumps). |
+| `/trajectory`, `/traj` | `[player [cursor] [me\|self\|selfme\|public]\|off]` | Draws where the bullets of your (or a player's) weapon fly, only the part on screen; green = where they hit; ahead of a Barrett bullet the camera follows. `cursor`: only that player's cursor. Who sees it: `me` (only you, the default), `self` (only that player), `selfme` (both), `public` (everybody). |
+| `/aimbot`, `/aim` | `[on\|off\|cursor\|nearest\|radius [px\|edit\|save\|cancel]\|acc <0-100>\|extra <min-max>\|law <game\|ground\|anywhere>\|colliders on\|off]` | While the aimbot key (crouch) is held, your weapon fires at an enemy, leading moving targets. `radius`: only enemies within that many pixels of the cursor (`radius edit` draws the circle for you); `acc` = share of the weapon's own inaccuracy; `extra` = random shots more after a kill. The key is `Key` (`FlagKey` while carrying a flag). |
+| `/speed`, `/speedhack` | `<player> [1.1-5\|off] [all\|ground\|jump]` | Runs and flies faster; `ground`: only on the ground, `jump`: the ground and a stronger jump off it. |
+| `/sayas`, `/sayteam` | `<player> <text>` | A chat (or team chat) line as that player; the admin is written to the server console. |
+| `/loadwep` (server) | `<name>` | The server's own command; the library reads the same `configs/<name>.ini` right after, so the trajectory, the aimbot and the anti-cheat use it. |
+| `/slay` | `<player>` | Kills at once. |
+| `/god`, `/heal`, `/slap`, `/freeze` | `<player> [...]` | Godmode, full health, a slap (optional damage), freeze (again = free). |
+| `/explode` | `<player> [kind]` | Detonates an explosion at the target: `plain`, `big`, `nuke`, `law`, `m79`, `arrows`, `firearrows`, `bullets`, `spas`, `flame`, `cluster`, `nades`, `knives`, `rain`. |
+| `/bigexplode`, `/boom`, `/nuke` | `<player>` | A spectacular big explosion, or a nuke (rings of blasts and rockets from the sky). |
+| `/bring`, `/goto` | `<player>` | Teleports players to you, or you to a player. |
+| `/disarm` | `<player>` | Takes the weapons. |
+| `/give` | `[near] <player> [ammo] <weapon>` | Gives a weapon with that many rounds (`/give all 30 ak`); `near` drops it next to them. A bow outside Rambo is refused (the server bans for it). |
+| `/bonus` | `[near] <player> <kind>` | Gives a bonus at once: `predator`, `berserker`, `vest`, `nades`, `clusters`, `flame`, `medkit` (1-7); `near` drops the kit next to them. |
+| `/statgun`, `/removestatgun` | `[player]`, `[all]` | Places a stationary gun next to you (or a player); removes the nearest one (or all). |
+| `/infammo` | `<player>` | Infinite ammo on/off (a thrown knife comes back). |
+| `/dmgfix`, `/dmgtaken` | `<player> <+n%\|-n%\|n%\|xN\|off>` | Changes the damage the player deals / takes (`/dmgfix 1 +2%`, `/dmgtaken bravo -10%`). |
+| `/vest` | `<player> [0-100]` | Sets body armour. |
+| `/ip`, `/hwid` | `[player]` | A player's address or computer id (yours without a player). |
+| `/acclear` | `<player\|all> [all]` | Forgets the anti-cheat numbers (`all`: all games too); `/acclear all all` forgets everybody and the whole history. |
+| `/banr` | `<id> <time> <reason>` | Timed player ban (e.g. `10m`, `2h`, `7d`, `1mon`, `1y`). |
+| `/banipr`, `/banhwr` | `<time> <IP\|HWID> <reason>` | Manual timed IP or Hardware ID ban. |
+| `/killall`, `/kickall`| *none* | Mass moderation commands (respects admin exemptions). |
+| `/explodeall` | `[kind]` | Explodes every other living player. |
+| `/randomize` | *none* | Shuffles server map list rotation. |
+| `/reloadsettings`, `/be_reload` | *none* | Hot-reloads `settings.ini` and text data files without server restart. |
+| `/be_status` | `[map]` | Displays live engine performance, memory database status, throughput stats and the script errors by place; `map` also compares the library's rays with the server's (a moment of work). |
+| `/be_bench` | `[force]` | Measures the bullet scan, the kit sweep, a property read, the player snapshot and a library call (run on test servers: refused with more than 2 players on unless `force`). |
+| `/be_prof` | `[on\|off\|reset]` | Times every part of the script's tick (and the damage and kill events) while on; `/be_prof` alone shows the runs, the average and longest run and the time each part takes a tick. |
+| `/be_test` | `<slot> <command>` | Emulates player commands for testing. |
+| `/tk` | `<player>` | `[TeamKill]`: a player's record and the last thing he did, with the reasons. |
+| `/tklist` | *none* | `[TeamKill]`: everybody with team kill points; what the library saw of the shots. |
+| `/tkreset` | `<player\|all> [bans]` | `[TeamKill]`: the points (and the bans) go. |
+| `/minelist` | *none* | `[Mines]`: every mine on the map with its owner and place; the library's counts. |
+| `/mineclear` | `<player\|all>` | `[Mines]`: the mines in the ground go. |
+| `/givemines` | `<player\|all\|team> [count] [mines\|claymores]` | `[Mines]`: mines to carry - of one kind, or of both without a kind (two numbers: mines, claymores). |
+| `/comments`, `/notes` | `[all\|read <n>\|del <n>\|clear]` | `[Notes]`: the unread notes, newest first; `all`, one in full, hide one, hide all (the file keeps them). |
+| `/noteban`, `/noteunban`, `/notebanlist` | `<player>`, `<n\|player\|value>`, *none* | `[Notes]`: the notes blacklist - his IP, computer id and Steam id. |
+| `/col`, `/admcol` | `[colour] <text>` | `[AdminChat]`: a coloured line to everybody (`#RRGGBB`, `$RRGGBB`, `RRGGBB` or a name: red, green, blue, yellow, orange ...). |
+| `/colteam`, `/colp` | `<team> [colour] <text>`, `<player> [colour] <text>` | `[AdminChat]`: the same to one team, to one player. |
+| `/announce`, `/ann` | `[colour] <text>` | `[AdminChat]`: in the middle of every screen too. |
+| `/tmute`, `/tunmute`, `/mutelist` | `<player> [time] [reason]`, `<player>`, *none* | `[AntiSpam]`: a timed mute (`30s`, `10m`, `2h`, `1d`), lifted by the script; who is muted. |
+| `/pause`, `/unpause` | *none* | `[Pause]`: as `!p`, `!up` (the script answers them instead of the server: with the countdown). |
+| `/unbanlast` | `[n\|time]` | `[BanJournal]`: the last n bans still in force, or every ban made within a time (`30m`, `2h`, `1d`, `1w`); alone: the server's own. |
+| `/banlist`, `/bans` | `[n]` | `[BanJournal]`: the last bans with the player's name, their time, reason and the time left. |
+| `/unbanname` | `<part of a name>` | `[BanJournal]`: lifts every ban in force of the player with that name (several players match: the list). |
+| `/bansteam`, `/steamban` | `<time\|perm> <player\|Steam id> <reason>` | `[SteamBan]`: bans a Steam account (`30m`, `2h`, `7d`, `1mon`, `1y`, `perm`); a player in the game goes at once. |
+| `/unbansteam` | `<Steam id\|number\|part of a name>` | `[SteamBan]`: lifts a Steam ban (the number of `/steambans`). |
+| `/steambans` | `[n]` | `[SteamBan]`: the Steam bans, the newest first, with the time left. |
+| `/lag`, `/laggers` | *none* | `[LagGuard]`: every player's connection (average ping, highest, spread, warps a minute), the worst first. |
+| `/maplistadd` | `<part of a name> [position\|again]` | `[MapCommands]`: a map of the maps folder into the server's list and `mapslist.txt`. |
+| `/maplistremove` | `<part\|number>` | `[MapCommands]`: a map out of the list. |
+| `/mapfind` | `<part>` | `[MapCommands]`: the maps of the folder that match (`*` = in the list). |
+| `/map` | `<part of a name>` | `[MapCommands]` `MapByPart = 1`: changes to the map a part of its name means (a whole name is the server's own `/map`). |
+| `/warn` | `<player> <reason>` | `[Warn]`: a warning in the middle of his screen; `KickAt` warnings kick. |
+| `/givemoney`, `/takemoney`, `/setmoney` | `<player\|all\|team> <amount>` | `[Shop]`: money added, taken, set. |
+| `/wallet` | `<player>` | `[Shop]`: his money, what he earned and spent, his account. |
+| `/moneyreset` | `<player\|all>` | `[Shop]`: back to the start money (the global accounts too). |
+| `/shoplist`, `/richest` | *none* | `[Shop]`: the richest players in the game. |
+| `/supplydrop` | `[here]` | `[Supply]`: a supply crate by a random spawn point, or under your aim. |
+| `/setclass` | `<player> <class>` | `[Classes]`: his class now (alive: with its loadout and weapons at once), whatever the limits; a class of the other side of `[Insurgents]` only for this life. |
+| `/givevest` | `<player\|all\|team\|bots\|humans> [pattern]` | `[Insurgents]`: a vest for this life (also for a soldier who is no insurgent); without a pattern the one of `[Insurgents] Pattern`. |
+| `/takevest` | `<player\|all\|team\|bots\|humans>` | `[Insurgents]`: no vest for this life. |
+
+---
+
+## Modules & Mechanics
+
+### Health HUD & In-Game Editor
+
+The Health HUD displays real-time vitals using a high-layer BigText element (`Layer = 199`). It smoothly transitions through colors based on remaining life:
+$$\text{Full (Green)} \longrightarrow \text{Half (Yellow)} \longrightarrow \text{Low (Red)}$$
+
+When health falls to or below `LowPercent` (default: 25%), the HUD flashes to alert the player.
+
+**Interactive Visual Editor (`!hp edit`):**
+- **Movement Keys (Left / Right / Jump / Crouch):** Moves HUD pixel by pixel. Holding increases speed.
+- **Reload Key:** Increases font scale.
+- **Change Weapon Key:** Decreases font scale (a tap is one step; the game sends this key as pressed for the whole weapon change, so holding it repeats only after a second).
+- **Grenade Key (E) or `!hp done`:** Saves position and exits.
+- The ammunition's own text (`!ammohud edit`) and the radar (`!radar edit`) use the same editor.
+- **Prone Key (X):** Discards changes and exits.
+
+**The lines on the screen.** A player may have nine lines of the script: the health, the ammunition (`[AmmoHud]`), the flash grenades, the mines, the blood, the money, the class, the battle points and the vest of `[Insurgents]`. The script keeps what his game shows on each line: a line is sent when it changes and again every `[HealthHud] RefreshSeconds`, and every text lives three refreshes - a lost packet, a map change, `/reloadsettings` with another layer or a `/recompile` can never leave an old or a doubled line for longer than that. The lines placed over the ammunition (`HudPlace = ammo`) are stacked from the ones shown now: one line up for each, past the health line and the lines at fixed places, and below the ammunition when the top of the screen is reached; while a line is moved in the editor, the stack moves with it. One or two players are looked at each tick, and a hit, a regeneration step or an ammunition report builds only its own line again.
+
+---
+
+### BF3 Health Regeneration & Suppression
+
+1. **Healing Curve:** After taking damage, regeneration pauses for `DelaySeconds` (5s). Healing starts at `StartRate` (%/s) and accelerates by `Acceleration` (%/s²) until reaching `MaxRate` (50%/s).
+2. **Suppression:** Bullets passing within `Radius` pixels (50px for small arms, 130px for explosives) reset the delay timer by `DelaySeconds` (3s), suppressing health regeneration even if the shot misses.
+3. **Kit Suppression:** Medkits and grenade crates can be stripped from `.pms` maps automatically on map load (`Medkits = 1`, `GrenadeKits = 1`), preserving tactical reliance on regeneration.
+
+---
+
+### Limited Ammunition & Looting
+
+Soldat keeps the magazine in the player's game: the game fires and reloads there and tells the server its count about every 7 ticks. In between, the server simulates the soldier and can show counts the player never had (an empty magazine full for a moment, a shot that was not fired, 0 right after a script set a partial magazine - the 2.8.2 server takes that number for the magazine size). So the library believes a new count only after it has held for 8 ticks, and works everything out from those counts:
+
+- **Shots** are the count going down; a reload is the count coming back from 0. A magazine emptied at once (the reload key with rounds left) is an early reload: those rounds are not lost.
+- **Reserve:** each weapon comes with the reserve of `[Ammo]` (in rounds, besides the magazine it comes with). With `MagazineMode = 1` it comes in full magazines of the weapon's size (`weapons.ini`), rounded to whole ones (160 rounds of an AK-74 with 35-round magazines: 5 magazines, never a short last one): a reload takes the fullest spare magazine (or the one chosen with `!mag <n>`) and puts the one taken out back into the pouch. With `MagazineMode = 0`, or for the Spas-12 (shell by shell), single-round weapons (M79, LAW, bows) and the chainsaw, it is one pool of rounds. When a reload loads more than there is, the script sets the magazine to what is left (the player's game takes a partial magazine; a bot's weapon only reloads full, so bots only lose the weapon at the end).
+- **Empty:** with `EmptyDrop = 1` a weapon with nothing left to load is taken away as soon as its magazine is empty (the secondary stays), also an empty one picked up; with 0 it stays empty (see `EmptyDrop = 0` below).
+- **Chainsaw:** its reserve is fuel: 1 every `ChainsawIdleDrainTicks` while in the hands, `ChainsawAttackDrain` more every `ChainsawDrainTicks` while sawing. The fuel is in the saw's tank: a saw thrown away and picked up again keeps it; an empty tank takes the saw away also with `EmptyDrop = 0` (the game cannot keep a saw at 0).
+- **Weapons on the ground** (`TrackGroundWeapons = 1`): each one is followed by its map object, so a weapon picked up is told apart from one chosen in the menu (both come into empty hands; the first weapon of a life, a weapon the script gives, and an object that vanished after its 20 s on the ground - the game took it away - are never taken for a pickup). A weapon thrown away keeps only the rounds in it; the spare magazines stay with the soldier and end with his life (thrown away, a team change, then picked up again: only the rounds in it). A dead soldier's magazines lie with his weapon and go to the one who picks it up (when that player has none for it, or always with `PickupFullSet = 1`); a team change or leaving the game leaves the weapon in the hands the same way. The hook in the server's `CreateThing` reports the map object the game makes for every weapon a soldier drops (thrown away, with his body, at a team change, when he leaves), so each record gets its own object at once; without the hook the nearest object of its kind nobody claimed is taken. **Looting** (`[Looting]`): crouching or lying still over such a weapon of the kind in the hands takes a spare magazine after `LootSeconds` (loose rounds only: a magazine of them while his own are full), and with a full pouch tops up the partial magazines after `RepackSeconds`. `DeadMagazines` decides where a dead soldier's spare magazines stay: `weapon` (with his weapon, as above), `body` (with his body, looted where the body lies - the game still moves it - while the weapon brings only the rounds in it; gone when he lives again) or `auto` (`body` in survival mode, where the dead stay down until the round ends, `weapon` otherwise); a team change or leaving the game always leaves them with the weapon. The Looting and Repacking texts are centred over the soldier (`TextScale`, `TextOffsetX`, `TextOffsetY` for a soldier standing; crouching or lying the text goes down with his head). A soldier carries at most the spare magazines a fresh weapon comes with plus `[Ammo] ExtraMagazines` (1; 0 = not more, -1 = up to 12): looting stops there, and a dead soldier's weapon picked up brings no more - so a full pouch right after a respawn takes one magazine, not every one lying around.
+- **Shots:** a shot and a reload can happen in the same tick (holding the reload key while firing); the count never shows that shot. The library hooks the server's `CreateBullet` (`[Debug] ServerHooks = 1`): every bullet is reported the moment the server makes it - from the packets of the human players and from the server's own fire (bots) - and a bullet made by a script (`Map.CreateBullet`, the aimbot's extras) is told apart by where the call comes from. So the magazine taken out of such a reload has the round less. A shot from a magazine believed empty proves a reload the reports never showed (the reload key and the fire key held together: the magazine is loaded, fired and taken out again between two reports, so every report says 0): that magazine is taken from the pouch then, and every such reload costs its round. The lowest count reported before the reload counts too: a late report of an older, higher count never brings rounds back.
+- **A weapon put away:** a reload the game finished but the reports have not shown yet is paid for when the weapon leaves the hands (Q right after a reload, a throw), and a weapon swapped back comes with the rounds it went away with - Q after each reload gives no free magazines.
+- **Options:** `ReloadOneRound` - a reload with one round left keeps that magazine (1) or loses the round (0); `InterruptedReload` - a reload cut short by a weapon change, a throw, a team change or death gives the magazine taken out back into the pouch (1) or loses it (0); `SortMagazines` - the pouch is always kept sorted, the fullest first (1), or in the order the magazines came until a `!repack` (0).
+- **`!repack`** (and `!mag`, which wait a moment while the weapon in the hands changes): after `RepackStartSeconds` without shooting it fills one partial magazine every `RepackSecondsPerMagazine` from the loose rounds and the emptiest magazines (an emptied one is gone), until at most one is partly empty; a shot, a reload or another weapon stops it.
+- **Survival carry-over** (`SurvivalCarry = 1`): a player alive when a survival round ends keeps his ammunition for the next round - the magazines of every weapon he used (the one in his gun goes back into its pouch; the next round's gun is loaded with his fullest one), his bandage and first-aid kits (`[Bleeding]`) and the Javelins he fired (`[ExtraRocket]`); a death in the round takes it all. The round's end is told apart from a death by the server's own blow at the end of the round (4000 damage with no bullet to everybody still alive), and confirmed once nobody is left alive. `SurvivalLock = 1`: a weapon he has no rounds left for is locked in his weapon menu until he dies or the map changes (taken from his hands when he has it anyway) - with or without the game's Advance mode.
+- **`EmptyDrop = 0`:** a player's empty weapon stays in the hands and its magazine is set to 0 again before the game's reload could fill it, so no round slips through - also an empty weapon picked up with nothing to load for it, which is set to 0 at once; a bot's empty weapon is taken away in both modes (the server reloads a bot's weapon at once and full).
+- **The ammunition on the screen:** `HudAppend = 1` adds it to the health line ("Ammo: 30 [35, 35, 29]", "[empty]" - `HudNoSpareText` - with no spare magazine left; the chainsaw's fuel in ml, from 1 l up in litres); `HudAppend = 2` gives it its own text (`[AmmoHud]`: layer, place, size, colours by what is left of a full load, and NoAmmoText blinking with nothing left or right after the weapon was taken away); the players move it with `!ammohud`. The magazine shown is the count believed less the shots the hook saw after it, so it drops with every shot at once, and it shows 0 while the player's game reloads (the count went to 0 with the reload key held).
+- A refill (a bounty, a crate, the shop's `Ammo`, the Support's resupply) only adds: a fuller pouch keeps what it has, and a class's spare magazines (`mags N`) count in the full set.
+- With `[General] MemoryReads` every soldier's weapon, rounds and keys come from the server's records in one library call a tick (see [Why It Keeps the Server Fast](#why-it-keeps-the-server-fast)); the rest is the same.
+- The aimbot takes its rounds from the same magazine; `/infammo` counts nothing. `/be_status` shows the reloads, the magazines set, the weapons taken, the shots seen and the repacks.
+
+---
+
+### Damage Numbers & Hit Flash
+
+- **Floating Indicators:** When inflicting damage, WorldText numbers float above the victim, visible exclusively to the attacker.
+- **Modes:**
+  - `sum`: Accumulates consecutive hits into a growing number.
+  - `column`: Displays up to 5 individual hits stacked vertically.
+  - `hit`: Renders an independent number per impact.
+- **Line-of-Sight Protection:** In Realistic Mode, damage numbers are suppressed if the target is behind cover or outside visibility, preventing players from locating enemies through fog-of-war.
+- **Hit Flash (`[HitFlash]`, off by default):** a red flash over the whole screen of the hit player - the ring of a giant letter O lying over the edges of the screen, as in the owner's battlefield.pas. It lasts `TicksPerPercent` ticks per percent of `ReferenceHealth` he lost (at least `MinTicks`, at most `MaxTicks`: 24-80 ticks by default, so a scratch only blinks and a Barrett hit lasts more than a second) and fades out by itself. `ReferenceHealth = 65` makes a hit flash as long in the normal mode (150 health) as in the realistic one; 0 counts in percent of the mode's own health. The game draws a big text that has less than 77 ticks left the fainter the less is left (3 x ticks + 25 of 255), so the length is also the strength of the flash: a flash shorter than about 20 ticks is hardly seen.
+
+---
+
+### Tactical Radar & Overlays
+
+Designed for administrative spectating, competitive tournaments, or public tactical servers:
+
+| Mode | Visual Representation | Target Audience |
+| :--- | :--- | :--- |
+| `list` | Static on-screen text panel with direction, health and the distance in meters (`{m}`, pixels / 14 like the kill screen) | Admins / Public |
+| `circle` | Circular mini-map HUD showing relative angles and ranges | Admins / Public |
+| `labels` | Name and health tags centred over the soldiers (health coloured) | Steam Admins |
+| `ring` | A dot on a ring around your soldier for each nearby player; the dot's size tells the distance, `F` a flag carrier; colours by team, distance or health | Steam Admins |
+
+Every mark is centred exactly with the metrics of the game font. The ring is drawn where your soldier will be when the texts reach you (your ping and speed). `!radar team off` hides the team mates; every mode keeps its own position, size, zoom and update rate. The letters of the ring keep one size (`RingLetterScale`) however close the player is.
+
+**Radar editor (`!radar edit`):** the movement keys move the list or the circle (a tap = 1 pixel), reload / change weapon resize it in fine steps; the labels (their letters) and the ring (its dots) are resized the same way.
+
+**A smooth circle:** with `CircleMovePixels = 0` a mark is sent every time it moves a screen pixel. A bigger circle (`!radar size`) moves its marks in finer steps; `!radar marks <n>` keeps the marks small in it and `!radar edge <n>` (`CircleEdgeScale`, for example 1.2 = 20% bigger) sizes the ring's dots and the players beyond reach. The soldier is not pulled back every tick while a key is held (that would flood the server with position updates), and the marks keep their size while you resize, so the game does not have to build new letter sets.
+
+**Who gets which mode (`[Radar]`):** full users are the Steam ids of `SteamIds` (and the admins with `AdminsFull = 1`); with `Public = 1` everybody else gets `PublicModes` too. Each group has its start mode (`Mode` / `PublicMode`), on or off at the start, filter (`Show` / `PublicShow`, the public may not choose to see more; `PublicMaxZoom` caps how far a public radar reaches, its size counted in) and the fastest update (`FullMinTicks` / `PublicMinTicks`). For example a circle for everybody showing only the enemies the team can see, and every mode with everybody for the admins. Each mode may have its own reach (`ListRange`, `LabelsRange`, `CircleRange`, `RingRange`).
+
+**Flags and the map:** a dropped flag (out of its base, not carried) is a line of the list, a mark on the circle and the ring, a label over it; a carried flag is not drawn again over its carrier, whose own mark says `F`. `!radar outline on` casts `OutlineDots` rays from you in every direction and puts a dot in the circle where each one meets a wall - the shape of the room or cave you are in (made again only when you moved).
+
+**Vision Filtering:**
+- `all`: everybody within reach.
+- `seen`: only the enemies on the screen of you or a living team mate (the part of the map the game shows around the camera); in realistic mode, where the walls hide the players, only those in the line of sight (ray casts).
+- `seenall`: the same, with the dead team mates too.
+- `seenreal`, `seenallreal`: always the line of sight (ray casts through the walls), also outside realistic mode.
+
+The line of sight is the game's own rule (`CheckSpriteLineOfSightVisibility`): in front of the aim, up to 1000 px, and no wall between the viewer's upper body (2 px higher) and the other's. With `SkeletonSight = 1` those upper bodies are skeleton point 7 as the server has it (read through the memory bridge), so a crouching, lying or rolling soldier is where the game sees him; the realistic fog of war of the damage numbers and the flash marks (`[FlashNades] LabelLineOfSight`, from the viewer's neck like the game's grenades) use it too. `SkeletonSight = 0` goes back to fixed heights over the feet.
+
+---
+
+### Admin Tools: Teleport, Trajectory, Aimbot, Explosions
+
+- **Teleport (`[Teleport]`):** the key is read every tick. `/tele` jumps to the cursor and stops. `/teletomouse`: a tap jumps and keeps the speed towards the cursor; holding the key longer than `HoldTicks` flies where the cursor points - move the mouse to the other side and you turn round - with jumps towards it at most every `HopTicks` (and not before your ping has passed). The game's camera lags behind after every jump, so for a moment the cursor seems to be behind you; the controller leaves that out. With `inherit` the speed grows the longer you hold (`InheritAccel` per second, `InheritGain` per jump, at most `InheritMax`). `/flytomouse` flies smoothly: the speed grows with the distance beyond `FlyDeadZone` (8 px) up to `FlyMax`. The game keeps a soldier's speed at 11 px a tick on each axis (15.5 diagonally), so by default (`FlyMax` = `FlyVelocityMax` = 15.5) it flies at that limit without any jumps; `FlyHops = 1` makes up what a higher `FlyMax` (up to 60) asks with short jumps along the way (`FlyHopTicks`, `FlyHopMaxPixels`) - faster, but the soldier visibly jumps. With the cursor on the soldier you hover. Jumps never end in a wall (`NotIntoWalls`).
+- **Trajectory (`[Trajectory]`):** `/trajectory [player]` shows the flight of the bullets of the weapon in hand (speed, gravity and the speed of the soldier taken from the server's `weapons.ini`), from the gun's real muzzle (standing, crouching or prone), with ray casts against the map; the dot where the bullets hit is green. It is worked out again only when the position, speed, cursor, weapon or stance changed, and only the part the player can see is drawn (the screen around the camera, which the game keeps between the soldier and the cursor - further out with a Barrett zoom). Soldat sends the cursor to the server only after the mouse moved about 30 pixels, so a far M79 shot can land a little off the drawn path. When the watched player fires a Barrett while crouching or prone (the game's camera then follows the bullet), the dots are drawn ahead of the flying bullet and disappear behind it. `/trajectory <player> cursor` shows only that player's cursor. Who sees it: `/trajectory <player> [cursor] me|self|selfme|public` - only you (the default; the watched player never knows), only that player (his own dots), both of you, or everybody.
+- **Aimbot (`[Aimbot]`):** while the key (crouch) is held, the weapon in hand fires at the enemy nearest to the line of the cursor, only at enemies within a circle around the cursor (`radius`, never jumping to somebody far away; `/aimbot radius edit` draws the circle for you until you save it), or at the nearest one. The shot leads a moving target, keeps the fire rate, start-up and reload of the weapon, takes a round of its real magazine (the game reloads it; `/infammo` or `InfiniteAmmo` = no), a thrown knife leaves the hand with the game's throw sound, and a Spas-12 or Minigun shot pushes the shooter back as in the game (`Recoil`). `/aimbot acc <0-100>` adds that share of the weapon's own inaccuracy (standing, crouching, prone, running and jumping as in the game). After a kill it fires a few more shots (`ExtraShots`, a random number in a range; `ExtraShotsMode`: at the last aim point, at the body, with a gently growing spread, or both), so it does not stop at once - not while another enemy is within range, not into a wall, and not for a target that is only out of sight. The gun is held only while there is somebody to shoot at, so a Minigun or Barrett winds up (with its sound) right before its first shot, not when the key is pressed. The key is `Key` (crouch, jet, prone, fire or flagthrow - a safe key when nobody carries a flag) and `FlagKey` while the player carries a flag. While you fire yourself it waits, so the magazine count of the server and of your game stay the same. The LAW fires as in the game (on the ground, crouching or prone) unless `/aimbot law ground|anywhere`. Colliders (the red circles that stop bullets) block the aim like walls (`Colliders`). With `Key = fire` the weapon's own bullets do no damage while the aimbot is on. The server does not let a script turn a player's cursor or press keys for a human (only for bots), so the soldier's arm does not follow the target.
+- **Speed, chat, weapons (`[Admin]`):** `/speed <player> [factor] [all|ground|jump]` pushes running and jets up to that factor (`ground`: only running on the ground; `jump`: the ground and the jump off it, `SpeedJumpShare` of the boost, nothing in the air); `/sayas` and `/sayteam` write a chat or team chat line as another player in the game's own format and colours; after the server's `/loadwep <name>` the library reads `configs/<name>.ini` too.
+- **Explosions (`[Admin]`):** `/explode <player> [kind]`, `/bigexplode`, `/nuke`. The patterns are built in the library and spawned over several ticks (at most 48 bullets a tick, and never into the last 32 free bullet slots of the game). `ExplodePower` scales the damage.
+
+---
+
+### Anti-Cheat Statistics
+
+Numbers worked out in the library from what the server sees (`[AntiCheat]`). By default every player may look them up (`/suspects`, `/acstats`, `/acreview`, with `/` or `!`), so anybody can check a suspect; `/acclear` is for admins.
+
+| Measure | How |
+| :--- | :--- |
+| Start-up | The time from the fire key (it reaches the server with the movement packets) to the Barrett / LAW bullet. The Barrett needs 19 ticks; a cheat without start-up fires at once. A lost packet can make one honest shot look short, so the share matters. |
+| Fire rate | A series of at least five hits of a weapon with a long interval (Barrett, Ruger...; not the shotguns) whose middle gap is shorter than `FireIntervalShare` of it - one pair of close hits (a late packet, the Desert Eagles' two bullets) proves nothing; hits within 2 ticks are one shot, 10 s without a hit starts a new series. |
+| Ammo | The magazine emptied faster than the fire interval allows - only when the server's hook saw that many shots too (the server's own refill of an empty magazine and late reports are no shots; never for the shotguns) - or full again sooner than the reload time (weapons given by the script and picked up are left out). |
+| Teleports | A living player who moved further than 11 px a tick on each axis allows between two looks (with lag allowance); moves by the script are left out. |
+| Speed | More than `SpeedPixels` a tick on average over a second. |
+| Hits under bink | Barrett hits fired soon after the shooter was hit while holding it (the game spreads those bullets widely). |
+| Hits while moving | Hits by weapons with movement inaccuracy fired while running, jumping or flying. |
+
+Head hits are not counted: in Soldat they are easy to get just by being above a player. The fire time of every hit is worked out from the bullet's position and speed, so only hits are seen (the server tells nothing about misses). `/suspects` lists the suspicious players of this game (`all`: everybody) with one short line each and the suspicion over all games of that computer (`Kruger (3): 45% - start-up 3/5 too fast, teleports 2 (310 px)  | 20% in 7 games`), `/acstats <player>` a coloured table - every check in this game next to all games of that computer (kept in `players.bdb` by the hardware id, so players without Steam too) - and `/acreview <player>` the last things noticed with how long ago. `/acclear all all` forgets everybody and the whole history. Findings go to `data/anticheat.log` with ping, computer id and address, and admins in the game are told once a player's suspicion reaches `TellFromScore`. With `VoteKick = 1` a vote to kick starts (with the reason and a line to everybody) when the suspicion reaches `VoteFromScore` with at least `VoteMinFindings` findings - never over another vote and never for an admin; nobody is kicked by the script itself.
+
+---
+
+### Command Permissions
+
+`[Permissions]` in `settings.ini` sets who may use a command and how it is typed: `<command> = <who> [<how>]` with who = `all`, `admins`, `console` or `off`, and how = `/`, `!` or `both`. For example `aimbot = admins both` also allows `!aim` in the chat, `trajectory = console` keeps it to the server console, `ratio = off` frees its words. By default `suspects`, `acstats` and `acreview` are for everybody with `/` and `!`. The names of all commands are listed in the file; `Example configs/` shows complete sets.
+
+---
+
+### Map Geometry in the Library
+
+At every map change the library reads `maps/<map>.pms` (`[MapGeometry] MapFolder`) and casts rays exactly like the server (sectors, polygon types, team polygons), only faster: it skips polygons already tested and those whose bounding box the ray misses. The radar's `seen` filter, the trajectory, the aimbot's line of sight, the realistic fog of war of the damage numbers and the teleport's wall check use it; when the map cannot be read, the script casts the rays with `Map.RayCast` itself. `/be_status` shows the polygon count and compares rays between the players with the server's own.
+
+---
+
+### Steam ID Admin Rights & Moderation
+
+- **Spoof-Proof Identity:** Unlike IP- or HWID-based admin lists, Steam accounts are verified cryptographically via `OnSteamAuth`.
+- **Automatic Assignment:** Verified Steam IDs listed in `[Admin] Steam-1`, `Steam-2` ... of `settings.ini` receive admin privileges immediately upon join (`/steamadmin add|del` writes those lines).
+- **Clean Leave Cleanup:** Temporary IP permissions granted through Soldat's `remote.txt` are revoked automatically upon disconnect, keeping your server secure.
+
+---
+
+### Combat Extras & Class Mechanics
+
+- **Assists (`[Assists]`):** Players dealing $\ge 65\%$ damage to an enemy who is subsequently killed receive assist credit and bonus points.
+- **MultiKill Combos (`[MultiKill]`):** Streak banners (`Triple kill!`, `Godlike!`) for multi-kills achieved within a 3-second window.
+- **Martyrdom (`[Posthumous]`):** Dying players have a skill-scaled chance to drop a live grenade upon death.
+- **Medic Mechanic (`[Medic]`):** Allows players to act as field medics, radiating area-of-effect healing to nearby teammates. With `[Classes]` on and a class that heals, the classes are the medics and this module steps aside (`!medic` points to `!classes`).
+- **TimeToKill (`[TimeToKill]`):** Prevents infinite standoffs in Survival mode by triggering an end-of-round sudden death countdown when few players remain (only in survival rounds).
+- **First Blood, Savior, Self Kill (`[FirstBlood]`, `[Savior]`, `[SelfKill]`):** the map's first kill is told to everybody and brings kill points; killing an enemy who hit a team mate within `WindowSeconds` saves the mate (kill points, team modes); a suicide (not the server's own kills) costs kill points.
+- **Kill Info (`[KillInfo]`):** one line to the killed player - who killed him with what, the killer's health left, the damage he did to the killer in that life, and the distance and the time in the air of the killing shot as the game shows them (switch it off where ZitroStats shows its own death summary).
+
+---
+
+### Flash Grenades & Guided Rockets
+
+Two more of the owner's older scripts, off until switched on (`Enabled = 1`).
+
+**Flash grenades (`[FlashNades]`).** Every life brings `Nades` grenades and `Flashes` flash grenades. A player chooses what his next grenade is and the grenade he throws becomes that one: the hook in the server's `CreateBullet` reports every throw the moment the server makes the grenade (without the hook the bullet table is looked through). How the type is switched comes from the settings, and the texts (`!flashhelp`, the join message with its `{switch}` token) say exactly that:
+- `SwitchKey` (crouch + change weapon): a new press switches to the other type;
+- `!f` / `/f` (also `!fla`, `!flash`, `!cc2`, `/tabac`): flash on/off - typed again it is a normal grenade again;
+- `!n` / `/n` (also `!nade`, `!cc1`, `/smoke`): a normal grenade; `!set` / `!change`: the other type.
+- With `[Classes]` on, `cc1` / `smoke` and `cc2` / `tabac` are the skills' (`!skill`, `!skill2`); where the classes are idle they switch the grenade type as above.
+
+While this is on the server's `Max_Grenades` is 1: a soldier carries one grenade, and the script gives him the next one right after it was thrown, as long as he has any left (the server's own value comes back when the feature is switched off or the script stops). A grenade kit gives `KitNades` and `KitFlashes`; because a soldier always holds one grenade, the script hands a kit's grenades to anybody who touches it and misses some, and the kit comes back at another grenade kit spawn point, as the game does.
+
+A flash is taken out of the server just before it goes off (`Defuse`, the bullet memory bridge): when its fuse ends, or a tick before it would touch a soldier or one of the map's colliders (the game makes a frag grenade burst on those; its thrower counts once the fuse is under 130, as in the game). The server then has no blast - no damage and no push of its own - while the players' games still show the explosion, and the flash does its work from the script:
+- everybody who sees it (no wall between it and his eyes - the middle of his head as the server's own skeleton has it, read through the memory bridge, so it follows standing, crouching, lying, rolling and the aim) within `Radius` (260 = 18.6 m, measured to his eyes) gets a white screen for `MinTicks` to `MaxTicks` - `MaxTicks` next to it, `MinTicks` (60: a second, already fading, so far away it is short and soft) at the edge; `Falloff = 3` keeps it long further out (at half the distance still 7/8 of the way to `MaxTicks`), `1` makes it drop evenly - which the game fades out over its last 1.3 seconds: a giant letter as a WorldText around him (`Method = 2`, any screen size) or a BigText (`Method = 1`); `Affects` decides whether the team mates and the thrower are blinded too, `BehindShare` shortens it for a player turned away;
+- a human's own game pushes him with its explosion: those within `NoPushRadius` are held where they stood for `NoPushTicks` (`NoPush`) and then get their speed back;
+- `MaxDamage` (0 by default) adds the flash's own damage from the script: less further out, nothing beyond `DamageRadius` or through a wall.
+
+A bot's grenade thrown at point blank goes off before the script sees it: then the flash's damage replaces the grenade's (`OnDamage`) and `NoPush` holds everybody. A bot cannot see texts: `BlindBots = 1` stops it for most of that time, `BlindBots = 2` makes it stagger about without shooting. A bot chooses no type: `BotFlashChance` of its grenades are flashes while it has any.
+
+A flash in the air carries a mark: `LabelFlash = O` draws a ring (`MarkScale` 0.06: about 8.5 x 7 px, the colour `LabelFlashColor`) with its ink centred on the grenade's picture - the game draws the grenade about 2 px above its position (`MarkOffsetX`, `MarkOffsetY`) - moved every tick while it flies and every pixel while it rolls (`LabelTicks`); the thrower's game has his grenade about his ping earlier than the server, so his own mark goes that far ahead while it flies (not while it lies or rolls). Every game moves its grenades itself, so after bounces a grenade can lie a pixel or two away from the server's and its mark. A longer word stands over the grenade instead, and normal grenades have none (`LabelNade` empty). The marks are seen by the thrower, his team or everybody (`LabelsSeenBy`; in the realistic mode an enemy only when he could see the grenade). The type and the grenades left are on the screen (`Hud`, `HudText`) - right over the player's own ammunition text, where and as big as he placed it with `!ammohud` (`HudPlace = ammo`; `fixed` = `HudX`, `HudY`) - and a new player is told how to switch in the chat (`JoinText`; `JoinBigText`, empty by default, would show it big too).
+
+**Guided rockets (`[ExtraRocket]`, a Javelin).** A player holding a loaded LAW on the ground keeps `Keys` down (crouch + reload; lying, reload alone - crouch would get him up). The sight looks for an enemy he can see within `Range`, near his cursor (`Target = radius`: within `CursorRadius` of it, the seeker's brackets `SeekWidth` pixels wide around the cursor; `cursor` and `nearest` are the other modes), and once it has one, brackets close on him for `LockSeconds` while the lock tone (`LockSound`, on with `ShooterBeep`) beeps quicker and quicker - the cursor is free then; letting go, the enemy lost from sight or a flash blinding the shooter ends it (a blinded player can lock again `BlindLockSeconds` before his white screen ends). The rocket leaves from the loaded LAW, which is empty then and reloads; its round comes back at the reload (`Launcher = reload`: with `[Ammo]` the reserve stays; `round` = the round goes into the rocket, `free` = the LAW is not touched). The count stands next to the ammunition while the LAW is in the hands - `(1/2 Javelin)`, `(Empty Javelin)` (`HudText`, `HudEmptyText`, `Name`). The one it locks on is warned (`LockWarning`): he sees the sight closing on himself, `LockWarnText` over his head and hears `WarnSound` (on with `TargetBeep`), quicker and quicker, and while the rocket flies at him `IncomingText` blinks there. The rocket's own sounds (`Sound`) and the two tones are switched separately. `!rocket` explains it all with the numbers of the settings.
+
+The flight is worked out in the library (`source_dll/be_rocket.pas`), a tick at a time, like a real guided missile:
+- the rocket leaves the tube slowly (`EjectSpeed`, falling a little) and its motor starts `EjectSeconds` later, with a burst of flames and the LAW's roar; the motor's hiss follows it;
+- the motor pushes along its heading (`Thrust`) against a drag that grows with the square of the speed, so it tops out at `MaxSpeed`; gravity pulls it down, the motor holds it while it burns;
+- its fins turn it with at most `Agility` of sideways push: the turn rate is `Agility / speed`, so a slow rocket turns tight and a fast one wide, and a turn costs speed (`TurnDrag`);
+- proportional navigation (`Lead`) flies it ahead of a running target, with a share of pure pursuit;
+- it looks `LookAheadSeconds` of flight ahead: a wall there makes it turn to the freer side and throttle back by up to `Brake` to turn tighter - coming too fast it still hits the wall; with the target in sight and near it goes straight at him;
+- with room above (`Profile = auto`: the target 300 px away or more, not well above, the whole arc free of walls) it flies a Javelin's top attack: an arc up to `TopHeight`, flown no faster than its tightest bend allows, and down on him steeply;
+- when the fuel ends (`FuelSeconds`) it glides on for `GlideSeconds` with weaker fins, falling, and bursts.
+
+It bursts at the target (within `HitRadius` of its path), next to another enemy on its way (`ProximityFuse`), at a wall or a collider, or at the end of its glide (there it goes on as a real LAW rocket and bursts where it lands). The blast is a column of real LAW rockets with the LAW's own damage (weapons.ini), along the line from the launch; the bullet memory bridge writes the LAW into them and where and when the Javelin left the tube (the bullet's `Initial` and `StartUpTime`, found once in the server's bullet record). So a kill shows the LAW's picture in the kill list, and "You killed" at the bottom of the screen shows the whole distance and the time in the air from the launch (the server works both out from those two fields when a player dies). ZitroStats counts it as a LAW kill, but without a distance: it measures from where it saw the shot, and the LAW emptied while the reload key is down looks to it like a reload of the one round. With `BlastSparks` the old script's rings of stationary gun bullets fly out of it (about 30 m, they can hit anybody on the way, the shooter too). `HitPercent` (0 by default) takes that share of his health first, never the last point. The trail is a harmless flame every `TrailSpacing` pixels. `source_dll/tests/test_rocket.pas` flies rockets on a real map without the server (`test.bat` runs it on ctf_Ash): on seven maps a standing target was hit every time, one running along the floor 85-97 % of the time - the misses are the ones where he ran behind cover.
+
+**Knives (`[Ammo] CombatKnife`).** The hook reports a thrown knife too: with `CombatKnife` spare knives (0 by default: a thrown knife is gone, as in the game) a thrown one is replaced from them after the throw (into empty hands; who picked up a gun meanwhile keeps his spare knife), and with `/infammo` it comes back at once. The ammunition text shows the knife in the hand and the spare ones.
+
+Compared with the old scripts: the old ExtraRocket flew its rocket in a loop with `Sleep` and stopped the whole server for about half a second per rocket - here nothing waits. The old FlashNades looked through all 254 bullet slots and sent every player a BigText every tick; here the hook reports the throws, the text is sent when it changes, and the marks over the grenades are moved every `LabelTicks` only while they move. `/be_prof` shows both parts of the tick (`flash grenades`, `guided rockets`) and `/be_status` their counters.
+
+
+### Team Kill Guard
+
+**`[TeamKill]` (off by default)** is the owner's old tk script grown up. It works in the modes of `Modes` (the team modes), only while the server's friendly fire is on (nobody can hurt his team without it) and, with `RealisticOnly = 1`, only in realistic mode; it notices a change of those by itself within five seconds.
+
+**How meant was it?** The library follows the line of every shot the hook in `CreateBullet` sees (`[Debug] ServerHooks = 1`), in the script's next tick, against the soldiers' body points as the server has them (the skeletons read through the memory bridge) and the map's walls:
+
+- the first soldier on its line is a team mate and no enemy is within `EnemyRadius` of the line: a shot **aimed at him**;
+- the same with an enemy near the line or behind the mate: **crossfire**;
+- the first one on the line is an enemy, or nobody: an ordinary shot.
+
+A hit on a team mate then gets its intent from the shooter's last shots: aimed at him 90-100 %, crossfire 20 %, a mate who ran into the fire (no shot of his went at him) 20 %; a grenade or M79 blast with an enemy within `BlastEnemyRadius` of the mate 10 %, with no enemy near 60 %; a knife or fists 100 %. Not judged at all: the blasts of mines and claymores, the shells and rounds of a class's skills (mortar, barrage, gunship, C4), a vest of `[Insurgents]`, a grenade or rounds still flying after his death (4 s), and the kill bullet of `[Bleeding]` / `[Downed]`.
+
+**Points.** A whole health of damage to the team gives `DamagePoints`, a team kill `KillPoints`, both times the intent - so a grenade that also caught a mate next to the enemies costs a tenth of an aimed kill. A team kill right after the mate's respawn (`SpawnSeconds`) counts `SpawnFactor` times, of a flag carrier `FlagFactor` times, and killing back the one who team killed you (`RevengeSeconds`) counts `RevengeFactor` (0: free). A point melts away every `DecayMinutes` (0 = never), starting `DecayAfterSeconds` after his last points, and with `DecayOffline` between his visits too (by the clock, so a ban melts points as well). With `KeepPoints` the points, bans and team kills follow the player by his Steam id (players.bdb), so leaving and coming back changes nothing; `ResetOnMapChange = 1` starts every map clean, as the old script did.
+
+**The ladder.** When his points reach a step it is taken once (a step at 0 is off): `WarnAt` a warning, `ShieldAt` his fire at the team is blocked - his hits on team mates do `ShieldShare` of their damage (0) and `MirrorShare` of it hits him instead, for `ShieldSeconds` and all the time his points stay at `ShieldAt` - `SlayAt` he is slain (dead in survival: after his next respawn), `KickAt` kicked, `BanAt` banned for `BanMinutes`, twice as long every next time (`BanDouble`, at most `BanMaxMinutes`); every `BanForgetDays` days without a ban the count of his bans goes one down, so the next ban is shorter again (`!tk` shows how long it would be). Bots are left alone unless `Bots = 1`, and never banned.
+
+**Spray.** `SprayShots` shots aimed at the same mate within `SpraySeconds`, at least `SprayShare` of all his shots then and none of them crossfire: his fire at the team is blocked at once, before the mate dies, `SprayPoints` are added, he and the mate are told. A player who keeps spraying while blocked gets the points again every `SpraySeconds` and climbs the ladder to the slay, the kick and the ban, although his bullets do nothing to his team any more.
+
+**The victim decides** (the old script's menu, within `VoteSeconds`): `!1` forgives - the kill's points and the damage he did to you in that life go away, and the block ends unless his points still say otherwise; `!2` kills him now (dead in survival: after his next respawn) and gives `PunishPoints`; `!3` gives only `PunishPoints`; `!4` in survival kills him after his next respawn. The old `/tk 1-4` works as `!tk 1-4`.
+
+**Commands.** `!tk` (`!banpoints`) shows a player his record; an admin's `/tk <player>` someone else's with the last thing he did and why (`killed Kruger (sprayed at him, 8 of 9 shots at him)`); `/tklist` everybody with points and the library's counts; `/tkreset <player|all> [bans]` clears them. Every team kill, spray, step and decision goes to `Log` in the data folder (`teamkill.log`) with the reasons, and `/be_status` has a line of counts. `source_dll/tests/test_tk.pas` checks the shot classes, intents and spray events without the server (in `test.bat`).
+
+
+### Mines & Claymores
+
+**`[Mines]` (off by default)** is the owner's old Mines script grown up, with a second kind: the claymore. Each kind is switched on and off on its own (`Landmines`, `Claymores`); the module works in the modes of `Modes`.
+
+**Earning.** Every `KillsPerMine` enemy kills give a landmine and every `KillsPerClaymore` a claymore (`KillStreak = 1`: only the kills of one life count; `MineKills`: whether kills by mines count too), a capture gives `CaptureMines` and `CaptureClaymores`, and every life starts with `SpawnMines` and `SpawnClaymores` at least. A player carries at most `MaxMines` and `MaxClaymores`, until the map ends (`KeepOnMapChange`); a line over his ammunition shows what he carries.
+
+**Planting.** `!mine` (`/mine`) or the game's throw of the flag - jump and crouch together, which does nothing without a flag - plants a landmine at his feet; `!claymore` (`!clay`) or the same keys lying down plant a claymore that looks where he aims (tilted at most `MaxTilt` from level). Only on the ground, `FlagDistance` from his flag and `SpawnDistance` from the enemies' spawn points (with a wall between they do not count: nobody of them comes that way) and `Spacing` from another mine; at most `MaxPlanted` and `MaxPlantedClaymores` of a player and `MaxOnMap` on the map. A mine is armed after `ArmSeconds`: its owner sees "Armed in 2s" over it and then "Armed" (`PlantText`, `ArmedText`; WorldText on `PlantLayer`) and hears it; `LifeSeconds` may end it (`ExpireBlast`: with a blast, as the old script did). A player's mines go when he leaves or changes team.
+
+**The landmine** lies hidden: only its owner and his team see its mark (`MineSeenBy`). It goes off under the first enemy whose leg or body comes within `TriggerRadius` of it sideways and at most `TriggerHeight` above it - jumping or jetting over one you know about is safe, crawling over it is not. The blast: `Blasts` M79 explosions - the first one right into the soldier who stepped on it, so it goes off on any floor (a floor only the players stand on lets bullets through, and an M79 falls through it), the others in the ground where the ground stops bullets - and `Shrapnel` shells thrown up.
+
+**The claymore** is seen by everybody with his eyes on it - not through walls, in every mode (`EnemySight = sight`; `realistic`: so only in realistic mode, `always`: through walls too) - and so is its tripwire: a red line of dashes along the ground ahead of it (`WireLength`, ended by a wall, `WireHeight` over the ground). An enemy's leg on the wire - or anybody hostile touching it (`TouchRadius`) - sets it off: `Pellets` Spas-12 shells fly in a cone of `Spread` degrees each side of where its owner looked (each does `PelletPower` of a Spas-12 shell: with 1.5 a soldier 77 px in front was killed by six of them), `BackPellets` weaker ones fly around and behind it, `Blast` M79 explosions go off at it where the ground stops bullets, and `Flames` flames that hurt nobody fan out in its cone - the flash of the blast. With `Fuse = cone` anybody in its front cone sets it off instead (`ConeAngle`, `ConeRange`, with nothing between). Its owner sees its cone for `PreviewSeconds` after planting it: `PreviewDots` dots along each edge and `PreviewArc` on the far arc, on layers of their own (`PreviewLayerFirst`).
+
+**Against the mines.** Low means the crouch key held or lying (and a low body: the crouch key held in a jump is not it). An enemy low within `SpotRadius` of a landmine, with his eyes on it, finds it: he - and his team with `SpotShare` - sees its mark from then on. Staying low within `DefuseRadius` of a mine he sees (not on it!) for `DefuseSeconds` takes it apart (with `DefuseTake` it is his then); the owner picks his own up the same way in `PickupSeconds`, once it is armed. The progress and the result stand over the mine for him alone (a WorldText on `WorkLayer`) and go by themselves when he stops or the mine goes. An enemy bullet through a claymore sets it off (`ShootClaymores`; its kills are the shooter's with `ShooterKills`), and another mine within `ChainRadius` follows one that goes off. A dead soldier's body that falls or slides onto a landmine, onto a claymore or across its tripwire sets it off too (`Corpses = enemies`: the bodies of the ones who would set it off alive; `all`: anybody's; `off`) - a body lying there already when the mine was armed does not; a mine taken apart is gone at once and cannot go off any more.
+
+**Kills, bots, admins.** A kill by a mine shows "Mine" or "Claymore" in the victim's kill info (the kill list shows the M79 or the Spas-12), the victim sees what got him in the middle of his screen (`VictimText`, "Killed by Sniper's mine") and the owner is told (`KillText`); a mine's blast on his team is not the team kill guard's business. With `Bots = 1` the bots earn them too and plant them now and then (`BotChance`), away from their own spawn points. `/minelist` lists every mine with its owner, `/mineclear <player|all>` removes them, `/givemines <player|all|team> [count] [mines|claymores]` gives some; `Log` writes the events into the data folder and `/be_status` has a line of counts.
+
+**How it runs.** The library (`be_mine`) looks after the mines every tick against the soldiers' skeletons in the server's memory, and only at soldiers near a mine closely. The marks are WorldTexts from a pool of layers (`MarkLayerFirst`, `MarkLayers`; each player gets the nearest ones), sent only when they change and again every two seconds (texts are plain packets). While the enemies see a claymore only with their eyes on it, each player's marks are looked at every 10 ticks, else every 30. With 10 fighting bots all carrying mines the module took about 60 us of a tick (16 667 us). `source_dll/tests/test_mine.pas` checks the fuses, the tripwire, the cone, finding, taking apart, picking up, shots, chains and the marks without the server (in `test.bat`).
+
+### Bleeding, Bandages & First-Aid Kits
+
+**`[Bleeding]` (off by default)** gives the soldiers blood. It works in the modes of `Modes`; bots bleed too with `Bots = 1`.
+
+**Wounds.** A hit may open a wound: the chance grows with the damage (`CritChance` percent at `CritDamage` percent of `ReferenceHealth`, less for smaller hits; `ReferenceHealth = 65` makes a hit open a wound as often in the normal mode as in the realistic one, 0 = the maximum health of the mode; a hit he does not live through opens none) and with the place it hit - the head, the torso or the legs, found on the soldier's skeleton the way the server finds it (the circles of its hit test along the bullet's line; `HeadFactor`, `TorsoFactor`, `LegsFactor`). A blade cuts deeper (`MeleeFactor`), a blast opens up to `BlastWounds` shrapnel wounds, fire and fists open none. A wound is light (a graze), heavy, or arterial (`ArterialShare` of the wounds, more often at the neck and the thigh; `HeavyShare` more often with a big hit or a blade). Each bleeds its rate a second (`GrazeRate`, `HeavyRate`, `ArterialRate` - percent of the blood); a light wound stops by itself after `GrazeSeconds` - with `GrazeRandom = 1` each one after its own random time between `GrazeMinSeconds` and `GrazeSeconds` - and the others after `HeavySeconds` / `ArterialSeconds` (0: only a bandage or a kit stops them). At most `MaxGrazes`, `MaxHeavy` and `MaxArterial` wounds of each kind are open at once (one of each by default; 0 = no limit): a hit that would open one more of a full kind opens none. `VestTorso = 1`: a bulletproof vest keeps the torso from bleeding - a bullet's hit there opens no wound while he wears one (the head and the legs still bleed, and a blast's shrapnel in the torso too).
+
+**Blood.** It is 100 at spawn, runs out by the open wounds and comes back by `BloodRegen` a second `BloodRegenDelay` seconds after the last wound closed. Below `WeakBlood` the health drains (`Drain` percent of the maximum health a second at `DeathBlood`, less above it); with `RegenBlock = 1` `[Regeneration]` waits while a wound bleeds and brings the health back only up to the blood's share. Below `ShockBlood` a shock may come every `ShockCheckSeconds` (`ShockChance` percent at `DeathBlood`, a quarter of it just below `ShockBlood`; the next check only `ShockCheckSeconds` after a shock ended, so shocks never chain): `ShockSeconds` frozen with a black screen (`ShockScreen`, the flash grenades' screen in black) and his shots taken out. At `DeathBlood` he bleeds out. With `BleedOut = drain` his health drains faster and faster while a wound bleeds - `OutDrain` percent of the maximum health a second more than `Drain`, and `OutDrainGrow` more for every point of blood under `DeathBlood`, half of it every half a second - and `OutText` tells him in the middle of his screen; a bandage on his last wound or a kit still saves him, the empty health kills him. `BleedOut = instant`: he bleeds out at once. Down with `[Downed]`, else dead; the kill is the one's who opened his worst wound, with that weapon, so the kill list, the points and the stats show the real killer. A shock or a down in the air does not hold him there: he falls. A pause of the game (`[Pause]`) stops the wounds, the blood, the shocks and the downed time; they go on when the game does.
+
+**Bandages and kits.** Staying still (slower than `StillSpeed` px a tick) - and low with `BandageLow = 1`: crouching or lying - with an open wound bandages it: by itself after `AutoDelay` seconds (`AutoBandage = 1`) or at once after `!bandage`. It takes `GrazeBandageSeconds`, `HeavyBandageSeconds` or `ArterialBandageSeconds` by the worst wound his bandage can still cover and uses `GrazeBandageUse`, `HeavyBandageUse` or `ArterialBandageUse` percent of it (`Bandage` percent at spawn); moving or shooting stops it (what was done of it is kept: the next time he stays still it goes on from there), and a progress text stands over him meanwhile. `AirBandage = 1`: falling freely with no key of a move held (left, right, jump, jets) counts as low and still. A medic - the `firstaid RADIUS` perk of `[Classes]` - with no wound of his own to bandage (his own first) bandages his wounded mates within RADIUS px with his own bandage while he stays low and still and they stay near (`TreatText`, `TreatedText`, `TreatedMateText`). A first-aid kit (`Kits` a life, `!kit`) closes every wound in `KitSeconds` of standing still (low too with `KitLow = 1`) and gives `KitBlood` percent of the blood and `KitHealth` percent of the health back. A medic of `[Medic]` and a healing polygon close the light wounds and give blood, a health kit on the map closes every wound; `/heal` does too. Bots bandage themselves `BotBandageSeconds` after their last wound (they cannot be told to stay low), and a downed bot uses its own kit that long after it went down.
+
+**On the screen.** A line over his ammunition (`HudPlace = ammo`, stacked with the other lines there; `fixed`: `HudX`, `HudY`, `HudScale`) shows his blood, every place that bleeds with its worst wound and how many wounds it has (`HudWound`, `HudWoundPart`, `HudWoundMany`: `| Bleeding: torso heavy x2, legs graze`), the blood he loses a second (`{rate}`), his bandage and kits (`HudText`), only while he bleeds or has lost blood with `HudShow = auto`; red while a wound bleeds. A new wound may be told in the middle of his screen (`WoundText`, empty by default: the line shows it), the closing of a light one, a bandage and a kit in the chat (`ClosedText`, `BandagedText`, `KitText` ...; empty = not shown). A blood bag of `[Shop]` gives `BloodBagBlood` percent of the blood back within `BloodBagSeconds`.
+
+**How it runs.** The library (`be_body`) keeps the wounds, the blood, the work and the timers of every soldier and gives the script events; the script reads each soldier once a tick only for those who need it (bandaging, near a downed mate). With 10 fighting bots `[Bleeding]` and `[Downed]` together took about 24 us of a tick (16 667 us). `source_dll/tests/test_body.pas` checks the hit places, wounds, clotting, the blood, the drain, shocks, bleeding out, bandaging, the kit, going down, getting up and the last stand without the server (in `test.bat`).
+
+### Downed & Revive
+
+**`[Downed]` (off by default; `SurvivalOnly = 1`: only in survival rounds)** - wounded instead of dead. A hit that would kill puts him down with `DownedHealth` percent of the maximum health for `DownSeconds` - unless it is a headshot (`HeadKills = 1`), more than `Overkill` percent of the maximum health above his health (a LAW, an M79 at his feet; 0 = never), or he was down `MaxDowns` times this life already (0 = no limit). Bleeding out puts him down too.
+
+**Down** he cannot move (`Movement = hold`; `crawl`: `CrawlSpeed` px a tick), his weapons are taken (`Weapons = none`, given back as they were - the same weapon and magazine; `keep`: his shots are taken out anyway) and he fires nothing; with `KeepBleeding = 1` his wounds bleed on (the blood running out ends his time). Any further hit finishes him (not the rest of the burst that put him down, a quarter of a second) (`FinishCredit = finisher`: the kill is the finisher's; `downer`: the one's who put him down). His team mates are told (`TellTeam`) and see `Mark` over him with the seconds left; he sees `DownText` in the middle of his screen.
+
+**Up again.** A team mate staying low (`ReviveLow`) within `ReviveRadius` px for `ReviveSeconds` gets him up with `ReviveHealth` percent and stops his bleeding (his time waits meanwhile; the helper sees the progress over him, the downed one in the middle of his screen); a bot mate next to him does it too with `BotsRevive`. His own first-aid kit gets him up when he crouches (`SelfRevive`). After getting up he is safe for `ProtectSeconds`. `!giveup` (or `/kill` while down) ends it at once. When nobody of his team who could help is left (`LastStand = 1`; without teams: one other soldier or none) his time ends at once - a survival round ends as the game expects - unless his own kit can still get him up. Every end is a kill of the one who put him down, with his weapon (a slow bullet of that player at point-blank range, its weapon set through the memory bridge): the kill list, the points, ZitroStats and the round's end all see an ordinary kill.
+
+### Spotting & Bounties
+
+**`[Spotting]` (off by default; the team modes)** - Battlefield-like marking of enemies. A player aims at an enemy he sees and spots him: the enemy nearest to his cursor within `CursorRadius` px, in his sight and within `Range` px. His team then has that enemy on its radar for `SpotSeconds` (`Radar = 1`) and, with `World = 1`, sees `Mark` over his head in the game. How to spot: `/spot` or `!spot` (`bind "f" "/spot"` in the game's console sends it silently), or `Keys = reload` - a press of reload the game ignores (a full magazine) spots; `AutoSeconds > 0`: aiming at a visible enemy that long spots him by itself. One spot every `CooldownSeconds`; nobody spots while blinded by a flash, in shock or down; a spot never shortens a longer one (a UAV's, a sensor's); bots spot now and then (`Bots = 1`, `BotChance` a second). The spotter, his team (`TellTeam`) and the spotted one (`TellTarget`) are told.
+
+The radar is the one of `[Radar]`: who has a radar and whom it shows is set there (`Public`, `PublicModes`, `PublicShow`). A spotted enemy is shown even out of sight with the `seen` / `seenreal` filters - so for everybody to see the spotted enemies, give the players a radar (`[Radar] Public = 1`, `PublicShow = seen` or `seenreal`) or use `World = 1`.
+
+**`[Bounty]` (off by default)** - a price on the head of the one who kills a lot: `StartKills` enemy kills in one life put `Base` points on his head, `PerKill` more for each kill after that (at most `Max`). Everybody is told (`Announce = big`, `console`, `both` or `none`); his enemies see him on their radar (`Radar = 1`) and, with `World = 1`, a mark over him. The enemy who kills him collects it: `RewardPoints` points, `RewardHealth` percent of the health, `RewardVest` percent of a vest, a fresh set of magazines (`RewardAmmo`), `RewardMines`, `RewardClaymores`, `RewardFlashes`, `RewardJavelins`, `RewardBandage` percent of bandage and `RewardKits` kits - of the modules that are on. A selfkill, a team kill or leaving ends it, and `ExpireSeconds` with no kill (0 = never); surviving a survival round with it gives `SurvivalBonus` points and it stays. `!bounty` lists them.
+
+### Server Community Tools
+
+**`[SpawnProtection]` (off by default).** For `Seconds` after a respawn a soldier takes no damage from the others and no flash blinds him (the server's own blows - the end of a survival round, an admin's kill - still go through; the server itself gives 1.5 s on top). It ends at once when he fires or throws a grenade (`EndOnShoot`), uses an attack skill of his class, or walks `EndDistance` px away; `NoDamageDealt = 1`: his bullets do nothing while he is protected (his mines, claymores and what he fired or threw before the respawn still do). Everybody sees `Mark` over him with the seconds left (WorldText from a pool of `MarkLayers` layers - a soldier finds none free when more are protected at once and goes without a mark; in realistic mode only his team, the dead and the spectators see it; sent again only when the second changes or he moves), he sees `SelfText`. `Survival = 0`: not in survival rounds (everybody spawns at once there).
+
+**`[PrivateMessages]` (off by default).** `/pm <player> <text>` (`/msg`) and `/r <text>`; a player is found by his id, his whole name or a part of it that only one name holds (several: the list). `/pmmute` stops every private message to you, `/pmmute <player>` only his; the blocks follow the player by his Steam id (or computer id), not his slot. A muted player cannot write them (`MutedCanWrite`), one message every `CooldownSeconds`; `AdminsSee` and `Log` are off by default. The script answers `/pm` of a player itself (the server's own `/pm` is an admin's, by id only; the console's `/pm` stays the server's).
+
+**`[Notes]` (off by default).** `/note <text>` and `/report <player> <text>` (with his ids) go into `notes.txt` in the data folder (the time, the name, the Steam id, the computer id, the IP, the map), written by the library's thread; the admins in the game are told at once, an admin who joins hears how many are unread. `/comments` lists the unread ones newest first, `/comments read <n>` one in full with the ids, `del` and `clear` hide them (the file keeps everything; what was read and hidden is in `notes_state.txt`). `/noteban <player>` puts his IP, computer id and Steam id on `notes_blacklist.txt` (one `ip|hw|steam <value> // comment` a line), `/noteunban`, `/notebanlist`. Limits: `CooldownSeconds`, `PerDay`, `MaxLength`.
+
+**`[AntiSpam]` (off by default).** Every chat line (and command) adds points - more within `BurstSeconds` of the last one, for the same line again (letter case, spaces and repeated letters left out), for a long line, for capitals, for one character repeated - and they melt by `DecayPerSecond`, so normal talk stays near 0. `WarnAt` warns, `MuteAt` mutes for `MuteSeconds`, twice as long for every next mute within `MemoryMinutes` (at most `MaxMuteSeconds`). The mute is the server's own (by IP: his lines go to nobody, he cannot start a vote); the script keeps the end time in `mutes.txt` (written by the library's worker, never in the tick; a line is weighed by the library in one call) and lifts it itself - also when he left muted and comes back after the time is over, however long he was away (the server mutes his IP again at the join, and puts his old name back); a slot taken by somebody else is never muted by an old entry; a mute the script did not make (`/gmute`) is left alone. Admins: `/tmute <player> [time] [reason]`, `/tunmute`, `/mutelist` (`/mute` and `/unmute` are the game client's own words). The server itself kicks and bans for 5 minutes after about 6 quick lines ("Chat Flood") and for a line over 100 letters; with the defaults the same line three times in a row quickly is a mute before that.
+
+**`[AdminChat]`.** `/col [colour] <text>` (`/admcol`), `/colteam <team> ...`, `/colp <player> ...`, `/announce` (in the middle of every screen too); a colour is `#RRGGBB`, `$RRGGBB`, `0xRRGGBB`, `RRGGBB` or a name of `Colors`, else `DefaultColor`; `Format` with `{text}` and `{admin}`.
+
+**`[Pause]` (off by default).** `!p` / `/pause` pauses, `!up` / `/unpause` counts down `CountdownSeconds` in big digits and goes on - the script answers both itself (the server's own have no countdown), never during a map change (a pause then loses the change). Admins always; `Players = 1` lets everybody pause (`PausesPerMap`, `MinPlayers`), `PlayersUnpause = paused|all|admins`; a player's pause ends by itself after `MaxSeconds`. The countdown runs by the clock, so it works while the game stands; only an admin or the one who paused stops it with another `!p`. Every clock of the script waits through a pause too (the shop's buy time and stationary guns, the team-kill guard's shield and votes, the bounties, the flashes, a Javelin's lock, the mines' fuses and work, the classes' skills and kits, the vests).
+
+**`[BanJournal]`.** The server keeps no date of a ban and its `/unbanlast` knows only the very last one. Every `CheckSeconds` the script compares the server's ban lists with what it saw (read 50 bans a tick, so a long list costs no tick) and writes each new ban - whoever made it - into `bans.log` with the time, the reason and the length. `/unbanlast <n>` lifts the last n bans still in force, `/unbanlast <time>` every ban made within that time (`30m`, `2h`, `1d`, `1w`); `/unbanlast` alone is the server's own. `/banlist [n]`.
+
+**Names in the journal.** With `Names = 1` a new ban gets the name of the player it hit: the one this script's ban named (`/banr`, `[Warn]`, `[TeamKill]` ...), a player in the game with that address or computer id, or one who left within `NameSeconds` (the server's own bans kick first, and the journal sees the ban a moment later). `/banlist` shows it with the time left (the server counts a ban's time while it runs), and `/unbanname <a part of the name>` lifts every ban in force of that player - when several players match, the list comes back to type more of the name.
+
+**`[SteamBan]`.** An address changes and a computer id can be faked; a Steam account cannot. `/bansteam <time|perm> <player|Steam id> <reason>` writes the account to `steambans.txt` in the data folder (one ban a line: `S123456789 <until|perm> <admin> // <name>: <reason>`; lines may be removed by hand, `/reloadsettings` reads the file again); `[Admin] MaxBanMinutes` holds for the admins in the game, the console may ban for good. Every time Steam confirms a player whose account is on the list he is told why (`Text`) and banned by the server for the time left, at most `EvasionIpMinutes` - his address soon belongs to somebody else, while the list stays and catches him again. `BanAlsoSteam = 1`: `/banr` and the bans of `[TeamKill]` put his Steam account on the list too. `/unbansteam <Steam id | number | part of the name>`, `/steambans [n]`. Players without Steam are not covered (the address and computer id bans are).
+
+**`[Teams]` Balance.** A script's team change passes the server's balance check, so the team words (`AlphaCommands` ...) check it themselves: with `Balance = 1` (or `auto` on a server with `Balance_Teams = 1` in `soldat.ini`) a team with as many players as the player's own is refused (from the spectators: a team that is not the smallest). `AutoBalance = 1`: when Alpha and Bravo are `AutoDifference` or more players apart for `AutoSeconds`, a dead player of the bigger team goes to the smaller one - the bots first with `AutoBotsFirst`, else the one who joined it last, the admins only with `AutoAdmins = 1` - and `AutoText` tells everybody. Nobody alive is moved: in a survival round the dead wait for the next round anyway.
+
+**`[LagGuard]` (off by default).** Once a second each player's ping is read and his warps are counted - his position corrected by more than `WarpPixels` over what his speed allows, which is the server putting him where his late or lost packets said (the library compares the positions of the world's snapshots, at least every 10 ticks; a move of the script is no warp, and a look in which most players jumped at once is the server standing still). The last `WindowSeconds` give the average, the spread (the mean jump between two readings), the highest ping and the warps a minute; a second in which the server stood still counts for nobody. It never kicks: the server kicks above `Max_Ping` of `soldat.ini` after `Max_Ping_Warnings` warnings 6 s apart and bans for 15 minutes - with `ServerLimit = 1` the script follows that rule and tells the player how close he is (`LimitText`). `WarnPing`: a player whose average is higher is told (`WarnText`, at most every `WarnEverySeconds`). The spectators, off while `SpecPing`, `SpecJitter` and `SpecWarps` are 0: a player over one of them for `SpecSeconds` goes to the spectators (`SpecText` to everybody) - only with `MinPlayers` players or more, in a survival round only when he is dead - and `!j` answers `WaitText` until his average stays under `ResumePing` for `ResumeSeconds`. `/lag` lists everybody, the worst first; `!track` shows the spread and the warps too. Packet loss itself cannot be read on 2.8.2: the warps are what the others see of it.
+
+**`[MapCommands]`.** `/maplistadd <part> [position|again]`, `/maplistremove <part|number>`, `/mapfind <part>` and `/map <part>` (`MapByPart`). The library lists the maps folder (`[MapGeometry] MapFolder`) and ranks the names as ZitroStats' map vote does: the exact name, a name that starts with the part, a word of a name (after `_` or `-`), any part - equal ranks go to the shorter name; several equal matches are listed. A whole name of `/map` is the server's own command.
+
+**`[Warn]`.** `/warn <player> <reason>`: a warning in the middle of his screen and his console (`Text`), told to everybody (`TellAll`); `KickAt` warnings in one visit kick him (with a ban of `BanMinutes`).
+
+**`[SpecIdle]`** starts its timer for every spectator once the server has `MinPlayers` (also for one who sat there before); `[Afk]` moves the players who press nothing to the spectators.
+
+### Shop & Supply Crates
+
+**`[Shop]` (off by default).** A shop and an economy: the owner's old Shop script, rewritten for ScriptCore 3, with the money kept by the library. `Economy = map`: the money lives for the map - `StartMoney` at the join and at every map, and a player who leaves and comes back on the same map gets his wallet back (a rejoin never brings new start money). `Economy = global`: the money follows the player by his Steam id (`GlobalComputerId = 1`: by his computer id without Steam) in `players.bdb`; a new account starts with `GlobalStartMoney`, what he makes before Steam answers is added to his account when it comes, and a player without an account after 15 s plays on a wallet of the map. `MaxMoney` and `GlobalMaxMoney` cap the wallet, nothing is earned with fewer than `MinHumans` players or without an opponent in the game (`[General] Opponents`, below), and the bots earn and buy with `Bots = 1`.
+
+**Earning.** A kill of an enemy pays `KillMoney` times the weapon's factor (`KillFactors`, e.g. `knife 3|chainsaw 2|barrett 0.8|mine 1` - the weapon of the killing bullet, not the one in the hands; a bot killed `BotKillFactor` of it, and of the headshot, assist and damage money too; the same enemy killed again within a minute pays `RepeatKillPercent` of it from the third kill on), a headshot `HeadshotMoney` (the hit places of `[Bleeding]`), everybody else who did `AssistPercent` of a full health's damage to him `AssistMoney`, every whole health of damage to enemies `DamageMoney` (a life pays at most `DamageLimit` percent of a full health in all, so the hits on a soldier healed or revived again and again pay no more), a capture `CaptureMoney` to the capper and `TeamCaptureMoney` to each of his mates. Survival: `SurviveMoney` to everybody alive at the end of a round, `RoundWinMoney` to the team that won it (the one alive or the one that captured), `RoundLossMoney` to the others plus `LossStreakMoney` for every round lost in a row before (at most `LossStreakMax`), `RoundStartMoney` at a round's start. `IncomeMoney` every `IncomeSeconds` outside survival, `BountyMoney` per point of a `[Bounty]` collected; `TeamKillMoney` and `SelfKillMoney` take money. The earnings follow the mode: `RealisticFactor`, `SurvivalFactor`, `AdvanceFactor` in those modes, `GlobalFactor` in the global economy; `RealisticPrices`, `SurvivalPrices`, `AdvancePrices` do the same for the prices.
+
+**Buying.** `!shop` shows the categories, `!shop weapons|ammo|equipment|special|all` the numbered items with their prices, a line for each category in its colour (`WeaponsColor`, `AmmoColor`, `EquipmentColor`, `SpecialColor`; the numbers stay the same whatever he holds), `!buy <word or number>` buys (`/buy` too, so a key can be bound: `bind "F5" "/buy ak"`), `!money`, `!pay <player> <amount>` (`Transfer = team|all|off`), `!sell` (`Sell = 1`: the weapon in the hands bought in this life, for `SellShare` of its price). Where and when: `BuyWhere = anywhere|spawn|base` (within `BuyRadius` of a spawn point or the flag of his team; `base` without a flag of his team - a mode without flags, Charlie and Delta - means his spawn points), within `BuySeconds` of the respawn (0 = always), in survival within `SurvivalBuySeconds` of the round's start, alive only (`AliveOnly`), one purchase every `BuyCooldownSeconds`. Every item is one line `price | words | a life's limit` (`off`: not sold; `Magazine` and `Ammo` take a percent of the price of the weapon in the hands):
+- the weapons - a weapon the server's list switches off (`soldat.ini` `Weapon_1`-`14`) is never sold, the bows only in Rambo, the flamer only with `FlamerWeapon = 1` or `[Admin] GiveFlamer = 1` (a server with `sv_bonus_flamer 1` bans a player holding a flamer); a primary goes into the primary slot and the old one becomes the secondary (`OldPrimary = secondary`; with the second weapon in the hands the rules work on his real primary), SOCOM, knife, chainsaw and LAW go into the secondary slot, with `[Ammo]`'s fresh magazines;
+- `Magazine` (one spare magazine of the weapon in the hands within `[Ammo] ExtraMagazines`), `Ammo` (a fresh set when the pouch holds less);
+- `Grenade` (`GrenadesPerBuy`, at most `MaxGrenades` with `[FlashNades]`), `Flash` (`MaxFlashes`), `Cluster` (the game's cluster kit), `Vest` (`VestAmount`), `Health` (full, wounds closed), `Bandage` (`BandageAmount` percent), `Kit` (`MaxKits`) and `BloodBag` (`BloodBagBlood` percent of the blood back within `BloodBagSeconds`) of `[Bleeding]`, `Mine` and `Claymore` (`[Mines]`), `Javelin` (`[ExtraRocket]`, `MaxJavelins`);
+- `Berserker`, `Predator` (the game's bonuses, off by default), `Statgun` (a stationary gun next to him for `StatgunSeconds`, `StatgunMax` of his at once), `UAV` (every enemy found for his team for `UavSeconds`, shown as `[Classes] SkillSpots` says - marks over them, or the radar for the team; not sold while no enemy is alive or, with the radar, while `[Radar]` is off), `APRounds` (his next `ApRoundsPerBuy` Barrett rounds explode where they hit a soldier or a wall: `ApBlasts` cluster blasts of `ApPower`; the library works out the wall a round will meet when it is fired, and the blast comes in the tick the round reaches it - a game client's round or a bot's alike; without the map's walls (`[MapGeometry]`) the rounds blast soldiers only, and the buyer is told), `Supply` (a crate of `[Supply]` under his aim, his team's first).
+
+**The other modules.** `ShopOnly` lists what the modules no longer give for free while the shop is on: `mines`, `claymores` (each on its own: none for kills, captures or at the spawn), `javelins`, `flashes` (none of a life). An item of a module that is idle here is not listed (the cluster grenades while `[FlashNades]` is on, mines while `[Mines]` is idle ...). A supply crate's weapon skips what the shop does not sell. By default the Barrett costs 1200. `LoseOnDeath = 1`: a death takes what was bought and not used; a survivor of a survival round keeps it, with `[Ammo] SurvivalCarry` his magazines too. `BuyOnly = 1` (made for the Advance mode, works without it): the weapon menu holds only the weapons a player owns - bought, and the ones in his hands when he survives a round or (`LoseOnDeath = 0`) when he dies, picked up ones too - and the ones the shop gives for nothing (price 0); a weapon he does not own in his hands in the first 3 s of a life is taken. The Advance mode's own unlocks never reach the menu (the shop sends it again after every kill). The server's bots ignore the menu: with `Bots = 1` a bot gets its best weapon of its own at every respawn, or buys one (without `BuyOnly` a bot buys now and then, for half of its money at most); with `Bots = 0` the bots keep the server's weapons.
+
+**On the screen.** The money is a line over the ammunition (`HudPlace = ammo`, above the lines of the flash grenades, the mines and the blood; or fixed with `HudX`, `HudY`, `HudScale`): `HudText` (`{currency}{money}`) and for a moment after a change `GainText` (`({gain} {why})`), the line in `GainColor` then (`BadColor` for a loss; the shop's refusals are `BadColor` too). The wallets of the map economy are kept over a `/recompile` (`data/shop_wallets.txt`, taken back when the script starts again on the same map within a minute); the global accounts are saved at the script's end. Admins: `/givemoney`, `/takemoney`, `/setmoney <player|all|team> <amount>`, `/wallet <player>`, `/moneyreset <player|all>`, `/shoplist`.
+
+**`[Supply]` (off by default; with the shop or without it).** Every `EveryMinutes` (plus or minus `JitterMinutes`, with 2 or more players) a crate comes down under a parachute by a random spawn point of the map, on the ground under it (falling for `FallSeconds`); with `SurvivalPerRound = 1` also once in every survival round at a random moment. Everybody is told (`AnnounceText`) and sees it (`Mark`, `FallMark` while it falls; WorldText from `MarkLayerFirst`, one layer a crate, `MaxCrates` at once). A soldier who stays low (crouching or lying) within `OpenRadius` px for `OpenSeconds` opens it (`OpenText` over it while he works; a bot by standing there twice as long, `Bots = 1`) and gets one thing of `Contents` by its weight (a class's crate - the Support's - serves every soldier of its team once while it lies): `ammo` (his magazines topped up), `grenades`, `flashes`, `mines`, `claymore`, `javelin`, `medical` (health, a bandage, a kit), `vest`, `money` (of the shop) or `weapon` (a weapon on the ground) - told in the middle of his screen (`GotText`). A crate lies `LifeSeconds`; a pause of the game stops its clocks. Without the map's ground (`[MapGeometry]` off or the map unread) a bought crate comes down where the buyer stands. The shop's `Supply` item drops one under the buyer's aim, for his team only during `TeamSeconds`; admins drop one with `/supplydrop` (by a random spawn point) or `/supplydrop here` (under the aim).
+
+### Battlefield Classes, Battle Points & Resupply
+
+**`[Classes]` (off by default).** The owner's Battlefield mod (2015-2021) rebuilt for ScriptCore 3: every soldier of a team plays a class. `List` names the classes and their order (at most 20 with the insurgents' classes of `[Insurgents] Classes`, which come after them); each has its section `[Class-<name>]`: `Name`, `Words` (for `!class`), `Color`, `Modes`, `Max` (players of a team in it - a number, or a percent of the team, at least 1), `Info`, and:
+- `Primary` and `Secondary` - the weapons of its menu (`deagles mp5 ak aug spas ruger m79 barrett minimi minigun`; `socom knife chainsaw law`). The weapon menu shows these (while he is dead: those of his next class); a weapon that is neither of his class nor bought in this life, in his hands a moment after the respawn - a menu that came late, an altered game, a bot (the server's bots ignore the menu) - is replaced by one of his class with full magazines; a weapon that comes in the first 3 s of a life (a lagging player's choice from the menu he had) is checked again. The class does not limit the shop: what he pays for is his (`ShopClassOnly = 1` makes the shop sell only the weapons of his class, and the bots buy only those). With `[Shop] BuyOnly` the menu is what he owns and the weapons of his class (they are his for nothing); `[Ammo] SurvivalLock` locks on top of that.
+- `Loadout` - what he carries at the respawn: `grenades N, flashes N, mines N, claymores N, javelins N, vest PERCENT, bandage PERCENT, kits N, mags N, c4 N` (spare magazines over `[Ammo]`'s fresh set; the C4 charges of a life). What it names replaces what the modules gave; `LoadoutOnly` lists the items only a class's loadout gives (`javelins|mines|claymores|flashes`); `RespectShopOnly = 1` lets `[Shop] ShopOnly` win over the loadout. A survivor whose kit `[Ammo] SurvivalCarry` keeps gets no new loadout.
+- `Perks`, once a second: `heal PERCENT RADIUS` (the mates within RADIUS px and himself get PERCENT of a full health back, not within 2 s of a hit, and with `[Bleeding]` their blood), `repair VEST RADIUS` (a vest a mate wears), `ammo MAGS SECONDS RADIUS` (a spare magazine of the weapon in each mate's hands every SECONDS), `revive FACTOR RADIUS` (`[Downed]`: he gets the downed up FACTOR times faster, from RADIUS px), `bandage FACTOR`, `armor FACTOR` (the damage he takes), `damage WEAPON FACTOR STANCE` (his WEAPON's damage times FACTOR when he stands `any`, `crouch`, `prone` or `low`), `spot FACTOR` (his `[Spotting]` marks last longer), `distance FACTOR` (his `[Points]` for distance kills), `detector RADIUS` (every second the enemy mines of `[Mines]` within RADIUS px of him are found - he sees their marks, a beep tells him); on every hit: `crit CHANCE FACTOR` (CHANCE % of his hits on enemies do FACTOR times the damage), `wounds FACTOR` (his hits open `[Bleeding]` wounds FACTOR times as often), `leech HP` (HP of health back for every hit on an enemy, up to his full health), `firstaid RADIUS` (`[Bleeding]`: with no wound of his own to bandage he bandages his wounded mates within RADIUS px with his own bandage). The default classes have no damage perk: ZitroStats reads the hit zones from the damage, so a changed damage can be counted in the wrong zone.
+- `Skill` and `Skill2` (`!skill`, `!skill2`): `rally SECONDS COOLDOWN [RADIUS]` (every mate who respawns while it lasts comes back next to him - where he last stood on the ground while he is in the air -, without spawn protection; with RADIUS only the mates who died within RADIUS px of him; not in survival; a carrier of the flag or a soldier down calls none back, and the mate is told why; several rallies of a team take the mates in turn - the one that got a mate longest ago first, a new one at once - and one that cannot take him now is passed by for another; the one who called it is told who came back at him), `healthpack COOLDOWN` and `grenadekit COOLDOWN` (a kit on the ground next to him for `KitSeconds`; the one who placed it gets `[Points]` when a mate takes it), `statgun SECONDS COOLDOWN` (a stationary gun, `[Shop] StatgunMax` of his at once), `mortar SHELLS COOLDOWN SPREAD` (a warning over the place he aims at, then SHELLS shells fall from the sky within SPREAD px of it, one every 0.2 s - each one four cluster bursts spreading as they fall, so a soldier in the air under them is hit too; under a roof they fall from the roof; his own blasts hurt him too, his team's guard of `[TeamKill]` does not count them), `uav SECONDS COOLDOWN` (every enemy found for his team for SECONDS: with `SkillSpots = marks` a mark over each of them for the team, with `radar` the team's players have the radar - its public look, what the team sees and has spotted - while it works; a longer spot is never shortened), `supply COOLDOWN WORDS` (a crate of `[Supply]` under his aim for his team - every mate takes one thing of it once while it lies - holding WORDS: `ammo grenades flashes mines claymore javelin medical vest money weapon`), `patchup PERCENT COOLDOWN` (his wounds closed and PERCENT of a full health back), `resupply COOLDOWN` (his magazines and grenades), `c4 RANGE COOLDOWN` (a charge of his loadout's `c4` stuck on the enemy nearest to his aim within RANGE px that he can see: a mark over that enemy for him, a warning to the enemy; `/c4` sets off all of his that stuck 2 s ago or longer - a blast inside each one, the kill his; not while he is down or in shock; a charge goes with either one's death, a team change or a leave; lying `C4ScrapeSeconds` scrapes it off), `sensor SECONDS COOLDOWN RADIUS` (while it works, every enemy within RADIUS px of him is found for his team, as the UAV shows it), `steal RANGE COOLDOWN` (the weapon in the hands of the enemy nearest to his aim within RANGE px that he can see comes into his hands with its magazine; his own goes to his second hand, and the robbed one is left with his second weapon), `barrage SHELLS COOLDOWN TARGETS` (up to TARGETS enemies his team sees - spotted, or in his own sight within 1200 px - get a warning over them, and a second later SHELLS shells fall from the sky over each, one every 0.25 s), `gunship SECONDS COOLDOWN RANGE` (a gun in the air over and behind him fires a round every 0.1 s at the enemy nearest to it that it can see within RANGE px, leading a moving target; under a roof it does not fire; its kills show the stationary gun), `cloak SECONDS COOLDOWN` (the game's predator bonus - hardly seen, 25 s whatever SECONDS says - with only SOCOM and the knife in his hands; his health stays what it was and his weapons come back after it); `off` = none. A skill that fails (no room, nothing to patch up, no open sky over the aim for the mortar) costs no cooldown; none works during a pause or while he is down. The mortar and the crate land where his game last told the server he aims (a few ticks old); the mortar and the barrage want 140 px of open sky over the place, the C4, the steal and the barrage only take enemies he could see (in realistic mode: ahead of him, within 1000 px). An attack skill (mortar, barrage, gunship, C4, steal, cloak) ends his spawn protection. The server makes no bullet for its last player slot (32): from there the mortar, the barrage, the gunship and C4 are refused, and an insurgent there wears no vest.
+
+The cooldown belongs to the skill, not to the class's place: a new class's skill waits as long as he last used the same skill. A player who leaves and comes back on the same map finds his cooldowns as he left them; every survival round starts with every skill ready. A rally, a sensor, a gunship and a cloak end with his death; a team change ends what his skills keep running and gives the new team's life its class (refused when the class is full there). `BotSkills = 1`: the bots use their skills, once a second by simple rules - a healthpack or a grenade kit when a mate near (or the bot) needs it, a patch-up when hurt, the supply crate at its own feet, an attack skill at an enemy in its sight, a UAV or a sensor for a team with players, a rally when two mates are dead; a bot's C4 goes off 2-3 s after it stuck.
+
+How a class is given (`Assign`): `choice` - he picks it with `!class <name or number>` (the weapon menu of the death screen shows the next class's weapons at once): it comes with his next respawn, or at once within `ChangeSeconds` of a respawn while he has used no skill and fired no shot; who picked nothing gets one rolled. `limited` - the same choice, but a class his team has `LimitedSpread` players more of than the class it has fewest of (of those he may play) is refused, so a team never plays one class only. `life` - a new class rolled at every death. `round` - one rolled for every survival round, also after a round nobody survived (in the other modes at the join and at every map's start); a survivor whose kit `[Ammo] SurvivalCarry` keeps keeps his class. `map` - one rolled for the whole map and kept by his computer id (and his account): leaving and coming back rolls no new one. While the players choose (`choice`, `limited`) they are told so: `ChoiceText` (`{list}`: the classes of his side) at the join and at the first `ChoiceTimes` deaths of a map, and `ChooseText` is `{choose}` of the line. The roll (`Balance = 1`) takes the classes of this mode that are not full, of them the ones with the fewest players of his team, of them the one he played least on this map, and never his class again while another is possible (`Repeat = 0`) - so everybody tries every class.
+
+`Vest` (the insurgents' classes): the pattern of his vest - see `[Insurgents]`.
+
+Every key from `Max` to `Vest` may be written with `Realistic`, `Survival` or `RealisticSurvival` at its end (and `Assign` too: `AssignSurvival = round`): that value counts in that mode - realistic survival first, then survival, then realistic. The defaults: the assault carries 3 grenades and a grenade kit every 30 s (60 s in survival, where he patches himself up instead of the rally); the medic (and the insurgents' healer) 250% of bandage, `firstaid 40` and in survival `heal 3 100`; the support the Minimi, the AUG or the Spas (not the Minigun), two claymores, a supply crate for his team every 50 s (grenades or medical supplies) and his own ammunition and grenades every 30 s (60 s in survival); the engineer one C4 a life (`c4 200 20`), the mine detector, a 20 s stationary gun every 120 s in survival and `repair 4 120`; the recon a sensor (`!skill2`) and a mine detector of a long reach (400 px). Five more classes wait to be added to `List`: Grenadier (the grenade launcher, a grenade kit, a small mortar - in survival too), Marksman (a UAV, patch-up), Mechanic (vest repair, a gunship `8 90 800`), Spy (a 25 s cloak) and Commando (`leech 6`, a stationary gun). The values are taken again at every map's start and `/reloadsettings`.
+
+On the screen: a line over the ammunition (`HudPlace = ammo`, in the stack of the other lines; `fixed`: `HudX`, `HudY`, `HudScale`) with the class in its colour and the state of its skills: `HudText` (`{class}: {skill} | {skill2}`), `SkillText` (`{name} {state}`: `ReadyText`, `CoolText` / `ActiveText` with `{seconds}`, `OffText` when it does not work here). `SkillSpots = marks|radar`: what the UAV, the sensor and a class's longer spots (`spot` perk) show the team - marks over the enemies (as `[Spotting] World = 1` shows them, for these spots only), or the radar for the team while the UAV or the sensor works. `ClassText` when he gets a class, `NextText` for the next life. `!classes` lists the classes with the players of his team; admins set a class with `/setclass <player> <class>`. Bots get classes too (their weapons are fixed at once). With a class that heals, `[Medic]` steps aside. The Advance mode gives the weapons itself: the classes are idle in it.
+
+**`[Points]` (off by default).** Battle points: a score of the map of its own, with a feed - the game's kills and ZitroStats stay as they are. Every key is the points of one event (0 = none, a negative value takes points): `Damage` (per percent of a full health done to an enemy; a life gives at most `DamageLimit` percent in all), `Kill`, `TeamDamage`, `Headshot` (the killing hit on the head), `Assist` (everybody else who did `AssistPercent` of a health to the one killed), `FirstBlood`, `SelfKill`, `Distance` (a kill farther than `DistanceFrom` px: `DistanceBase` + 1 per `DistanceStep` px more, times the class's distance perk), `Savior` (killing the one who hurt a mate within `SaviorSeconds`), `Revenge` (once a minute for the same pair), `Posthumous`, `MultiKill` (the 2nd to the 6th kill within `MultiSeconds`), `FlagGrab` (from its base, once until the flag went home by a capture or an enemy's return - grabbing it again after throwing it back pays nothing), `FlagScore`, `FlagReturn` (only a flag an enemy took), `Revive` (`[Downed]`, a mate an enemy put down), `TeamRespawn` (a mate came back at your rally), `AmmoGiven`, `Healed`, `Repaired` (per `AmmoEvery` magazines, `HealEvery` percent of a health, `RepairEvery` vest given), `KitTaken` (only when the mate needed the kit, once a minute per pair), `KitEnemy`, `KitPlaced`, `StatgunPlaced` (0 by default), `SpotKill` (an enemy you spotted killed by a mate), `BountyCollected`, `CrateOpened` (a mate opened the crate of your supply skill), `Resupplied`. The line over the ammunition (`HudText` with `{score}` and for `GainSeconds` after an event `{gain}`: `GainText` with the events of those seconds added up); `FeedConsole = 1` writes every event in his console. `!score`, `!scores`; at the map's end everybody gets the best `BestLines` in the console and sees the lists of every team with players for `BoardSeconds`. A player who leaves and comes back on the same map keeps his score; the bots get points with `Bots = 1`.
+
+**No opponent, no earnings (`[General] Opponents`).** While a player has nobody against him in the game - no player of another team (in the modes without teams nobody else), the spectators do not count - he earns nothing: no `[Points]`, no `[Shop]` money (neither the income nor a round's money; a supply crate gives him something else than money), no score points of the extras (`[Medic]` and the others) and no mines for a capture. So a flag taken and captured alone, with everybody in the spectators or with only his own team in the game, or a mate healed with nobody to fight, pays nothing; a loss (a suicide, team damage) still counts. `any` (the default) takes a bot for an opponent, `humans` only a human, `off` pays everything even alone. `NoOpponentText` tells him why (once, and again after he had an opponent).
+
+**`[Resupply]` (off by default).** The Battlefield mod's `/getammo`, without the command: a soldier who stays low (crouching or lying; a bot by standing there) within `Radius` px of his team's flag base (`Where = flag`) or of a spawn point of his team (`spawn`; `both` = either) for `Seconds` gets `What` - `mags` (his magazines topped up), `grenades`, `bandage`, `vest` (a vest he wears made whole) - and not again for `CooldownSeconds`; the progress over him (`Text`), `DoneText` in his console. `Survival = 0`: not in survival rounds. In the field: the supply crates, the Support class's ammo perk and its supply and resupply skills.
+
+### Insurgents
+
+**`[Insurgents]` (off by default).** The owner's Taliban mod (2014) rebuilt with neutral names - every name and text is a setting. One team (`Team = alpha`, `bravo` or `both`) fights as the insurgents (`Name`, against the `EnemyName`) in the team modes of `Modes`, and every soldier of it wears a suicide vest:
+- **Setting it off.** Holding `Keys` (as `[Mines]`: `flagthrow` = crouch + jump or the throw-flag key; `none` = the command only) or `/detonate` (again = stop) counts `HoldSeconds` down: a beep (`ArmSound`, heard within `SoundRadius` px) and `ArmText` over him (`ArmColor`, WorldText layer `ArmLayer`) warn everybody near, his line counts down, and letting the keys go stops it. `KeysOverMines = 1`: an insurgent's flag-throw keys set off the vest, not a landmine of `[Mines]` (lying, they are still the claymore's).
+- **The blast.** A blast inside every enemy within `CoreRadius` px that he can see (made inside a soldier, it surely goes off there), and the vest's pattern around him: made in the library, spawned from that place over at most 20 ticks (48 bullets a tick at most, never into the last 32 free bullet slots of the game), mirrored when he looks left; `Power` scales its hits. He dies of it as of an admin's slay - no suicide's penalty, no grenade of `[Posthumous]`, never downed - and every kill of it is his (`VictimText` to the ones it killed, `BomberText` to him two seconds later).
+- **The patterns** (`Pattern`, or a class's `Vest`): `classic` (blasts in a plus and the diagonals within 60 px, then three rings of rounds), `hawk` (the classic one and a line of blasts diving into the ground ahead of him), `inferno` (a ring of blasts flying out, fire inside it), `shrapnel` (a blast at the chest, pellets all round), `ring` (blasts thrown out all round, going off where they land), `scatter` (pellets and burning arrows), `ied` (blasts along the floor under and around him, rounds sideways), `plain` (one blast); `random` gives a new one of the first seven every life, `none` no vest.
+- **Counterplay.** Not in the first `MinLifeSeconds` of a life, not within `SpawnDistance` px of an enemy spawn point he can see, not with a flag (`FlagCarrier = 1`: also then), not while his team waits `TeamCooldownSeconds` after a vest of it went off. Killed while it counts down, it goes off anyway with `DeadManChance` % (never after a headshot with `HeadshotStops = 1`); `DownedDetonate = 1`: a downed insurgent (`[Downed]`) can still set it off.
+- **Bots** (`Bots = 1`): an insurgent bot with `BotMinEnemies` enemies or more within `BotRadius` px that he can see sets it off, `BotChance` % each second - with the server's friendly fire on only when no mate is nearer than the nearest of them.
+- **On the screen.** `JoinText` at his first vest (`{faction}`, `{enemy}`, `{how}`); a line over the ammunition (`Hud = 1`; `HudPlace = ammo`, in the stack of the other lines, or `fixed`: `HudX`, `HudY`, `HudScale`; BigText layer `HudLayer`): `HudText` with `{state}` - `ReadyText`, `ArmingText` (`{seconds}` left) or `WaitText` (`{seconds}`). `Shout`: a chat line he says at the blast (empty by default). `!insurgents` tells how it works here; admins give or take a vest for a life with `/givevest` and `/takevest`.
+- **Classes.** With `[Classes]` on, the classes of `Classes` (their `[Class-<name>]` sections) are played by the insurgents only, and the classes of `[Classes] List` by everybody else; the roll, `!class`, `!classes` and the limits follow the side. The defaults are the 2014 roles with neutral names and the 2014 insurgents' weapons (AK-74, Spas-12, Ruger 77, FN Minimi): Hawk (critical hits, more wounds), Healer (heals, a healthpack), Thief (`steal`), Saboteur (C4), Spotter (longer spots, a `barrage`; a random vest), Leader (a rally point), Raider (grenades and flashes) and Mortarman (a mortar) - each with a vest of its own. Without `[Classes]`, `Weapons` may limit the insurgents' weapon menu (`ak spas ruger minimi`; empty = the server's).
+
+---
+
+## Configuration (`settings.ini`)
+
+The settings file is `scripts/Basic-Extended/settings.ini`, next to `main.pas` (a `data/settings.ini` of an older release is still read when there is none there). It supports in-game hot reloading via `/reloadsettings`. Every list is a set of numbered keys in its section - `Line-1`, `Line-2` ... - as many as you like, in any order and with gaps: `[Rules]` and `[CommandList]` (`Source = lines`) and `[AdminCommandList]` have `Line-N` with `Color-Line-N`, `[Tips]` has `Message-N` with `Color-Message-N`, `Chance-Message-N` (a weight) and `Seconds-Message-N` (the shortest time between two showings), `[Reservation]` has `Slot-N`, `[Logger]` has `Watch-N` and `[Admin]` has `Steam-N`.
+
+Key sections include:
+- `[General]`: Output line rates, broadcast throttling, startup banners, `MemoryReads` (the soldiers read from the server's memory), and `Opponents` (nothing is earned without an opponent in the game).
+- `[Welcome]`, `[Info]`, `[MapInfo]`, `[MapList]`, `[MapsList]`, `[Ratio]`, `[Ping]`, `[PingTrack]`, `[ServerPing]`, `[Time]`, `[WhoIsAdmin]`, `[CallAdmin]`, `[CheatHint]`, `[TeamGuard]`: the basics - the welcome line, `/info`, `?map` and the map lines, the maps list file and its shuffle, `!rate`, `!ping`, `!track`, the average ping, `!time`, `!whois`, `!admin`, the hint for players who ask for cheats, and a player put back into a team the game mode has.
+- `[Assists]`, `[MultiKill]`, `[FirstBlood]`, `[Savior]`, `[SelfKill]`, `[Posthumous]`, `[Medic]`, `[TimeToKill]`, `[KillInfo]`: the combat extras (see [Combat Extras & Class Mechanics](#combat-extras--class-mechanics)).
+- `[HealthHud]`: HUD layers, default positions, styles, and low-health blink intervals.
+- `[Regeneration]` & `[Suppression]`: Regeneration curves, delay intervals, and suppression radii.
+- `[Kits]`: Toggle map removal of medkits, grenade kits, and bonus crates.
+- `[Ammo]`, `[AmmoHud]`, `[Looting]`: Limited ammunition (reserve per weapon, magazines or a pool, what happens to an empty weapon, bots, the chainsaw's fuel, weapons on the ground, `!repack`, sorting, a reload with one round, an interrupted reload, the survival carry-over and lock), its own text on the screen, and looting dead soldiers' magazines.
+- `[DamageNumbers]`: Modes, colors, and line-of-sight filters.
+- `[Radar]`: who gets which modes (Steam IDs, admins, everybody), filters, reach and update rate of each mode, list colours, flags, the circle's marks and edge dots, the ring's letters and the map outline.
+- `[Admin]`, `[AdminCommandList]`: the Steam admins, the `/admincommands` list, ban duration caps, command aliases, explosion commands and power, `/speed` (mode, jump share), `/sayas`, `/sayteam`, `/slay`.
+- `[Teleport]`: Tap / hold behaviour, velocity inheritance, flight speed, dead zone and smoothing, wall collision prevention, and trigger keys.
+- `[Trajectory]`, `[Aimbot]`: Commands, update rates, dots, view clipping, following a bullet, target selection (cursor, radius, nearest), range, spread, extra shots, LAW rule, colliders, recoil, ammunition and sound.
+- `[Weapons]`: Which `weapons.ini` the trajectory and the aimbot read (`auto` = the server's own; a `/loadwep` is followed).
+- `[AntiCheat]`: Commands, thresholds, the log file, when admins are told, the optional vote kick and the colours of the lines.
+- `[Permissions]`: who may use each command and whether it is typed with `/`, `!` or both.
+- `[MapGeometry]`: Where the map files are and how many vision rays the library casts a tick.
+- `[Spree]`: Killing sprees (off by default).
+- `[FlashNades]`, `[ExtraRocket]`: Flash grenades and guided rockets (off by default).
+- `[TeamKill]`: The team kill guard (off by default).
+- `[Mines]`: Landmines and claymores (off by default).
+- `[Bleeding]`, `[Downed]`: Wounds, blood, shock, bandages and first-aid kits; wounded instead of dead, with the revive (off by default).
+- `[Spotting]`, `[Bounty]`: Spotting enemies on the radar or in the world; bounties (off by default).
+- `[SpawnProtection]`, `[PrivateMessages]`, `[Notes]`, `[AdminChat]`, `[AntiSpam]`, `[Pause]`, `[BanJournal]`, `[SteamBan]`, `[MapCommands]`, `[Warn]`: the community and admin tools; `[Teams]` the team words, their balance and the automatic balance; `[LagGuard]` the connections (off by default).
+- `[Shop]`, `[Supply]`: The economy, the shop's items and prices, `ShopOnly`, `BuyOnly`; supply crates (off by default).
+- `[Classes]` with a `[Class-<name>]` section for each class, `[Points]`, `[Resupply]`: Battlefield classes, battle points, resupply at the base (off by default). A `[Class-<name>]` section that `[Classes] List` does not name is not read (five more classes - Grenadier, Marksman, Mechanic, Spy, Commando - wait there to be added to `List`).
+- `[Insurgents]` with the `[Class-<name>]` sections of its classes: the insurgents' side, the vest and its patterns, the bots, the texts and the line (off by default).
+- `[Debug]`: `BotsSeeTexts` (texts for bots on a test server) and `ServerHooks` (the library's hooks in the server's `CreateBullet` and `CreateThing`).
+
+Ready files for several kinds of servers are in `Example configs/` (see its `README.md`).
+
+---
+
+## Building from Source
+
+Requirements: **Free Pascal Compiler 3.2+ for i386** (Soldat server is 32-bit).
+
+### Windows
+
+Run `build.bat` inside `source_dll/`:
+```bat
+cd scripts\Basic-Extended\source_dll
+build.bat            :: builds basicext_dll.dll
+build.bat debug      :: builds debug binary with overflow/range checks
+```
+
+### Linux (Ubuntu / Debian x86_64)
+
+Install the 32-bit compilation toolchain and FPC i386:
+```bash
+sudo apt-get install binutils libc6-dev-i386
+wget https://downloads.sourceforge.net/project/freepascal/Linux/3.2.2/fpc-3.2.2.i386-linux.tar
+tar xf fpc-3.2.2.i386-linux.tar && cd fpc-3.2.2.i386-linux && sudo ./install.sh
+```
+
+Build the shared library:
+```bash
+cd scripts/Basic-Extended/source_dll
+sh build.sh          # builds basicext_dll.so
+sh build.sh debug    # debug build
+```
+
+Compiled libraries are automatically placed in `scripts/Basic-Extended/`. Run it with `sh build.sh`: a copy made on Windows has Windows line ends, which `./build.sh` cannot start (`cannot execute: required file not found`), while `sh build.sh` takes them out itself (as does `sed -i 's/\r$//' build.sh`).
+
+`test.bat` (Windows) builds and runs the tests: the store, the library through its exports, the engines (radar layout, text diff, the HUD lines, teleport controller, ballistics, explosions), the ammunition, the bleeding, the mines, the bullet memory bridge and the soldiers' records (fake records laid out as 2.8.2's; the bullet table is found through the server code's signature, as on the server). `main.pas` needs the library of the same release (`BE_API` 23): on Linux the `basicext_dll.so` of the release (or one built from its `source_dll`) goes next to the new `main.pas`.
+
+---
+
+## Troubleshooting
+
+| Issue | Cause & Solution |
+| :--- | :--- |
+| `Cannot Import dll`, `Invalid External` or the library fails to load | The folder must be named exactly `Basic-Extended` (the library is loaded from `scripts/Basic-Extended/`; a ZIP from GitHub unpacks to `Basic-Extended-4.0.0`), `server.ini` needs `AllowDlls=1` under `[ScriptCore3]`, and on Linux `basicext_dll.so` must lie next to `main.pas` (it comes with the script; `sh source_dll/build.sh` builds it again). |
+| `./build.sh: cannot execute: required file not found` | The file was copied from Windows with Windows line ends: run `sh build.sh`, which takes them out itself (or `sed -i 's/\r$//' build.sh`). |
+| `NOT STARTED: basicext_dll API ...` in the console | `main.pas` and `basicext_dll` are from different releases: the script does not start (rather than half-run with wrong calls). Put the library of the same release next to `main.pas` (on Linux its `basicext_dll.so`) and restart the server - a `/recompile` keeps the old library loaded. |
+| `[Ammo] weapons and keys from the properties (switched off: ...)` in the log | The check of `[General] MemoryReads` found a soldier's record different from the script's own values (another server build, a change by another script) and switched the reading off for good: everything works, a little slower (the script reads the properties). `/be_status` shows the state. |
+| Players carry only one grenade, `Max_Grenades` is 1 | `[FlashNades] Enabled = 1`: the script gives the next grenade right after one is thrown, as long as the player has any left (`Nades`, `Flashes`). The server's own value comes back when it is switched off (`/reloadsettings`) or the script stops. |
+| `/be_status` shows `hooks: CreateBullet not found` or `hooks: not installed` | Another server build than 2.8.2 (the hooks find the server's code by its first bytes), or `[Debug] ServerHooks = 0`. The ammunition then follows only the counts the game reports: a shot fired together with a reload is missed, and a dropped weapon gets the nearest object of its kind. |
+| Changes to `main.pas` do not take effect | Delete `main.psb` (compiled byte-code cache) in the script directory and restart. |
+| The server shuts down (`Access violation`) right after `/recompile BasicExtended` | After any file of the script's folder changed, the 2.8.2 server compiles the script while the game runs (about 2 s for Basic-Extended), and an admin tool connecting or disconnecting over TCP in that time crashes it - the server tells every script about the admin, also the one being compiled. Restart the server after an update, or give `/recompile` in the game (or from an admin tool that stays connected a few seconds longer). |
+| Health HUD or Damage Numbers not appearing | Check if layer numbers collide with other scripts (`[HealthHud] Layer = 199`). Verify `AllowDlls = 1` in `server.ini`. |
+| Damage numbers show through walls | Set `[DamageNumbers] LineOfSight = auto` or `on`. Ensure map polygons are compiled correctly. |
+| Steam admins not recognized | Ensure the client runs an authentic Steam copy and `[Admin] Steam-N` holds valid Steam IDs (e.g. `S123456789` or `76561198...`). |
+| `/be_status` shows `errors since the start` | A part of the tick or an event failed: the first three errors of each place are in the server's log (then every 1000th), the rest of the script runs on. Send the log lines to the author. |
+| Server freezes on high player count | Decrease `LinesPerTick` in `[General]`. Ensure `basicext_dll` is running (check `/be_status`). |
+| `/be_status` says `map not loaded` | The library could not read `maps/<map>.pms` (another folder: `[MapGeometry] MapFolder`). Everything still works, the script casts the rays itself. |
+| An aimbot kill shows the Desert Eagles in the kill list and in ZitroStats | The server names the weapon of a bullet made by a script after its bullet style (for the plain bullet that is the Desert Eagles), and ScriptCore cannot change it. The library's bullet memory bridge does: it finds the server's bullet array (from the code the server reads a bullet's weapon with) and writes the real weapon into each aimbot bullet after checking the bullet's slot, style and damage. `/be_status` shows `bridge: ready`; when it is not ready (another server build) the kills show the Desert Eagles. |
+| A bot reloads a full magazine although less was left for it | A bot's weapon only reloads full on the 2.8.2 server (a partial magazine set by a script becomes 0 and a full reload). The rounds are still taken from its reserve, so it loses the weapon when nothing is left. Players' games take partial magazines. |
+| The weapon menu shows only some weapons | `[Classes]` (the weapons of his class; while he is dead those of his next one), `[Shop] BuyOnly` (what he owns) or `[Ammo] SurvivalLock` (a weapon with no rounds left after a survival round). The whole menu comes back when the module is switched off (`/reloadsettings`) or the script stops. |
+| A player (admin too) banned for a day, "Not allowed weapon" | The server's own anti-cheat: a bow outside Rambo mode, a weapon switched off on the server, or a flamer while `sv_bonus_flamer` is 1. `/give` refuses the bow; see `[Admin] GiveFlamer`. |
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

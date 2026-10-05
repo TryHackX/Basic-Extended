@@ -1,0 +1,9 @@
+# what a running server writes next to the script
+data/
+main.psb
+# the library's build output
+source_dll/build/
+*.o
+*.ppu
+# the forum post
+Message.txt
