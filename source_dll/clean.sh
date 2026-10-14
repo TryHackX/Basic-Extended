@@ -4,6 +4,6 @@
 cr=$(printf '\r') #
 case $(head -n 1 "$0" 2>/dev/null) in *"$cr") sed -i "s/$cr\$//" "$0" && exec sh "$0" "$@";; esac #
 # Removes compiler output and test builds (build/). The library in the script folder stays.
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 rm -rf build
 echo "Removed build/"

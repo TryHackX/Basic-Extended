@@ -181,9 +181,10 @@ function BdWants: LongWord;
 procedure BdLow(ID, Low: LongInt);
 { the soldiers whose crouch and prone keys the library needs for the next tick (bit ID - 1) }
 function BdNear: LongWord;
-{ which of the server's body parts bullet (X, Y, going VX, VY; bullet style Style) hit soldier V: WP_HEAD,
-  WP_TORSO, WP_LEGS (0 = not known) }
-function BdHitPart(V, Style: LongInt; X, Y, VX, VY: Single): LongInt;
+{ which of the server's body parts bullet B (at X, Y, going VX, VY; bullet style Style) hit soldier V: WP_HEAD,
+  WP_TORSO, WP_LEGS (0 = not known). 4.1: the circles are moved like the server's (BdPing: a human is hit where
+  he stood the shooter's ping ago) }
+function BdHitPart(V, B, Style: LongInt; X, Y, VX, VY: Single): LongInt;
 { a hit on V by By's weapon W (bullet style Style) of Damage, his maximum health MaxHP, at Part: the kind of
   the wound it opened (0 = none) }
 function BdHit(V, By, W, Style: LongInt; Damage, MaxHP: Single; Part, Tick: LongInt): LongInt;
@@ -243,6 +244,7 @@ var
     crouching, 4 lying, 0 not known); a test sets its own }
   BdPoint: function(ID, K: LongInt; out X, Y: Single): Boolean = nil;
   BdStance: function(ID: LongInt): LongInt = nil;
+  BdPing: function(V, B: LongInt; out DX, DY: Single): Boolean = nil;
 
 implementation
 
@@ -806,16 +808,28 @@ begin
     Sqr(StillPx * (STILL_SPAN - 1));
 end;
 
-function BdHitPart(V, Style: LongInt; X, Y, VX, VY: Single): LongInt;
+function BdHitPart(V, B, Style: LongInt; X, Y, VX, VY: Single): LongInt;
 var
   k, Part, Near: LongInt;
-  CX, CY, Off, FX, FY, A, Bq, C, Disc, T, Best, D, NearD: Single;
+  CX, CY, Off, FX, FY, A, Bq, C, Disc, T, Best, D, NearD, SX, SY: Single;
 begin
   Result := 0;
   if not Valid(V) then
     Exit;
   if not Assigned(BdPoint) then
     Exit;
+  { the server tests a human's circles where he stood the shooter's ping ago: the bullet is moved the
+    other way instead (the same test) }
+  SX := 0;
+  SY := 0;
+  if Assigned(BdPing) then
+    if not BdPing(V, B, SX, SY) then
+    begin
+      SX := 0;
+      SY := 0;
+    end;
+  X := X - SX;
+  Y := Y - SY;
   { the server's circles lie 2 px left of the parts (not for a fist or a blade); an arrow is left a step
     before the place it hit }
   Off := 2;
@@ -1281,8 +1295,6 @@ end;
 
 procedure BdShot(const E: TShotEvent);
 begin
-  if E.Script then
-    Exit;
   if Valid(E.Owner) then
     B[E.Owner].LastShot := E.Tick;
 end;
@@ -2317,5 +2329,6 @@ end;
 initialization
   BdPoint := @SpritePoint;
   BdStance := @SpriteStance;
+  BdPing := @SpritePingShift;
   Randomize;
 end.

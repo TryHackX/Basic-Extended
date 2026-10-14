@@ -3,13 +3,14 @@ unit be_hook;
 { OnPlayerShoot and OnWeaponDrop: hooks on the server's CreateBullet and CreateThing (Soldat 2.8.2,
   found by their first bytes).
 
-  Every bullet goes through CreateBullet: the server's own fire (bots, the fast weapons of humans),
-  the bullets of humans that come in packets (ServerHandleBulletSnapshot), grenades, thrown knives,
-  arrows, cluster fragments and the scripts' bullets (Map.CreateBullet -> ServerCreateBullet). The
-  hook calls the original and looks at what it returned: only a bullet that was really made (an
-  index 1..255) is reported - for a human's slow weapon the server's simulation calls CreateBullet
-  too, and it returns -1 at once. A bullet made by ServerCreateBullet (the call comes from inside it)
-  is a script's bullet, not a shot.
+  Every bullet of a soldier goes through CreateBullet: the server's own fire (bots, the fast weapons of
+  humans), the bullets of humans that come in packets (ServerHandleBulletSnapshot), grenades, thrown
+  knives, arrows and cluster fragments. The hook calls the original and looks at what it returned: only
+  a bullet that was really made (an index 1..255) is reported - for a human's slow weapon the server's
+  simulation calls CreateBullet too, and it returns -1 at once. A script's bullet (Map.CreateBullet)
+  never comes here: 2.8.2's ServerCreateBullet is a copy of CreateBullet of its own, it does not call
+  it - so every bullet the hook sees is a soldier's (4.1: the old check of the caller was taken out, it
+  never matched).
 
   CreateThing makes the weapons a soldier drops (thrown away, with his body, at a team change, when
   he leaves): the hook reports the object's index and its owner, so the dropped weapon is known
@@ -36,8 +37,6 @@ type
     Tick: LongInt;
     Slot, Owner, W, Style: LongInt;
     X, Y, VX, VY: Single;
-    { made by a script (ServerCreateBullet), not fired }
-    Script: Boolean;
   end;
 
   TThingEvent = record
@@ -62,6 +61,9 @@ procedure HookTick(Tick: LongInt);
 procedure HookWatch(W: LongInt; On: Boolean);
 function HookNextShot(out E: TShotEvent): LongInt;
 function HookInfo: AnsiString;
+{ the only place in the server's code that begins with Sig, where a $100 matches any byte (0 = none, or more
+  than one) }
+function FindCodeW(const Sig: array of Word): PtrUInt;
 
 implementation
 
@@ -71,11 +73,6 @@ uses
   SysUtils, be_bridge;
 
 const
-  { ServerCreateBullet(sPos, sVelocity: TVector2; sNum: Byte; sOwner: Integer; N: Byte; HitM: Single;
-    Net: Boolean): Integer - push ebp; mov ebp,esp; sub esp,2Ch; ... mov eax,[ebp+14h] (sOwner) }
-  SIG_SCB: array[0..23] of Byte = (
-    $55, $89, $E5, $83, $EC, $2C, $53, $56, $57, $89, $45, $FC, $89, $55, $F8, $88,
-    $CB, $8B, $45, $14, $89, $45, $E0, $8A);
   { CreateBullet(sPos, sVelocity: TVector2; sNum: Byte; sOwner: Integer; N: Byte; HitM: Single; Net,
     MustCreate: Boolean; Seed: LongInt): Integer - sub esp,8Ch; ... mov eax,[ebp+1Ch] (sOwner) }
   SIG_CB: array[0..23] of Byte = (
@@ -94,7 +91,7 @@ const
 
 var
   Installed: LongInt = 0;
-  AddrCB, AddrSCB, AddrSCBEnd, AddrCT: PtrUInt;
+  AddrCB, AddrCT: PtrUInt;
   SavedCB: array[0..CB_PATCH - 1] of Byte;
   SavedCT: array[0..CT_PATCH - 1] of Byte;
   TrampCB: Pointer = nil;
@@ -107,7 +104,6 @@ var
   ShotHead: LongInt = 0;
   ShotTail: LongInt = 0;
   CntShots: LongInt = 0;
-  CntScript: LongInt = 0;
   CntThings: LongInt = 0;
   Why: AnsiString = 'not installed';
   Watch: array[0..255] of Boolean;
@@ -115,7 +111,7 @@ var
 
 { ---------------- what the hooks report ---------------- }
 
-procedure ShotMade(Res: LongInt; PosPtr, VelPtr: Pointer; Num, Owner: LongInt; CallerRet: PtrUInt); cdecl;
+procedure ShotMade(Res: LongInt; PosPtr, VelPtr: Pointer; Num, Owner: LongInt); cdecl;
 var
   E: TShotEvent;
   n: LongInt;
@@ -146,20 +142,15 @@ begin
       PLongWord(@E.VX)^ := PLongWord(VelPtr)^;
       PLongWord(@E.VY)^ := PLongWord(PtrUInt(VelPtr) + 4)^;
     end;
-    E.Script := (AddrSCB <> 0) and (CallerRet >= AddrSCB) and (CallerRet < AddrSCBEnd);
-    if E.Script then
-      Inc(CntScript)
-    else
-      Inc(CntShots);
-    if not E.Script then
-      if WatchAll or Watch[E.W] then
-      begin
-        Shots[ShotHead] := E;
-        n := (ShotHead + 1) and (MAX_SHOT_QUEUE - 1);
-        if n = ShotTail then
-          ShotTail := (ShotTail + 1) and (MAX_SHOT_QUEUE - 1);
-        ShotHead := n;
-      end;
+    Inc(CntShots);
+    if WatchAll or Watch[E.W] then
+    begin
+      Shots[ShotHead] := E;
+      n := (ShotHead + 1) and (MAX_SHOT_QUEUE - 1);
+      if n = ShotTail then
+        ShotTail := (ShotTail + 1) and (MAX_SHOT_QUEUE - 1);
+      ShotHead := n;
+    end;
     if Assigned(OnShot) then
       OnShot(E);
   except
@@ -193,6 +184,14 @@ end;
 
 { ---------------- the hooks ---------------- }
 
+{ HookCB and HookCT set up their own frame (push ebp / mov ebp, esp) and read their parameters and locals through
+  it, so the compiler's warnings 7102 and 7104 ("+offset(%ebp) for parameters invalid here", "-offset(%ebp) is not
+  recommended for local variable access") are false alarms for them: they are silenced for these two routines only
+  (push and pop keep the settings of the command line). }
+{$push}
+{$warn 7102 off}
+{$warn 7104 off}
+
 { entered by the jump at CreateBullet: EAX = @sPos, EDX = @sVelocity, CL = sNum, the stack: the
   return address and Seed, MustCreate, Net, HitM, N, sOwner (sOwner the deepest). The original gets
   the same registers and a copy of the six, pops them (ret 24); then the result is reported and the
@@ -215,14 +214,13 @@ asm
   mov ecx, [ebp - 12]
   call dword ptr [TrampCB]
   push eax
-  push dword ptr [ebp + 4]
   push dword ptr [ebp + 28]
   push dword ptr [ebp - 12]
   push dword ptr [ebp - 8]
   push dword ptr [ebp - 4]
   push eax
   call ShotMade
-  add esp, 24
+  add esp, 20
   pop eax
   mov esp, ebp
   pop ebp
@@ -256,6 +254,8 @@ asm
   ret 4
 end;
 
+{$pop}
+
 { ---------------- finding the code ---------------- }
 
 {$IFDEF UNIX}
@@ -280,19 +280,19 @@ begin
 end;
 {$ENDIF}
 
-function Matches(p: PByte; const Sig: array of Byte): Boolean;
+function Matches(p: PByte; const Sig: array of Word): Boolean;
 var
   j: LongInt;
 begin
   Result := False;
   for j := 0 to High(Sig) do
-    if p[j] <> Sig[j] then
-      Exit;
+    if Sig[j] < $100 then
+      if p[j] <> Sig[j] then
+        Exit;
   Result := True;
 end;
 
-{ the address of the only place in the server's code that begins with Sig (0 = none, or more than one) }
-function FindCode(const Sig: array of Byte): PtrUInt;
+function FindCodeW(const Sig: array of Word): PtrUInt;
 var
   Found: LongInt;
   {$IFDEF WINDOWS}
@@ -334,7 +334,7 @@ begin
       pEnd := PByte(M + VAddr + VSize - LongWord(Length(Sig)));
       while p <= pEnd do
       begin
-        if p^ = Sig[0] then
+        if (Sig[0] >= $100) or (p^ = Sig[0]) then
           if Matches(p, Sig) then
           begin
             Inc(Found);
@@ -377,7 +377,7 @@ begin
           pEnd := PByte(B - PtrUInt(Length(Sig)));
           while p <= pEnd do
           begin
-            if p^ = Sig[0] then
+            if (Sig[0] >= $100) or (p^ = Sig[0]) then
               if Matches(p, Sig) then
               begin
                 Inc(Found);
@@ -393,6 +393,18 @@ begin
   {$ENDIF}
   if Found <> 1 then
     Result := 0;
+end;
+
+{ the address of the only place in the server's code that begins with Sig (0 = none, or more than one) }
+function FindCode(const Sig: array of Byte): PtrUInt;
+var
+  W: array of Word;
+  k: LongInt;
+begin
+  SetLength(W, Length(Sig));
+  for k := 0 to High(Sig) do
+    W[k] := Sig[k];
+  Result := FindCodeW(W);
 end;
 
 { the end of a function: the first "leave; ret Pops" within Span bytes (0 = not there) }
@@ -524,12 +536,6 @@ begin
       Why := 'CreateBullet does not end as expected';
       Exit;
     end;
-    AddrSCB := FindCode(SIG_SCB);
-    AddrSCBEnd := 0;
-    if AddrSCB <> 0 then
-      AddrSCBEnd := FindRet(AddrSCB, 16, $600);
-    if AddrSCBEnd = 0 then
-      AddrSCB := 0;
     for k := 0 to CB_PATCH - 1 do
       SavedCB[k] := PByte(AddrCB + PtrUInt(k))^;
     if (TrampCB = nil) or (TrampCBFor <> AddrCB) or (not CompareMem(TrampCB, @SavedCB[0], CB_PATCH)) then
@@ -628,8 +634,7 @@ function HookInfo: AnsiString;
 begin
   Result := 'hooks: ' + Why;
   if Installed <> 0 then
-    Result := Result + ' (shots ' + IntToStr(CntShots) + ', script bullets ' + IntToStr(CntScript) +
-      ', objects made ' + IntToStr(CntThings) + ')';
+    Result := Result + ' (shots ' + IntToStr(CntShots) + ', objects made ' + IntToStr(CntThings) + ')';
 end;
 
 end.

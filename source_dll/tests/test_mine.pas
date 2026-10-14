@@ -74,11 +74,11 @@ begin
   PY[ID] := 5000;
 end;
 
-procedure Shot(Owner: LongInt; X, Y, VX, VY: Single);
+procedure ShotAt(Tick, Owner: LongInt; X, Y, VX, VY: Single);
 var
   E: TShotEvent;
 begin
-  E.Tick := 0;
+  E.Tick := Tick;
   E.Slot := 1;
   E.Owner := Owner;
   E.W := 3;
@@ -87,8 +87,12 @@ begin
   E.Y := Y;
   E.VX := VX;
   E.VY := VY;
-  E.Script := False;
   MnQueueShot(E);
+end;
+
+procedure Shot(Owner: LongInt; X, Y, VX, VY: Single);
+begin
+  ShotAt(0, Owner, X, Y, VX, VY);
 end;
 
 var
@@ -149,6 +153,9 @@ end;
 var
   i, M1, M2, M3, C1, n, More, T, Kind, Owner, Team: LongInt;
   X, Y, FX, FY, D: Single;
+  K, Arrived: LongInt;
+  GY, VY, BX, BY, BVX, BVY: Single;
+  Hit, Hit2: Boolean;
 
 begin
   Failed := 0;
@@ -346,15 +353,71 @@ begin
   { 5. shots: an enemy's bullet through a claymore sets it off; a team mate's or a miss does not }
   C1 := MnPlant(MN_CLAY, 1, 1, 0, 0, 300, -12, 1000);
   Run(1061);
-  Shot(3, -200, -5, 20, 0);
+  MnGet(C1, Kind, Owner, Team, X, Y, FX, FY);
+  Y := Y - 5;
+  Shot(3, X - 100, Y - 2, 20, 0);
   Run(1062);
   Check(not Has(MNE_SHOT, C1, -1), 'a team mate''s bullet does nothing');
-  Shot(2, -200, -30, 20, 0);
+  Shot(2, X - 100, Y - 25, 20, 0);
   Run(1063);
   Check(not Has(MNE_SHOT, C1, -1), 'a bullet 25 px over it misses');
-  Shot(2, -200, -5, 20, 0);
+  Shot(2, X - 100, Y - 2, 20, 0);
   Run(1064);
   Check(Has(MNE_SHOT, C1, 2), 'an enemy bullet through it sets it off');
+  MnRemove(C1);
+  { BD2-02: the bullet falls (0.135 px a tick squared) and slows down: 600 px away a level shot passes 50 px below
+    the claymore and does not touch it; a lobbed one that comes down on it does, when it gets there }
+  C1 := MnPlant(MN_CLAY, 1, 1, 0, 0, 600, -12, 1070);
+  Run(1071);
+  MnGet(C1, Kind, Owner, Team, X, Y, FX, FY);
+  Y := Y - 5;
+  ShotAt(1071, 2, X - 600, Y, 24, 0);
+  Run(1072);
+  Check(not Has(MNE_SHOT, C1, -1), 'a level shot 600 px away drops below the claymore: nothing');
+  GY := 0;
+  Hit := False;
+  for K := 0 to 400 do
+  begin
+    VY := -1.5 + K * 0.005;
+    { the same flight as the game's: gravity first, then the move, then the drag }
+    BX := X - 600;
+    BY := Y;
+    BVX := 24;
+    BVY := VY * 24;
+    for T := 1 to 70 do
+    begin
+      BVY := BVY + 0.135;
+      BX := BX + BVX;
+      BY := BY + BVY;
+      BVX := BVX * 0.99;
+      BVY := BVY * 0.99;
+      if (Abs(BX - X) < 12) and (Abs(BY - Y) < 3) then
+      begin
+        Hit := True;
+        GY := VY;
+        Break;
+      end;
+    end;
+    if Hit then
+      Break;
+  end;
+  Check(Hit, 'a lobbed flight that comes down on the claymore exists');
+  ShotAt(1072, 2, X - 600, Y, 24, GY * 24);
+  Run(1073);
+  Check(not Has(MNE_SHOT, C1, -1), 'the lobbed bullet has not arrived yet');
+  Hit2 := False;
+  Arrived := 0;
+  for K := 1074 to 1160 do
+  begin
+    Run(K);
+    if Has(MNE_SHOT, C1, 2) then
+    begin
+      Hit2 := True;
+      Arrived := K;
+      Break;
+    end;
+  end;
+  Check(Hit2 and (Arrived > 1085), 'the lobbed bullet sets it off when it gets there (tick ' + IntToStr(Arrived) + ')');
   MnRemove(C1);
   M1 := MnPlant(MN_LAND, 1, 1, 0, 0, 0, 0, 1100);
   Run(1161);

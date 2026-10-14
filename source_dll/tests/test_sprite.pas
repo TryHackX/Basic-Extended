@@ -157,6 +157,16 @@ begin
   Recs[1, CTL + 2] := 1;
   Check(SpriteCheck(1, 1, 3, 30, 0, 12, 2, 700, -250, 4) = 1, '2.8.2: the up key');
   Recs[1, CTL + 2] := 0;
+  { 4.1: prone at +17 and flag throw at +18 - the byte at +16 is no key }
+  Recs[1, CTL + 17] := 1;
+  Check(SpriteCheck(1, 1, 3, 30, 0, 12, 2, 700, -250, 1024) = 1, '2.8.2: the prone key at +17');
+  Recs[1, CTL + 17] := 0;
+  Recs[1, CTL + 18] := 1;
+  Check(SpriteCheck(1, 1, 3, 30, 0, 12, 2, 700, -250, 2048) = 1, '2.8.2: the flag throw key at +18');
+  Recs[1, CTL + 18] := 0;
+  Recs[1, CTL + 16] := 7;
+  Check(SpriteCheck(1, 1, 3, 30, 0, 12, 2, 700, -250, 0) = 1, '2.8.2: the byte at +16 is no key');
+  Recs[1, CTL + 16] := 0;
 
   { the ammunition of all of them in one call }
   WeaponsDefault(False);

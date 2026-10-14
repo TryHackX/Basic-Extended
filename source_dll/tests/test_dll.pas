@@ -65,7 +65,8 @@ var
   AmmoMagCount: TAmmoMagCount;
   AmmoFormatHud: TAmmoFormatHud;
   k, V, Act, T, A, p, q, n: LongInt;
-  Dir, LogFile, MainPas, S, Rest, Name, Missing: AnsiString;
+  Dir, LogFile, MainPas, S, Rest, Name, Missing, OldD, NewD: AnsiString;
+  DataNote: TStatus;
   L, ML: TStringList;
   Vals: array[0..255] of LongInt;
 begin
@@ -148,10 +149,11 @@ begin
 
   Check(BridgeReady() = 0, 'bridge initially not ready');
   Check(StrPas(BridgeInfo()) = 'not calibrated, weapons set 0, refused 0; soldiers: not used yet; weapons and keys ' +
-    'from the properties (not calibrated yet)', 'initial bridge info: ' + StrPas(BridgeInfo()));
+    'from the properties (not calibrated yet); ping compensation the server''s GetSpriteCollisionPoint was not found',
+    'initial bridge info: ' + StrPas(BridgeInfo()));
 
-  Check(Init(PChar(Dir), 99) = -23, 'another API version is refused');
-  Check(Init(PChar(Dir), 23) = 23, 'started');
+  Check(Init(PChar(Dir), 99) = -25, 'another API version is refused');
+  Check(Init(PChar(Dir), 25) = 25, 'started');
   Check(Count('S777') = 6, 'players.txt taken over');
   Check(FileExists(Dir + 'players.txt.imported'), 'players.txt moved aside');
   FillChar(Vals, SizeOf(Vals), 0);
@@ -208,10 +210,58 @@ begin
   Check((L.Count = 2) and (L[1] = 'second line'), 'the log lines are in their file');
   L.Free;
 
-  Check(Init(PChar(Dir), 23) = 23, 'started again');
+  Check(Init(PChar(Dir), 25) = 25, 'started again');
   FillChar(Vals, SizeOf(Vals), 0);
   Check((Load('S888', @Vals[0]) = 3) and (Vals[2] = 42), 'the value came back from players.bdb');
   Check(Count('S777') = 6, 'and the taken-over one');
+  Shutdown();
+
+  { 4.2 (LEAD-01): the data folder of an earlier release is taken over once, entry by entry, never over what is there }
+  DataNote := TStatus(GetProcAddress(H, 'BE_DataNote'));
+  Check(Assigned(DataNote), 'BE_DataNote exported');
+  OldD := Dir + 'olddata' + PathDelim;
+  NewD := Dir + 'newdata' + PathDelim;
+  DeleteFile(OldD + 'a.txt');
+  DeleteFile(OldD + 'b.txt');
+  DeleteFile(OldD + 'settings.ini');
+  DeleteFile(OldD + 'imported' + PathDelim + 'x' + PathDelim + 'f.txt');
+  RemoveDir(OldD + 'imported' + PathDelim + 'x');
+  RemoveDir(OldD + 'imported');
+  DeleteFile(NewD + 'a.txt');
+  DeleteFile(NewD + 'b.txt');
+  DeleteFile(NewD + 'imported' + PathDelim + 'x' + PathDelim + 'f.txt');
+  RemoveDir(NewD + 'imported' + PathDelim + 'x');
+  RemoveDir(NewD + 'imported');
+  ForceDirectories(OldD + 'imported' + PathDelim + 'x');
+  ForceDirectories(NewD);
+  L := TStringList.Create;
+  L.Add('old a');
+  L.SaveToFile(OldD + 'a.txt');
+  L.Clear;
+  L.Add('old b');
+  L.SaveToFile(OldD + 'b.txt');
+  L.SaveToFile(OldD + 'settings.ini');
+  L.SaveToFile(OldD + 'imported' + PathDelim + 'x' + PathDelim + 'f.txt');
+  L.Clear;
+  L.Add('new b');
+  L.SaveToFile(NewD + 'b.txt');
+  L.Free;
+  Check(Init(PChar(NewD + '|' + OldD), 25) = 25, 'started with the data folder of an earlier release');
+  Check(FileExists(NewD + 'a.txt') and (not FileExists(OldD + 'a.txt')), 'a file moved');
+  Check(FileExists(NewD + 'imported' + PathDelim + 'x' + PathDelim + 'f.txt') and (not DirectoryExists(OldD + 'imported')),
+    'a folder moved with its files');
+  Check(FileExists(OldD + 'b.txt') and FileExists(NewD + 'b.txt'), 'a name that is in both places: both stay');
+  L := TStringList.Create;
+  L.LoadFromFile(NewD + 'b.txt');
+  Check(L[0] = 'new b', 'and the new one is not touched');
+  L.Free;
+  Check(FileExists(OldD + 'settings.ini') and (not FileExists(NewD + 'settings.ini')), 'settings.ini stays where it was');
+  Check(DirectoryExists(OldD), 'the old folder itself stays (the server makes it at every start)');
+  Check((Pos('2 entries moved', StrPas(DataNote())) > 0) and (Pos('1 left', StrPas(DataNote())) > 0),
+    'the note says so: ' + StrPas(DataNote()));
+  Shutdown();
+  Check(Init(PChar(NewD + '|' + OldD), 25) = 25, 'started again');
+  Check(Pos('2 entries', StrPas(DataNote())) = 0, 'nothing more to take over: ' + StrPas(DataNote()));
   Shutdown();
   UnloadLibrary(H);
   if Failed > 0 then

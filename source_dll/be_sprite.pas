@@ -27,12 +27,19 @@ function SpriteKnown(ID: LongInt): Boolean;
   known (the record not bound, or not laid out as 2.8.2's: its anchors are checked every time) }
 function SpriteStance(ID: LongInt): LongInt;
 function SpriteInfo: AnsiString;
+{ 4.1: the server's ping compensation of a hit on soldier V by bullet B (2.8.2's GetSpriteCollisionPoint): a
+  human's body parts are tested where he stood the bullet owner's ping ago (OldSpritePos[V, OwnerPingTick], at
+  most 124 ticks back), a bot's - and a flame's first ticks - where he stands. DX, DY = that place less where he
+  stands now (0, 0 when nothing is moved); False = not known (the server's code was not found) }
+function SpritePingShift(V, B: LongInt; out DX, DY: Single): Boolean;
+function SpritePingInfo: AnsiString;
 
 { ---- round 26: the weapons, the keys and the aim of every soldier read from his record ----
   The places are found by matching what the script reads through the properties on two soldiers at once (the
   weapon in the hands and the second one: number and rounds, three gun records in a row with the grenades in the
   third; the aim pair after 12 key bytes of 0 or 1), checked again every second against the properties; one
-  mismatch switches the reading off for good (until SpriteMemReset). }
+  mismatch switches the reading off for good: until the server restarts (the library stays loaded, so a /recompile
+  does not reset it; SpriteMemReset is only for the tests). }
 
 { a calibration sample of a bound soldier (the properties of this tick): 1 = the places are known now }
 function SpriteCalibrate(ID, W, A, SW, SA, Gren, AimX, AimY: LongInt): LongInt;
@@ -51,7 +58,7 @@ function SpriteMemInfo: AnsiString;
 implementation
 
 uses
-  SysUtils, be_bridge;
+  SysUtils, be_bridge, be_hook;
 
 const
   MAX_ID = 32;
@@ -63,6 +70,34 @@ const
   EYES_OUT = 3;
   { the class of the script's player objects (TScriptActivePlayer in the server's source) }
   CLASS_WANT = 'ActivePlayer';
+
+const
+  { 4.1: 2.8.2's GetSpriteCollisionPoint, alike in the Windows and the Linux server: the flame case (SpriteParts.Pos
+    when TimeOut > 30), the bot test (Sprite[i].Player.ControlMethod = BOT), the ping compensation (OldSpritePos[i,
+    OwnerPingTick], [i, 124] beyond); the three tables' addresses are the wild bytes }
+  COLW = $100;
+  SIG_COLPOINT: array[0..76] of Word = (
+    $53, $56, $57, $89, $CB, $80, $78, $01, $05, $75, COLW, $66, $81, $78, $0C, COLW, COLW, $7E, COLW, $89,
+    $DF, $8D, $34, $D5, COLW, COLW, COLW, COLW, $B9, $08, $00, $00, $00, $F3, $A4, $EB, COLW, $69, $CA, $18,
+    $C2, $00, $00, $80, $B9, COLW, COLW, COLW, COLW, $02, $74, COLW, $80, $78, $21, $7D, $73, COLW, $69, $CA,
+    $F0, $03, $00, $00, $0F, $B6, $40, $21, $89, $DF, $8D, $B4, $C1, COLW, COLW, COLW, COLW);
+  COL_POS_AT = 24;
+  COL_CTL_AT = 45;
+  COL_OLD_AT = 73;
+  SPRITE_STEP_282 = $C218;
+  OLDPOS_ROW = $3F0;
+  OLDPOS_KEPT = 125;
+  CONTROL_BOT = 2;
+  STYLE_FLAME = 5;
+  FLAME_FRESH = 30;
+
+var
+  PingTried: Boolean = False;
+  PingPos: PtrUInt = 0;
+  PingCtl: PtrUInt = 0;
+  PingOld: PtrUInt = 0;
+  PingWhy: AnsiString = 'not looked for yet';
+  PingShifts: LongInt = 0;
 
 var
   Addr: array[1..MAX_ID] of PtrUInt;
@@ -176,6 +211,98 @@ begin
       if ExeData(a + PtrUInt(PosOff), 25 * 8) then
         Addr[k] := a;
     end;
+end;
+
+procedure FindPing;
+var
+  A: PtrUInt;
+begin
+  PingTried := True;
+  A := FindCodeW(SIG_COLPOINT);
+  if A = 0 then
+  begin
+    PingWhy := 'the server''s GetSpriteCollisionPoint was not found';
+    Exit;
+  end;
+  PingPos := PLongWord(A + COL_POS_AT)^;
+  PingCtl := PLongWord(A + COL_CTL_AT)^;
+  PingOld := PLongWord(A + COL_OLD_AT)^;
+  if not (ExeData(PingPos + 8, 8 * MAX_ID) and ExeData(PingCtl + SPRITE_STEP_282 * MAX_ID, 1) and
+    ExeData(PingOld + OLDPOS_ROW, OLDPOS_ROW * MAX_ID)) then
+  begin
+    PingPos := 0;
+    PingCtl := 0;
+    PingOld := 0;
+    PingWhy := 'its tables are not in the server''s data';
+    Exit;
+  end;
+  PingWhy := 'ready';
+end;
+
+function Finite32(B: LongWord): Boolean;
+begin
+  Result := (B and $7F800000) <> $7F800000;
+end;
+
+function SpritePingShift(V, B: LongInt; out DX, DY: Single): Boolean;
+var
+  Active, Owner, W, Style, TimeOut, Ping: LongInt;
+  O, P: PtrUInt;
+  OX, OY, PX, PY: LongWord;
+begin
+  Result := False;
+  DX := 0;
+  DY := 0;
+  try
+    if (V < 1) or (V > MAX_ID) then
+      Exit;
+    if not PingTried then
+      FindPing;
+    if PingOld = 0 then
+      Exit;
+    { a flame in its first ticks is tested where he stands }
+    if BridgeBulletInfo(B, Active, Owner, W, Style, TimeOut) then
+      if (Style = STYLE_FLAME) and (TimeOut > FLAME_FRESH) then
+      begin
+        Result := True;
+        Exit;
+      end;
+    { a bot where he stands }
+    if PByte(PingCtl + PtrUInt(V) * SPRITE_STEP_282)^ = CONTROL_BOT then
+    begin
+      Result := True;
+      Exit;
+    end;
+    Ping := BridgeBulletPingTick(B);
+    if Ping < 0 then
+      Exit;
+    if Ping >= OLDPOS_KEPT then
+      Ping := OLDPOS_KEPT - 1;
+    O := PingOld + PtrUInt(V) * OLDPOS_ROW + PtrUInt(Ping) * 8;
+    P := PingPos + PtrUInt(V) * 8;
+    OX := PLongWord(O)^;
+    OY := PLongWord(O + 4)^;
+    PX := PLongWord(P)^;
+    PY := PLongWord(P + 4)^;
+    if not (Finite32(OX) and Finite32(OY) and Finite32(PX) and Finite32(PY)) then
+      Exit;
+    DX := PSingle(@OX)^ - PSingle(@PX)^;
+    DY := PSingle(@OY)^ - PSingle(@PY)^;
+    if (DX <> 0) or (DY <> 0) then
+      Inc(PingShifts);
+    Result := True;
+  except
+    Result := False;
+  end;
+end;
+
+function SpritePingInfo: AnsiString;
+begin
+  if not PingTried then
+    FindPing;
+  Result := 'ping compensation ' + PingWhy;
+  if PingOld <> 0 then
+    Result := Result + ' (hits moved ' + IntToStr(PingShifts) + ')';
 end;
 
 function SpriteKnown(ID: LongInt): Boolean;
@@ -420,10 +547,11 @@ begin
   Result := PSmallInt(a)^;
 end;
 
-{ the two layouts of the control record (18 bytes, right before the first gun, which is 4-aligned: 20 bytes before
-  it): 1 = 2.8.2's (Left, Right, Up, Down, then MouseAimX, MouseAimY, MouseDist, then Fire, Jetpack, ThrowNade,
-  ChangeWeapon, ThrowWeapon, Reload, Prone, FlagThrow - read from the running server), 2 = the source's of today
-  (the 12 keys, then the aim) }
+{ the two layouts of the control record (right before the first gun, which is 4-aligned: 20 bytes before it):
+  1 = 2.8.2's (Left, Right, Up, Down, then MouseAimX, MouseAimY, MouseDist, then Fire, Jetpack, ThrowNade,
+  ChangeWeapon, ThrowWeapon, Reload at +10 .. +15, a byte of its own at +16, Prone at +17, FlagThrow at +18 - the
+  server's code reads the two keys there: 13 and 6 places, +16 only 2), 2 = the source's of today (the 12 keys,
+  then the aim) }
 procedure SetLayout(L: LongInt);
 var
   k: LongInt;
@@ -434,8 +562,10 @@ begin
     CtlAim := 4;
     for k := 0 to 3 do
       CtlKey[k] := k;
-    for k := 4 to 11 do
+    for k := 4 to 9 do
       CtlKey[k] := k + 6;
+    CtlKey[10] := 17;
+    CtlKey[11] := 18;
   end
   else
   begin

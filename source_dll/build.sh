@@ -42,10 +42,20 @@ OPTS="-O2 -Xs -XX -CX"
 if [ "$1" = "debug" ]; then
   OPTS="-O1 -gl -gw -Cr -Co -Ci -dBE_CHECKS -CX"
 fi
+# PIC=1 sh build.sh: position independent code (-Cg). Without it the library has relocations in its
+# code (TEXTREL), which a system with SELinux or PaX may refuse to load. The two small assembler
+# routines of the hook (be_hook.pas) keep an absolute address, so PIC=1 narrows the relocations but
+# may not remove them: if the library still does not load, see Troubleshooting in README.md.
+if [ "$PIC" = "1" ]; then
+  OPTS="$OPTS -Cg"
+fi
 OUT=build/i386-linux
 mkdir -p "$OUT"
 
 "$FPC" -B -Pi386 -Tlinux -Mobjfpc -Sh $OPTS ${UNITPATH:+"$UNITPATH"} -FU"$OUT" -FE"$OUT" -obasicext_dll.so be_main.pas
-cp -f "$OUT/basicext_dll.so" ../basicext_dll.so
-chmod 755 ../basicext_dll.so
-echo "Built ../basicext_dll.so"
+# A new file beside the old one, renamed over it: a running server keeps the library it loaded
+# (a copy onto that file would change its code under the server and crash it).
+cp -f "$OUT/basicext_dll.so" ../basicext_dll.so.new
+chmod 755 ../basicext_dll.so.new
+mv -f ../basicext_dll.so.new ../basicext_dll.so
+echo "Built ../basicext_dll.so - a running server keeps the old library until it restarts (the library is pinned)"

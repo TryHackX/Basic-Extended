@@ -1087,6 +1087,62 @@ begin
   AcTotals(5, Tot);
   Check(Tot[T_SPEED] = 1, 'sustained speed seen: ' + IntToStr(Tot[T_SPEED]));
   while AcNext(ID, Kind, Txt) do ;
+  { BD2-01: a stall (four humans corrected by 400 px in one look) is no teleport, a jump of one alone is }
+  for k := 4 to 7 do
+    AcReset(k);
+  WClear;
+  for k := 4 to 7 do
+    WAdd(k, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 100, 100, 0, 0);
+  WorldLoad(3000, WN, @WI, @WF);
+  AcWorld(3000);
+  WClear;
+  for k := 4 to 7 do
+    WAdd(k, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 500, 100, 0, 0);
+  WorldLoad(3010, WN, @WI, @WF);
+  AcWorld(3010);
+  Check(not AcNext(ID, Kind, Txt), 'a stall: four humans corrected together are no teleports');
+  AcTotals(4, Tot);
+  Check(Tot[T_JUMPS] = 0, 'a stall counts no jump');
+  WClear;
+  WAdd(4, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 500, 100, 0, 0);
+  WAdd(5, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 500, 100, 0, 0);
+  WAdd(6, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 500, 100, 0, 0);
+  WAdd(7, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 1500, 100, 0, 0);
+  WorldLoad(3020, WN, @WI, @WF);
+  AcWorld(3020);
+  Check(AcNext(ID, Kind, Txt) and (ID = 7) and (Kind = AK_JUMP), 'one of four jumping alone is a teleport');
+  while AcNext(ID, Kind, Txt) do ;
+  { BD2-01 (c): the ping is ticks he may be behind; above 400 ms the jump rule does not judge him }
+  AcReset(8);
+  WClear;
+  WAdd(8, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 100, 100, 0, 0);
+  WorldLoad(3100, WN, @WI, @WF);
+  AcWorld(3100);
+  WClear;
+  WAdd(8, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 520, 100, 0, 0);
+  WorldLoad(3110, WN, @WI, @WF);
+  AcWorld(3110);
+  Check(AcNext(ID, Kind, Txt) and (Kind = AK_JUMP), 'a jump of 420 px at ping 0 is a teleport');
+  AcPing(8, 200);
+  WClear;
+  WAdd(8, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 940, 100, 0, 0);
+  WorldLoad(3120, WN, @WI, @WF);
+  AcWorld(3120);
+  Check(not AcNext(ID, Kind, Txt), 'the same jump at ping 200 is a correction');
+  AcPing(8, 500);
+  WClear;
+  WAdd(8, WF_ALIVE or WF_HUMAN, 1, 100, 0, 0, 0, 0, 2940, 100, 0, 0);
+  WorldLoad(3130, WN, @WI, @WF);
+  AcWorld(3130);
+  Check(not AcNext(ID, Kind, Txt), 'at ping 500 the jump rule does not judge');
+  { BD2-03: one short start-up in one measured is 25%, not the 50% that tells the admins }
+  FillChar(Tot, SizeOf(Tot), 0);
+  Tot[T_SU_N] := 1;
+  Tot[T_SU_BAD] := 1;
+  Check(AcScoreOf(Tot) = 25, 'one bad start-up of one: ' + IntToStr(AcScoreOf(Tot)));
+  Tot[T_SU_N] := 6;
+  Tot[T_SU_BAD] := 6;
+  Check(AcScoreOf(Tot) >= 60, 'six bad start-ups of six still show: ' + IntToStr(AcScoreOf(Tot)));
   AcSet(AC_ENABLED, 0);
 
   { [LagGuard]: a jump of 120 px in a tick is a warp, walking is not, a move by the script is not; three humans

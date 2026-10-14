@@ -16,6 +16,9 @@ function AutoDetectBridge: Boolean;
 function BridgeBulletStyle(B: LongInt): LongInt;
 function BridgeBulletInfo(B: LongInt; out Active, Owner, W, Style, TimeOut: LongInt): Boolean;
 function BridgeBulletKill(B, Owner, Style: LongInt): Boolean;
+{ the ticks of its owner's ping the server goes back when it hits a human with bullet B (OwnerPingTick: the
+  owner's ping in ticks when he is a human, 0 for a bot); -1 = not known }
+function BridgeBulletPingTick(B: LongInt): LongInt;
 { where and when bullet B (made this tick at MadeX, MadeY) counts as fired: its Initial becomes FromX,
   FromY and its StartUpTime goes back by Ago ticks - the distance and the air time a kill by it shows
   (the server's death message) count from there }
@@ -44,6 +47,8 @@ const
   OFF_N = -3;
   OFF_ACTIVE = -5;
   OFF_HITM = 11;
+  { OwnerPingTick: the record's +$21 }
+  OFF_PING = 28;
 
 type
   TRegion = record
@@ -238,7 +243,7 @@ begin
       if p > 0 then
         Path := Trim(Copy(L, p, Length(L)));
       Mine := Path = Exe;
-      if (Perm[1] = 'r') and (Perm[2] = 'w') then
+      if (Length(Perm) >= 2) and (Perm[1] = 'r') and (Perm[2] = 'w') then
       begin
         if Mine then
           AddRegion(A, B)
@@ -363,7 +368,8 @@ begin
     Exit;
   try
     a := PtrUInt(PtrInt(Base) + B * Stride);
-    if not InRegion(a, 1) then
+    { what is read lies from a-5 to a+14 and the weapon byte at a is written: the same 24 bytes SlotAddr checks }
+    if not InRegion(PtrUInt(PtrInt(a) + OFF_ACTIVE), 24) then
       Exit;
 
     // Safety check 1: Active flag
@@ -463,6 +469,23 @@ begin
     Result := Active <= 1;
   except
     Result := False;
+  end;
+end;
+
+function BridgeBulletPingTick(B: LongInt): LongInt;
+var
+  a: PtrUInt;
+begin
+  Result := -1;
+  try
+    a := SlotAddr(B);
+    if a = 0 then
+      Exit;
+    if not InRegion(PtrUInt(PtrInt(a) + OFF_PING), 1) then
+      Exit;
+    Result := PByte(PtrInt(a) + OFF_PING)^;
+  except
+    Result := -1;
   end;
 end;
 

@@ -46,6 +46,20 @@ begin
   Y := PY[ID] - U;
 end;
 
+{ 4.1: the server's ping compensation for bullet 7 at soldier 1 (he stood 5 px left and 22 px higher the
+  shooter's ping ago); none for any other bullet }
+function FakePing(V, B: LongInt; out DX, DY: Single): Boolean;
+begin
+  DX := 0;
+  DY := 0;
+  Result := (V = 1) and (B = 7);
+  if Result then
+  begin
+    DX := -5;
+    DY := -22;
+  end;
+end;
+
 { the stance as the server would have it: 2 crouching, 1 standing (0: not known - the keys then) }
 function FakeStance(ID: LongInt): LongInt;
 begin
@@ -198,7 +212,6 @@ begin
   E.Y := 0;
   E.VX := 1;
   E.VY := 0;
-  E.Script := False;
   BdShot(E);
 end;
 
@@ -211,6 +224,7 @@ begin
   RandSeed := 12345;
   BdPoint := @FakePoint;
   BdStance := @FakeStance;
+  BdPing := nil;
   for i := 1 to 32 do
   begin
     Known[i] := True;
@@ -265,13 +279,18 @@ begin
 
   { 1. hit places: a bullet left on the edge of the circle it hit (the server's circles: 7 px, 2 px left) }
   Spawn(1, 1, 0);
-  Check(BdHitPart(1, 1, -2 - 7, -21, 10, 0) = WP_HEAD, 'a bullet on the head circle''s edge: the head');
-  Check(BdHitPart(1, 1, -1 - 2 - 7, -11, 10, 0) = WP_TORSO, 'on a hip circle''s edge: the torso');
-  Check(BdHitPart(1, 1, -2 - 2, -6 + 7, 0, 10) = WP_LEGS, 'on a knee circle''s edge from below: the legs');
-  Check(BdHitPart(1, 11, -7, -21, 10, 0) = WP_HEAD, 'a knife: no 2 px shift');
-  Check(BdHitPart(1, 1, -14, -26, 10, 0) = WP_HEAD, 'off the edges: the line enters the head first');
-  Check(BdHitPart(1, 1, -14, -21, 10, 0) = WP_TORSO, 'level with the head from the left: the shoulder first (the server''s rule)');
-  Check(BdHitPart(1, 7, -2 - 7 - 10, -21, 10, 0) = WP_HEAD, 'an arrow is left a step back');
+  Check(BdHitPart(1, 0, 1, -2 - 7, -21, 10, 0) = WP_HEAD, 'a bullet on the head circle''s edge: the head');
+  Check(BdHitPart(1, 0, 1, -1 - 2 - 7, -11, 10, 0) = WP_TORSO, 'on a hip circle''s edge: the torso');
+  Check(BdHitPart(1, 0, 1, -2 - 2, -6 + 7, 0, 10) = WP_LEGS, 'on a knee circle''s edge from below: the legs');
+  Check(BdHitPart(1, 0, 11, -7, -21, 10, 0) = WP_HEAD, 'a knife: no 2 px shift');
+  Check(BdHitPart(1, 0, 1, -14, -26, 10, 0) = WP_HEAD, 'off the edges: the line enters the head first');
+  Check(BdHitPart(1, 0, 1, -14, -21, 10, 0) = WP_TORSO, 'level with the head from the left: the shoulder first (the server''s rule)');
+  Check(BdHitPart(1, 0, 7, -2 - 7 - 10, -21, 10, 0) = WP_HEAD, 'an arrow is left a step back');
+  { 4.1: the server tests a human's circles where he stood the shooter's ping ago }
+  BdPing := @FakePing;
+  Check(BdHitPart(1, 8, 1, -2 - 7, -21, 10, 0) = WP_HEAD, 'a bullet without a shift on the head''s edge: the head');
+  Check(BdHitPart(1, 7, 1, -2 - 7, -21, 10, 0) = WP_LEGS, 'the same place with the ping''s shift: the knee where he stood');
+  BdPing := nil;
 
   { 2. a hit opens a wound (Crit 100 at 10% of the health); fire and fists do not; the blood runs out }
   n := BdHit(1, 2, 3, 1, 30, 150, WP_TORSO, T);

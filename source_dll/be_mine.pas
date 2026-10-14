@@ -171,7 +171,7 @@ var
 implementation
 
 uses
-  SysUtils, Math, be_map, be_sprite, be_texts, be_font;
+  SysUtils, Math, be_map, be_sprite, be_texts, be_font, be_ballistic;
 
 const
   MAX_ID = 32;
@@ -210,6 +210,8 @@ type
     { how far under it bullets meet the ground (-1 = not near) }
     BGround: Single;
     PlantTick, ArmTick, EndTick, ChainAt: LongInt;
+    { a bullet will reach it at ShotAt (fired by ShotBy): 0 = none }
+    ShotAt, ShotBy: LongInt;
     { the enemies who found it (bit ID - 1) and their teams (bit team) }
     SeenBy: LongWord;
     SeenTeams: LongInt;
@@ -224,7 +226,7 @@ type
   end;
 
   TShotCopy = record
-    Owner: LongInt;
+    Owner, Tick, Style: LongInt;
     X, Y, VX, VY: Single;
   end;
 
@@ -791,6 +793,8 @@ begin
   else
     Mines[Slot].EndTick := 0;
   Mines[Slot].ChainAt := 0;
+  Mines[Slot].ShotAt := 0;
+  Mines[Slot].ShotBy := 0;
   Mines[Slot].SeenBy := 0;
   Mines[Slot].SeenTeams := 0;
   Mines[Slot].Worker := 0;
@@ -996,8 +1000,6 @@ begin
     Exit;
   if Live <= 0 then
     Exit;
-  if E.Script then
-    Exit;
   if not (ShootClay or ShootLand) then
     Exit;
   if not Valid(E.Owner) then
@@ -1008,6 +1010,8 @@ begin
     (E.Style = 14)) then
     Exit;
   Q[QHead].Owner := E.Owner;
+  Q[QHead].Tick := E.Tick;
+  Q[QHead].Style := E.Style;
   Q[QHead].X := E.X;
   Q[QHead].Y := E.Y;
   Q[QHead].VX := E.VX;
@@ -1036,11 +1040,14 @@ begin
     Y := M.Y - 2;
 end;
 
-{ a shot's line: the first mine it passes through (an enemy's bullet, before a wall) goes off }
+{ a mine a bullet reaches goes off: the bullet is followed tick by tick as the game flies it (it falls and slows
+  down), and the mine goes off when the bullet gets there - not at the shot (an enemy's bullet, before a wall) }
 procedure LookShot(const C: TShotCopy);
 var
-  i, Best: LongInt;
-  L, DX, DY, WX, WY, T, BestT, CX, CY: Single;
+  i, Best, Stp, BestAt, Cands: LongInt;
+  L, DX, DY, WX, WY, T, CX, CY, G, PX, PY, BVX, BVY, NX, NY, SX, SY, SL, U, BestU, Drop, Sp: Single;
+  Cand: array[1..MAX_MINES] of Boolean;
+  MX, MY: array[1..MAX_MINES] of Single;
 begin
   if not (FiniteS(C.X) and FiniteS(C.Y) and FiniteS(C.VX) and FiniteS(C.VY)) then
     Exit;
@@ -1049,40 +1056,112 @@ begin
     Exit;
   DX := C.VX / L;
   DY := C.VY / L;
-  Best := 0;
-  BestT := 1E9;
+  { the mines near the bullet's way (under its first line by as much as it can fall): only for them is the
+    flight followed }
+  Cands := 0;
   for i := 1 to MAX_MINES do
+  begin
+    Cand[i] := False;
     if Mines[i].Live then
       if not Mines[i].Going then
-      begin
-        if Mines[i].Kind = MN_CLAY then
+        if Mines[i].ShotAt = 0 then
         begin
-          if not ShootClay then
+          if Mines[i].Kind = MN_CLAY then
+          begin
+            if not ShootClay then
+              Continue;
+          end
+          else if not ShootLand then
             Continue;
-        end
-        else if not ShootLand then
-          Continue;
-        if not Hostile(Mines[i], C.Owner) then
-          Continue;
-        Middle(Mines[i], CX, CY);
-        WX := CX - C.X;
-        WY := CY - C.Y;
-        T := WX * DX + WY * DY;
-        if (T < 0) or (T > 1200) or (T >= BestT) then
-          Continue;
-        if Abs(WX * DY - WY * DX) > HitR then
-          Continue;
-        if MapReady then
-          if MapRay(C.X, C.Y, CX - DX * HitR, CY - DY * HitR, MR_BULLET, 0) then
+          if not Hostile(Mines[i], C.Owner) then
             Continue;
-        Best := i;
-        BestT := T;
+          Middle(Mines[i], CX, CY);
+          WX := CX - C.X;
+          WY := CY - C.Y;
+          T := WX * DX + WY * DY;
+          if (T < 0) or (T > 1250) then
+            Continue;
+          Sp := T / L * 1.4;
+          Drop := 0.5 * BulletGravity * Sp * Sp + HitR;
+          if Abs(WX * DY - WY * DX) > Drop then
+            Continue;
+          Cand[i] := True;
+          MX[i] := CX;
+          MY[i] := CY;
+          Inc(Cands);
+        end;
+  end;
+  if Cands = 0 then
+    Exit;
+  G := BulletGravity;
+  if C.Style = STYLE_FLAME then
+    G := G - 0.15;
+  PX := C.X;
+  PY := C.Y;
+  BVX := C.VX;
+  BVY := C.VY;
+  Best := 0;
+  BestAt := 0;
+  for Stp := 1 to 70 do
+  begin
+    BVY := BVY + G;
+    NX := PX + BVX;
+    NY := PY + BVY;
+    SX := NX - PX;
+    SY := NY - PY;
+    SL := SX * SX + SY * SY;
+    BestU := 2;
+    for i := 1 to MAX_MINES do
+      if Cand[i] then
+      begin
+        WX := MX[i] - PX;
+        WY := MY[i] - PY;
+        if SL < 0.0001 then
+          U := 0
+        else
+          U := (WX * SX + WY * SY) / SL;
+        if U < 0 then
+          U := 0;
+        if U > 1 then
+          U := 1;
+        CX := PX + U * SX - MX[i];
+        CY := PY + U * SY - MY[i];
+        if CX * CX + CY * CY <= HitR * HitR then
+          if U < BestU then
+          begin
+            { a wall on the way to the point of the closest pass stops the bullet first }
+            if MapReady then
+              if MapRay(PX, PY, PX + U * SX, PY + U * SY, MR_BULLET, 0) then
+                Continue;
+            BestU := U;
+            Best := i;
+          end;
       end;
+    if Best <> 0 then
+    begin
+      BestAt := Stp;
+      Break;
+    end;
+    if MapReady then
+      if MapRay(PX, PY, NX, NY, MR_BULLET, 0) then
+        Exit;
+    PX := NX;
+    PY := NY;
+    BVX := BVX * 0.99;
+    BVY := BVY * 0.99;
+  end;
   if Best = 0 then
     Exit;
-  Mines[Best].Going := True;
-  Inc(CntShot);
-  Push(MNE_SHOT, Best, C.Owner, 0);
+  Mines[Best].ShotBy := C.Owner;
+  Mines[Best].ShotAt := C.Tick + BestAt - 1;
+  if Mines[Best].ShotAt < 1 then
+    Mines[Best].ShotAt := 1;
+  if Mines[Best].ShotAt <= CurTick then
+  begin
+    Mines[Best].Going := True;
+    Inc(CntShot);
+    Push(MNE_SHOT, Best, C.Owner, 0);
+  end;
 end;
 
 { a landmine: a point of his legs or body within TrigR sideways and at most TrigH over it }
@@ -1450,6 +1529,15 @@ begin
               begin
                 Mines[i].Going := True;
                 Push(MNE_TRIGGER, i, 0, 1);
+                Continue;
+              end;
+            { the bullet that was followed has arrived }
+            if Mines[i].ShotAt > 0 then
+              if Tick >= Mines[i].ShotAt then
+              begin
+                Mines[i].Going := True;
+                Inc(CntShot);
+                Push(MNE_SHOT, i, Mines[i].ShotBy, 0);
                 Continue;
               end;
             if Mines[i].Armed then
@@ -1850,6 +1938,8 @@ begin
         Inc(Mines[k].EndTick, Delta);
       if Mines[k].ChainAt > 0 then
         Inc(Mines[k].ChainAt, Delta);
+      if Mines[k].ShotAt > 0 then
+        Inc(Mines[k].ShotAt, Delta);
       if Mines[k].WorkStart > 0 then
         Inc(Mines[k].WorkStart, Delta);
     end;

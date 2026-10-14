@@ -7,6 +7,12 @@ library basicext_dll;
   written by one worker thread: the store a moment after a change, the log lines as they come. So
   a slow disk never stops a tick.
 
+  Linux: a Free Pascal library gives the signal handlers back to the host when it loads, so the try/except blocks of
+  the exports catch Pascal exceptions (a file error, a bad index with checks on) but NOT a hardware fault (SIGSEGV,
+  SIGFPE): that signal is handled by the server's runtime and does not enter the library's except. On Windows the
+  structured exception handling does catch it. Hence every read of the server's memory is checked against the
+  program's regions first (be_bridge, be_sprite) and divisors are tested where they can be 0.
+
   The library pins itself on the first BE_Init: a script reload finds the running worker again
   instead of unloading code under a running thread. BE_Shutdown (the script's finalization) writes
   what is pending and stops the thread; the next BE_Init starts again from the files.
@@ -27,11 +33,12 @@ library basicext_dll;
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   {$IFDEF WINDOWS}Windows,{$ENDIF}
-  SysUtils, SyncObjs, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac, be_util, be_bridge, be_hook, be_ammo, be_prof, be_rocket, be_sprite, be_tk, be_mine, be_body, be_names, be_shop, be_hud;
+  SysUtils, SyncObjs, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac, be_util, be_bridge, be_hook, be_ammo, be_prof, be_rocket, be_sprite, be_tk, be_mine, be_body, be_names, be_shop, be_hud,
+  be_spawn;
 
 
 const
-  BE_API_VERSION = 23;
+  BE_API_VERSION = 25;
   GET_MODULE_HANDLE_EX_FLAG_PIN = 1;
   GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = 4;
 {$IFNDEF WINDOWS}
@@ -46,6 +53,11 @@ var
   Writer: TBEWriter = nil;
   Worker: TBEWorker = nil;
   Pinned: Boolean = False;
+  { a worker thread that did not end within StopAll's 3 s (a stuck disk) with its store and writer: BE_Init takes
+    them over (the thread ends by itself and writes what is theirs) instead of reading older files }
+  Abandoned: TBEWorker = nil;
+  AbStore: TBEStore = nil;
+  AbWriter: TBEWriter = nil;
   Imported: LongInt = 0;
   StatusBuf: AnsiString = '';
   BridgeBuf: AnsiString = '';
@@ -60,6 +72,10 @@ var
   MnBuf: AnsiString = '';
   NamesBuf: AnsiString = '';
   BdBuf: AnsiString = '';
+  { 4.1: [Spawns] - the data folder of the layouts' file }
+  SpDir: AnsiString = '';
+  { 4.2 (LEAD-01): what BE_Init took over from the data folder of an earlier release ('' = nothing) }
+  DataNote: AnsiString = '';
 
 {$IFDEF WINDOWS}
 function PinModuleHandle(Flags: DWORD; Addr: Pointer; var Module: HMODULE): BOOL; stdcall;
@@ -106,9 +122,112 @@ begin
     Result := Copy(StrPas(P), 1, MaxLen);
 end;
 
+{ what an abandoned thread left is freed once the thread has ended (its objects too, unless the running session took
+  them over) }
+procedure ReapAbandoned;
+begin
+  if Abandoned = nil then
+    Exit;
+  if Abandoned.Done.WaitFor(0) <> wrSignaled then
+    Exit;
+  Abandoned.WaitFor;
+  FreeAndNil(Abandoned);
+  if AbStore <> Store then
+    FreeAndNil(AbStore)
+  else
+    AbStore := nil;
+  if AbWriter <> Writer then
+    FreeAndNil(AbWriter)
+  else
+    AbWriter := nil;
+end;
+
+{ 4.2 (LEAD-01): the data folder of 4.0 and 4.1 lay in the script's own folder (scripts/Basic-Extended/data/), where
+  every write made the server compile the script again at each /recompile (it loads the saved bytecode only when no
+  file in the script's folder is newer). From 4.2 the data lies outside it. Once, before anything is read, every entry
+  of the old folder (files and folders, the settings.ini that an old release looked for there excepted) is moved to
+  the new one: only moved, never deleted, never over something that is already there (both stay, and DataNote says
+  so). The emptied old folder itself stays (the server would make it again, which changes the script's folder). }
+function SameDir(const A, B: AnsiString): Boolean;
+begin
+  Result := ExpandFileName(ExcludeTrailingPathDelimiter(A)) = ExpandFileName(ExcludeTrailingPathDelimiter(B));
+  {$IFDEF WINDOWS}
+  Result := LowerCase(ExpandFileName(ExcludeTrailingPathDelimiter(A))) =
+    LowerCase(ExpandFileName(ExcludeTrailingPathDelimiter(B)));
+  {$ENDIF}
+end;
+
+function DataMigrate(OldDir, NewDir: AnsiString): LongInt;
+var
+  SR: TSearchRec;
+  Name: AnsiString;
+  Moved, Kept, Failed: LongInt;
+begin
+  Result := 0;
+  DataNote := '';
+  OldDir := IncludeTrailingPathDelimiter(OldDir);
+  NewDir := IncludeTrailingPathDelimiter(NewDir);
+  if not DirectoryExists(ExcludeTrailingPathDelimiter(OldDir)) then
+    Exit;
+  if SameDir(OldDir, NewDir) then
+    Exit;
+  if not ForceDirectories(ExcludeTrailingPathDelimiter(NewDir)) then
+    Exit;
+  Moved := 0;
+  Kept := 0;
+  Failed := 0;
+  if FindFirst(OldDir + '*', faAnyFile, SR) = 0 then
+  try
+    repeat
+      Name := SR.Name;
+      if (Name = '.') or (Name = '..') then
+        Continue;
+      { an old release looked for its settings.ini here when there was none next to main.pas: it stays }
+      if LowerCase(Name) = 'settings.ini' then
+        Continue;
+      if FileExists(NewDir + Name) or DirectoryExists(NewDir + Name) then
+        Inc(Kept)
+      else if RenameFile(OldDir + Name, NewDir + Name) then
+        Inc(Moved)
+      else
+        Inc(Failed);
+    until FindNext(SR) <> 0;
+  finally
+    FindClose(SR);
+  end;
+  { the empty old folder stays: the server makes scripts/<script>/data again at every start where it is missing, and
+    that changes the script's folder - the next start would compile the script again }
+  Result := Moved;
+  if Moved + Kept + Failed > 0 then
+  begin
+    DataNote := 'data folder: ' + IntToStr(Moved) + ' entries moved from ' + OldDir + ' to ' + NewDir;
+    if Kept > 0 then
+      DataNote := DataNote + '; ' + IntToStr(Kept) + ' left where they were because the new folder has them too';
+    if Failed > 0 then
+      DataNote := DataNote + '; ' + IntToStr(Failed) + ' could not be moved';
+  end;
+end;
+
+{ the store and the writer go, unless an older thread that is still stuck on the disk works on them (BE_Init took them
+  over): ReapAbandoned frees them when that thread has ended }
+procedure FreeStoreObjects;
+begin
+  if (Abandoned <> nil) and ((AbStore = Store) or (AbWriter = Writer)) then
+  begin
+    Store := nil;
+    Writer := nil;
+  end
+  else
+  begin
+    FreeAndNil(Writer);
+    FreeAndNil(Store);
+  end;
+end;
+
 procedure StopAll;
 begin
   HookShutdown;
+  ReapAbandoned;
   if Worker <> nil then
   begin
     Worker.Terminate;
@@ -119,19 +238,20 @@ begin
     begin
       Worker.WaitFor;
       FreeAndNil(Worker);
-      FreeAndNil(Writer);
-      FreeAndNil(Store);
+      FreeStoreObjects;
     end
     else
     begin
+      Abandoned := Worker;
+      AbStore := Store;
+      AbWriter := Writer;
       Worker := nil;
       Writer := nil;
       Store := nil;
     end;
     Exit;
   end;
-  FreeAndNil(Writer);
-  FreeAndNil(Store);
+  FreeStoreObjects;
 end;
 
 procedure ResetEngines;
@@ -163,7 +283,9 @@ end;
 
 function BE_Init(DataDir: PChar; ApiVersion: LongInt): LongInt; cdecl;
 var
-  Dir, Txt: AnsiString;
+  Dir, Txt, Old: AnsiString;
+  Taken: Boolean;
+  p: LongInt;
 begin
   Result := 0;
   try
@@ -176,21 +298,59 @@ begin
     ResetEngines;
     { a second BE_Init without BE_Shutdown (the script was loaded again): start fresh }
     StopAll;
-    Dir := IncludeTrailingPathDelimiter(Str(DataDir, 1024));
-    Store := TBEStore.Create(Dir + 'players.bdb');
-    Writer := TBEWriter.Create;
-    Imported := 0;
-    if not Store.Load then
+    { 'new folder|old folder': the folder of an earlier release to take over (a '|' is in no file name) }
+    Dir := Str(DataDir, 2048);
+    Old := '';
+    p := Pos('|', Dir);
+    if p > 0 then
     begin
-      Txt := Dir + 'players.txt';
-      if FileExists(Txt) then
+      Old := Copy(Dir, p + 1, Length(Dir));
+      Dir := Copy(Dir, 1, p - 1);
+    end;
+    Dir := IncludeTrailingPathDelimiter(Dir);
+    { the script's own writes (SaveToFile) need the folder: there is none in a fresh install }
+    ForceDirectories(ExcludeTrailingPathDelimiter(Dir));
+    DataNote := '';
+    if Old <> '' then
+      try
+        DataMigrate(Old, Dir);
+      except
+        DataNote := 'data folder: taking over ' + Old + ' failed';
+      end;
+    ReapAbandoned;
+    Taken := False;
+    if (Abandoned <> nil) and (AbStore <> nil) and (AbWriter <> nil) and (AbStore.Path = Dir + 'players.bdb') then
+    begin
+      { the last session's thread is still stuck on the disk with changes that are not written: its store and writer
+        go on (its layouts too, they are in memory); reading the files would lose those changes, or the thread
+        would later write over what this session saved }
+      Store := AbStore;
+      Writer := AbWriter;
+      Imported := 0;
+      Taken := True;
+    end
+    else
+    begin
+      Store := TBEStore.Create(Dir + 'players.bdb');
+      Writer := TBEWriter.Create;
+      Imported := 0;
+      if not Store.Load then
       begin
-        Imported := Store.ImportText(Txt);
-        if Store.Save then
-          RenameFile(Txt, Txt + '.imported');
+        Txt := Dir + 'players.txt';
+        if FileExists(Txt) then
+        begin
+          Imported := Store.ImportText(Txt);
+          if Store.Save then
+            RenameFile(Txt, Txt + '.imported');
+        end;
       end;
     end;
     Worker := TBEWorker.Create(Store, Writer);
+    { 4.1: [Spawns] - the layouts of the maps }
+    SpDir := Dir;
+    SpTableOff;
+    if not Taken then
+      SpLoad(Dir + 'spawns.bdb');
     Result := BE_API_VERSION;
   except
     try
@@ -212,6 +372,7 @@ end;
 function BE_Status: PChar; cdecl;
 begin
   try
+    ReapAbandoned;
     if Store = nil then
       StatusBuf := 'not running'
     else
@@ -232,7 +393,11 @@ begin
         ', trajectories computed ' + IntToStr(TrajRecomputed)
     else
       StatusBuf := StatusBuf + ', map not loaded';
-    StatusBuf := StatusBuf + ', bridge: ' + BridgeInfo + ', ' + HookInfo + ', ' + AmmoStatus;
+    StatusBuf := StatusBuf + ', bridge: ' + BridgeInfo + ', ' + HookInfo + ', ' + AmmoStatus + ', ' + SpInfo;
+    if not Pinned then
+      StatusBuf := StatusBuf + ', library NOT pinned (no hooks, no /recompile thread)';
+    if Abandoned <> nil then
+      StatusBuf := StatusBuf + ', a writer thread of an earlier session is still stuck on the disk';
   except
     StatusBuf := 'status failed';
   end;
@@ -401,6 +566,14 @@ procedure BE_AcMoved(ID, Tick: LongInt); cdecl;
 begin
   try
     AcMoved(ID, Tick);
+  except
+  end;
+end;
+
+procedure BE_AcPing(ID, Ping: LongInt); cdecl;
+begin
+  try
+    AcPing(ID, Ping);
   except
   end;
 end;
@@ -1628,6 +1801,25 @@ begin
   end;
 end;
 
+{ what BE_Init took over from the data folder of an earlier release ('' = nothing) }
+function BE_DataNote: PChar; cdecl;
+begin
+  Result := PChar(DataNote);
+end;
+
+{ 4.2 (BE3-07): the whole file FileName becomes Text now, in one step (FileName.tmp to the disk, then put in the file's
+  place); 1 = done, 0 = the old file is as it was }
+function BE_FileReplace(FileName, Text: PChar): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if WriteFileAtomic(Str(FileName, 1024), Str(Text, 4194304)) then
+      Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
 { the whole file FileName becomes Text, written by the worker thread (FileName.tmp, then put in place) }
 procedure BE_FileSave(FileName, Text: PChar); cdecl;
 begin
@@ -1792,11 +1984,9 @@ begin
 end;
 
 { the hooks' events for the ammunition, in the game thread as the server makes the bullet or the
-  weapon object: a player's shot (a script's bullet is not one), a weapon he dropped }
+  weapon object: a player's shot (a script's bullet never comes here), a weapon he dropped }
 procedure ShotToAmmo(const E: TShotEvent);
 begin
-  if E.Script then
-    Exit;
   if (E.Owner >= 1) and (E.Owner <= 32) then
   begin
     AmmoShot(E.Owner, E.W, E.Tick);
@@ -1811,11 +2001,10 @@ begin
   ShotToAmmo(E);
   { a soldier who is down or in shock fires nothing: his bullet (a shot, a grenade) is taken out as the
     server makes it - no damage, no push (his own game still draws it) }
-  if not E.Script then
-    if E.Style >= 0 then
-      if BdMuted(E.Owner) then
-        if BridgeBulletKill(E.Slot, E.Owner, E.Style) then
-          Exit;
+  if E.Style >= 0 then
+    if BdMuted(E.Owner) then
+      if BridgeBulletKill(E.Slot, E.Owner, E.Style) then
+        Exit;
   BdShot(E);
   TkQueueShot(E);
   MnQueueShot(E);
@@ -2550,12 +2739,13 @@ begin
   end;
 end;
 
-{ which body part a bullet hit (12 the head, 10 the torso, 3 the legs, 0 not known) }
-function BE_BodyHitPart(V, Style: LongInt; X, Y, VX, VY: Single): LongInt; cdecl;
+{ which body part bullet B hit (12 the head, 10 the torso, 3 the legs, 0 not known; 4.1: with the server's ping
+  compensation) }
+function BE_BodyHitPart(V, B, Style: LongInt; X, Y, VX, VY: Single): LongInt; cdecl;
 begin
   Result := 0;
   try
-    Result := BdHitPart(V, Style, X, Y, VX, VY);
+    Result := BdHitPart(V, B, Style, X, Y, VX, VY);
   except
     Result := 0;
   end;
@@ -3237,7 +3427,7 @@ end;
 function BE_BridgeInfo: PChar; cdecl;
 begin
   try
-    BridgeBuf := BridgeInfo + '; ' + SpriteInfo + '; ' + SpriteMemInfo;
+    BridgeBuf := BridgeInfo + '; ' + SpriteInfo + '; ' + SpriteMemInfo + '; ' + SpritePingInfo;
     Result := PChar(BridgeBuf);
   except
     Result := 'error';
@@ -3250,12 +3440,411 @@ function BE_HookInit: LongInt; cdecl;
 begin
   Result := 0;
   try
+    { the hooks jump into this library: with a library that could not pin itself a /recompile could unload the code
+      they jump to, so they stay off }
+    if not Pinned then
+      Exit;
     BridgeReady;
     OnShot := @ShotHandler;
     OnThing := @ThingToAmmo;
     Result := HookInit;
   except
     Result := 0;
+  end;
+end;
+
+{ ============ 4.1: [Spawns] - the spawn point layouts of the maps (Respawns-Control built in) ============ }
+
+var
+  SpBuf: AnsiString = '';
+  SpImportBuf: AnsiString = '';
+  SpRetireBuf: AnsiString = '';
+
+procedure SpSaveSoon;
+begin
+  if (Writer = nil) or (SpDir = '') then
+    Exit;
+  Writer.AddWhole(SpDir + 'spawns.bdb', SpSerialize);
+  if Worker <> nil then
+    Worker.Wake;
+end;
+
+{ the layout of a map is the selected one: its points (0 = none) }
+function BE_SpSelect(Map: PChar): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpSelect(Str(Map, 255));
+  except
+    Result := 0;
+  end;
+end;
+
+{ point K (0 ..) of the selected layout: 1 = given }
+function BE_SpPoint(K: LongInt; var Style, X, Y: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if SpPoint(K, Style, X, Y) then
+      Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
+{ bit S = the selected layout has points of style S }
+function BE_SpStyles: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpSelStyles;
+  except
+    Result := 0;
+  end;
+end;
+
+{ a new layout for a map: BE_SpBegin, BE_SpAdd per point, BE_SpCommit (saved a moment later; no points = the
+  map's layout goes) }
+procedure BE_SpBegin(Map: PChar); cdecl;
+begin
+  try
+    SpBegin(Str(Map, 255));
+  except
+  end;
+end;
+
+function BE_SpAdd(Style, X, Y: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if SpAdd(Style, X, Y) then
+      Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_SpCommit: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpCommit;
+    SpSaveSoon;
+  except
+    Result := 0;
+  end;
+end;
+
+{ a map's layout removed (saved a moment later): 1 = it had one }
+function BE_SpDelete(Map: PChar): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if SpDelete(Str(Map, 255)) then
+    begin
+      Result := 1;
+      SpSaveSoon;
+    end;
+  except
+    Result := 0;
+  end;
+end;
+
+{ the maps with a layout: how many, a name, its points }
+function BE_SpMaps: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpMapCount;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_SpMapName(Index: LongInt): PChar; cdecl;
+begin
+  try
+    SpBuf := SpMapName(Index);
+  except
+    SpBuf := '';
+  end;
+  Result := PChar(SpBuf);
+end;
+
+function BE_SpMapPoints(Index: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpMapPoints(Index);
+  except
+    Result := 0;
+  end;
+end;
+
+{ every layout as a text file of the old script (four lines a point) into Dir: the files (written by the worker) }
+function BE_SpExport(Dir: PChar): LongInt; cdecl;
+var
+  i: LongInt;
+  D: AnsiString;
+begin
+  Result := 0;
+  try
+    if Writer = nil then
+      Exit;
+    D := IncludeTrailingPathDelimiter(Str(Dir, 1024));
+    for i := 0 to SpMapCount - 1 do
+    begin
+      Writer.AddWhole(D + SpMapName(i), SpLayoutText(i));
+      Inc(Result);
+    end;
+    if Worker <> nil then
+      Worker.Wake;
+  except
+    Result := 0;
+  end;
+end;
+
+{ the folder of the old Respawns-Control in ScriptsDir (not OwnDir); '' = none }
+function BE_SpFindOld(ScriptsDir, OwnDir: PChar): PChar; cdecl;
+begin
+  try
+    SpBuf := SpFindOld(Str(ScriptsDir, 1024), Str(OwnDir, 1024));
+  except
+    SpBuf := '';
+  end;
+  Result := PChar(SpBuf);
+end;
+
+{ the old script's layout files (its data/ folder): the maps taken (-1 = the folder could not be read; 0 with no
+  such folder - the old script saved no layout); saved a moment later; BE_SpImportInfo tells the rest }
+function BE_SpImport(Dir: PChar): LongInt; cdecl;
+var
+  Maps, Kept, Points, Skipped, Bad: LongInt;
+begin
+  Result := -1;
+  try
+    if not DirectoryExists(ExcludeTrailingPathDelimiter(Str(Dir, 1024))) then
+    begin
+      SpImportBuf := 'no layouts (the old script has no data folder)';
+      Result := 0;
+      Exit;
+    end;
+    if not SpImportDir(Str(Dir, 1024), Maps, Kept, Points, Skipped, Bad) then
+    begin
+      SpImportBuf := 'the folder ' + Str(Dir, 1024) + ' could not be read';
+      Exit;
+    end;
+    Result := Maps;
+    SpImportBuf := IntToStr(Maps) + ' maps (' + IntToStr(Points) + ' spawn points) taken over';
+    if Kept > 0 then
+      SpImportBuf := SpImportBuf + ', ' + IntToStr(Kept) + ' kept the layout they had here';
+    if Skipped > 0 then
+      SpImportBuf := SpImportBuf + ', ' + IntToStr(Skipped) + ' lines made no point';
+    if Bad > 0 then
+      SpImportBuf := SpImportBuf + ', ' + IntToStr(Bad) + ' files made no layout';
+    if Maps > 0 then
+      SpSaveSoon;
+  except
+    Result := -1;
+    SpImportBuf := 'the import failed';
+  end;
+end;
+
+function BE_SpImportInfo: PChar; cdecl;
+begin
+  Result := PChar(SpImportBuf);
+end;
+
+{ the old folder out of the scripts: 1 = moved (BE_SpRetired says where) or deleted, 0 = it stays }
+function BE_SpRetire(Folder, ScriptsDir: PChar; DeleteIt: LongInt): LongInt; cdecl;
+var
+  Dest: AnsiString;
+begin
+  Result := 0;
+  try
+    if SpRetire(Str(Folder, 1024), Str(ScriptsDir, 1024), SpDir + 'imported' + DirectorySeparator, DeleteIt <> 0,
+      Dest) then
+      Result := 1;
+    SpRetireBuf := Dest;
+  except
+    Result := 0;
+  end;
+end;
+
+{ where the last folder went (moved here or by the recompile's thread; 'deleted ...'), '' = none }
+function BE_SpRetired: PChar; cdecl;
+begin
+  try
+    SpRetireBuf := SpRetiredInfo;
+  except
+    SpRetireBuf := '';
+  end;
+  Result := PChar(SpRetireBuf);
+end;
+
+{ /recompile through the server's admin port (its own thread; the password never leaves it); Folder (when given)
+  leaves the scripts just before the command is sent }
+procedure BE_SpRecompile(Host: PChar; Port: LongInt; Password, Folder, ScriptsDir: PChar; DeleteIt: LongInt); cdecl;
+begin
+  try
+    { its thread waits in this library's code for up to 2 minutes: not without a pinned library }
+    if not Pinned then
+    begin
+      SpRecompileRefuse;
+      Exit;
+    end;
+    SpRecompile(Str(Host, 255), Port, Str(Password, 255), Str(Folder, 1024), Str(ScriptsDir, 1024),
+      SpDir + 'imported' + DirectorySeparator, DeleteIt <> 0);
+  except
+  end;
+end;
+
+function BE_SpRecompileState: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpRecompileState;
+  except
+    Result := 0;
+  end;
+end;
+
+{ the first tick of a start of the script: a recompile's admin connection may close now (1 = one was waiting, or
+  the old script's folder left the scripts since) }
+function BE_SpRecompileDone: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if SpRecompileDone then
+      Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
+{ the server's spawn table from Map.Spawns[1] and [2] (the objects and their properties): 1 = known }
+function BE_SpBind(Obj1: Pointer; A1, X1, Y1, S1: LongInt; Obj2: Pointer; A2, X2, Y2, S2: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if SpBind(Obj1, A1, X1, Y1, S1, Obj2, A2, X2, Y2, S2) then
+      Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
+{ the active player points of a style (-1 = all), -1 = the table not known }
+function BE_SpCount(Style: LongInt): LongInt; cdecl;
+begin
+  Result := -1;
+  try
+    if SpTableOk then
+      Result := SpCount(Style);
+  except
+    Result := -1;
+  end;
+end;
+
+function BE_SpNearest(X, Y, MaxDist: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpNearest(X, Y, MaxDist);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_SpNext(After: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpNext(After);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_SpPickReset; cdecl;
+begin
+  try
+    SpPickReset;
+  except
+  end;
+end;
+
+function BE_SpPick(Style: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpPick(Style);
+  except
+    Result := 0;
+  end;
+end;
+
+{ the N nearest active player points to X, Y within MaxDist (0 = however far; Must among them): how many;
+  BE_SpNearGet }
+function BE_SpNear(X, Y: Single; N, Must: LongInt; MaxDist: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpNear(X, Y, N, Must, MaxDist);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_SpNearGet(K: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := SpNearGet(K);
+  except
+    Result := 0;
+  end;
+end;
+
+{ the active player points against the map's walls: the findings (-1 = the table or the map not known) }
+function BE_SpCheck(FloorPx, MinGap: Single): LongInt; cdecl;
+begin
+  Result := -1;
+  try
+    Result := SpCheck(FloorPx, MinGap);
+  except
+    Result := -1;
+  end;
+end;
+
+function BE_SpCheckGet(K: LongInt; var ID, Kind, Other: LongInt; var Value: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    if SpCheckGet(K, ID, Kind, Other, Value) then
+      Result := 1;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_SpInfo: PChar; cdecl;
+begin
+  try
+    SpBuf := SpInfo;
+  except
+    SpBuf := 'spawn layouts: error';
+  end;
+  Result := PChar(SpBuf);
+end;
+
+{ 4.1: [Debug] ServerHooks = 0 (also by /reloadsettings): the server's own bytes back; BE_HookInit puts them in
+  again }
+procedure BE_HookStop; cdecl;
+begin
+  try
+    HookShutdown;
+  except
   end;
 end;
 
@@ -3365,6 +3954,7 @@ exports
   BE_AcReset,
   BE_AcKeys,
   BE_AcMoved,
+  BE_AcPing,
   BE_AcHurt,
   BE_AcHit,
   BE_AcWatched,
@@ -3449,6 +4039,7 @@ exports
   BE_BridgeSetWeapon,
   BE_BridgeInfo,
   BE_HookInit,
+  BE_HookStop,
   BE_GunCheckStartSound,
   BE_AmmoConfig,
   BE_AmmoSetReserve,
@@ -3598,6 +4189,8 @@ exports
   BE_AmmoTopUp,
   BE_AmmoGroundAge,
   BE_FileSave,
+  BE_FileReplace,
+  BE_DataNote,
   BE_ChatWeigh,
   BE_HudCfgLine,
   BE_HudCfgTimes,
@@ -3619,6 +4212,36 @@ exports
   BE_SpriteMemInfo,
   BE_AmmoLastW,
   BE_AmmoPass,
+  BE_SpSelect,
+  BE_SpPoint,
+  BE_SpStyles,
+  BE_SpBegin,
+  BE_SpAdd,
+  BE_SpCommit,
+  BE_SpDelete,
+  BE_SpMaps,
+  BE_SpMapName,
+  BE_SpMapPoints,
+  BE_SpExport,
+  BE_SpFindOld,
+  BE_SpImport,
+  BE_SpImportInfo,
+  BE_SpRetire,
+  BE_SpRetired,
+  BE_SpRecompile,
+  BE_SpRecompileState,
+  BE_SpRecompileDone,
+  BE_SpBind,
+  BE_SpCount,
+  BE_SpNearest,
+  BE_SpNext,
+  BE_SpPickReset,
+  BE_SpPick,
+  BE_SpNear,
+  BE_SpNearGet,
+  BE_SpCheck,
+  BE_SpCheckGet,
+  BE_SpInfo,
   BE_AmmoPassOp;
 
 end.

@@ -32,6 +32,8 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 "%FPC%" -B -Pi386 -Twin32 -Mobjfpc -Sh -O1 -gl -Cr -Co -Ci -dBE_CHECKS -Fu. -FUbuild\test -FEbuild\test tests\test_sprite.pas
 if errorlevel 1 exit /b 1
+"%FPC%" -B -Pi386 -Twin32 -Mobjfpc -Sh -O1 -gl -Cr -Co -Ci -dBE_CHECKS -Fu. -FUbuild\test -FEbuild\test tests\test_spawn.pas
+if errorlevel 1 exit /b 1
 
 build\test\test_store.exe build\test
 if errorlevel 1 exit /b 1
@@ -52,6 +54,10 @@ if errorlevel 1 exit /b 1
 build\test\test_names.exe
 if errorlevel 1 exit /b 1
 build\test\test_sprite.exe
+if errorlevel 1 exit /b 1
+rem [Spawns]: the old Respawns-Control's layouts and a map of the server are used when this folder is in its
+rem scripts folder (each one is left out when it is not there); the /recompile talks to a stand-in on 127.0.0.1
+build\test\test_spawn.exe ..\..\Respawns-Control\data ..\..\..\maps\ctf_Ash.pms
 if errorlevel 1 exit /b 1
 rem the shop's helpers on a map of the server (when this folder is in its scripts folder)
 if exist ..\..\..\maps\ctf_Ash.pms (

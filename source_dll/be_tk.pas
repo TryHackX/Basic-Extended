@@ -171,8 +171,6 @@ var
 begin
   if not TkOn then
     Exit;
-  if E.Script then
-    Exit;
   if not Valid(E.Owner) then
     Exit;
   if not Straight(E.Style) then

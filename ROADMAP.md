@@ -3,6 +3,19 @@
 Stan po wersji 3.5 i propozycje na kolejne wersje, od najbardziej opłacalnych. Każdy punkt ma
 krótkie uzasadnienie i szacunek pracy (S - godziny, M - dzień, L - kilka dni).
 
+## 4.1 (2026-10-06)
+
+- `[Spawns]`: Respawns-Control wbudowany w skrypt - układy punktów odrodzenia map w jednym pliku `data/spawns.bdb`
+  (CRC, `.bak`, zapis w wątku biblioteki) zamiast 54 plików tekstowych; brak obrażeń podczas zmiany mapy, przeniesienie
+  graczy na punkty układu, stare komendy oraz `/checkspawns` (ściana, brak podłogi, za blisko), `/spawnlayouts`,
+  `/deletespawnlayout`, `/exportspawns`; znaczniki najbliższych punktów na własnych warstwach (20-43); tablica spawnów
+  serwera czytana przez bibliotekę; przejęcie starego skryptu przy pierwszym starcie (import, przeniesienie folderu do
+  `data/imported/`, `/recompile` przez port admina - połączenie otwarte do pierwszego ticku po kompilacji, bo 2.8.2
+  pada, gdy admin TCP łączy się lub rozłącza w trakcie kompilacji skryptów).
+- Poprawki: klawisze prone i rzutu flagą w odczycie pamięci (+17/+18), część ciała trafienia z kompensacją pingu
+  serwera (GetSpriteCollisionPoint), odczyt pamięci po `/recompile`, `ServerHooks = 0` zdejmuje haki po
+  `/reloadsettings`, usunięte martwe rozpoznawanie pocisków skryptów. BE_API 24.
+
 ## Co już jest (3.5)
 
 - `/speed <gracz> <x> [all|ground|jump]`: przyspieszenie wszędzie, tylko na ziemi albo na ziemi i w

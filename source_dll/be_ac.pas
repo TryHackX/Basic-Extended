@@ -59,6 +59,9 @@ function AcEnabled: Boolean;
 procedure AcReset(ID: LongInt);
 procedure AcKeys(Tick, Count: LongInt; I: PLongArr);
 procedure AcMoved(ID, Tick: LongInt);
+{ his ping in ms (main.pas tells it every half second): a connection that corrects a player's position all the time
+  is not a teleport hack - AcWorld allows him the ticks of his ping and does not judge jumps above 400 ms }
+procedure AcPing(ID, Ping: LongInt);
 procedure AcHurt(Victim, Tick, W: LongInt);
 { [LagGuard]: the humans' warps - a position moved more than his speed allows plus WarpPx between two looks (the
   server corrected him after late or lost packets); not after a move by the script (AcMoved), not in a look in
@@ -96,11 +99,13 @@ const
   MAX_STEP = 15.6;
   QUEUE_SIZE = 64;
   RECENT = 8;
+  { above this ping (ms) the server corrects a player all the time: the jump rule does not judge him }
+  JUMP_PING_MAX = 400;
 
 type
   TAcRec = record
     Fire, LastAlive, Known: Boolean;
-    Rise, KeyTick, HurtTick, HurtW, MovedTick, LastSnap, PrevShot, PrevShotW, LastBullet, LastFire: LongInt;
+    Rise, KeyTick, HurtTick, HurtW, MovedTick, LastSnap, PrevShot, PrevShotW, LastBullet, LastFire, Ping: LongInt;
     LastX, LastY, SpDist: Single;
     SpTicks, AmW, AmAmmo, AmTick, AmEmpty, RecentNext: LongInt;
     { the shots of AmW the hook saw since the last look at the magazine (bullets of one tick are one shot: the
@@ -270,6 +275,16 @@ procedure AcMoved(ID, Tick: LongInt);
 begin
   if ValidID(ID) then
     Ac[ID].MovedTick := Tick;
+end;
+
+procedure AcPing(ID, Ping: LongInt);
+begin
+  if ValidID(ID) then
+  begin
+    if Ping < 0 then
+      Ping := 0;
+    Ac[ID].Ping := Ping;
+  end;
 end;
 
 procedure LagSet(Key: LongInt; Value: Single);
@@ -520,13 +535,19 @@ end;
 
 procedure AcWorld(Tick: LongInt);
 var
-  ID, dt: LongInt;
+  ID, dt, n, w: LongInt;
   D, Allowed: Single;
   R: ^TAcRec;
+  JumpOf: array[1..BE_PLAYERS] of Boolean;
+  JumpD, JumpAllowed: array[1..BE_PLAYERS] of Single;
+  JumpDt: array[1..BE_PLAYERS] of LongInt;
 begin
   if not Enabled then
     Exit;
   NowTick := Tick;
+  n := 0;
+  w := 0;
+  FillChar(JumpOf, SizeOf(JumpOf), 0);
   for ID := 1 to BE_PLAYERS do
   begin
     R := @Ac[ID];
@@ -545,19 +566,27 @@ begin
     begin
       dt := Tick - R^.LastSnap;
       D := Sqrt(Sqr(WP[ID].X - R^.LastX) + Sqr(WP[ID].Y - R^.LastY));
-      Allowed := MAX_STEP * (dt + JumpLag) + JumpSlack;
-      if D > Allowed then
+      { his ping is ticks the server's picture of him may be behind (the corrections after a lag) }
+      Allowed := MAX_STEP * (dt + JumpLag + R^.Ping div 17) + JumpSlack;
+      if R^.Ping > JUMP_PING_MAX then
       begin
-        Inc(R^.T[T_JUMPS]);
-        if Round(D) > R^.T[T_JUMP_MAX] then
-          R^.T[T_JUMP_MAX] := Round(D);
-        Report(ID, AK_JUMP, 'moved ' + IntToStr(Round(D)) + ' px in ' + IntToStr(dt) + ' ticks (at most ' +
-          IntToStr(Round(Allowed)) + ')');
+        R^.SpDist := 0;
+        R^.SpTicks := 0;
+      end
+      else if D > Allowed then
+      begin
+        Inc(n);
+        Inc(w);
+        JumpOf[ID] := True;
+        JumpD[ID] := D;
+        JumpAllowed[ID] := Allowed;
+        JumpDt[ID] := dt;
         R^.SpDist := 0;
         R^.SpTicks := 0;
       end
       else
       begin
+        Inc(n);
         R^.SpDist := R^.SpDist + D;
         R^.SpTicks := R^.SpTicks + dt;
         if R^.SpTicks >= 60 then
@@ -583,6 +612,19 @@ begin
     R^.LastY := WP[ID].Y;
     R^.LastSnap := Tick;
   end;
+  { most of the humans jumped together: the server stalled and corrected them, no teleports (as in LagWorld) }
+  if (n >= 3) and (w * 2 > n) then
+    Exit;
+  for ID := 1 to BE_PLAYERS do
+    if JumpOf[ID] then
+    begin
+      R := @Ac[ID];
+      Inc(R^.T[T_JUMPS]);
+      if Round(JumpD[ID]) > R^.T[T_JUMP_MAX] then
+        R^.T[T_JUMP_MAX] := Round(JumpD[ID]);
+      Report(ID, AK_JUMP, 'moved ' + IntToStr(Round(JumpD[ID])) + ' px in ' + IntToStr(JumpDt[ID]) +
+        ' ticks (at most ' + IntToStr(Round(JumpAllowed[ID])) + ')');
+    end;
 end;
 
 procedure AcAmmo(ID, Tick, W, Ammo: LongInt);
@@ -784,8 +826,10 @@ var
   S: Single;
 begin
   S := 0;
+  { three more in the divisor: one short start-up in one measured (a lost packet makes an honest shot look
+    short) is 25%, not the 50% that tells the admins }
   if T[T_SU_N] > 0 then
-    S := S + 100 * T[T_SU_BAD] / (T[T_SU_N] + 1);
+    S := S + 100 * T[T_SU_BAD] / (T[T_SU_N] + 3);
   S := S + 20 * T[T_RATE] + 15 * T[T_JUMPS] + 25 * T[T_SPEED] + 15 * T[T_AMMO] + 20 * T[T_RELOAD];
   if T[T_B_HITS] >= 5 then
     S := S + 60 * Ratio(T[T_BINK_HITS], T[T_B_HITS]);

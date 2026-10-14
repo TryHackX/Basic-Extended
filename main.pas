@@ -214,6 +214,9 @@ external {$IFDEF WIN32} 'BE_AcKeys@scripts/Basic-Extended/basicext_dll.dll cdecl
 procedure BE_AcMoved(ID, Tick: Integer);
 external {$IFDEF WIN32} 'BE_AcMoved@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcMoved@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+procedure BE_AcPing(ID, Ping: Integer);
+external {$IFDEF WIN32} 'BE_AcPing@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcPing@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 procedure BE_AcHurt(Victim, Tick, W: Integer);
 external {$IFDEF WIN32} 'BE_AcHurt@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AcHurt@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
@@ -320,6 +323,9 @@ external {$IFDEF WIN32} 'BE_BridgeInfo@scripts/Basic-Extended/basicext_dll.dll c
 
 function BE_HookInit(): Integer;
 external {$IFDEF WIN32} 'BE_HookInit@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_HookInit@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+{ 4.1: the hooks taken out ([Debug] ServerHooks = 0, also by /reloadsettings) }
+procedure BE_HookStop();
+external {$IFDEF WIN32} 'BE_HookStop@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_HookStop@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
 procedure BE_HookTick(Tick: Integer);
 external {$IFDEF WIN32} 'BE_HookTick@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_HookTick@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
@@ -457,7 +463,7 @@ procedure BE_BodyLow(ID, Low: Integer);
 external {$IFDEF WIN32} 'BE_BodyLow@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_BodyLow@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 function BE_BodyNear(): Integer;
 external {$IFDEF WIN32} 'BE_BodyNear@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_BodyNear@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
-function BE_BodyHitPart(V, Style: Integer; X, Y, VX, VY: Single): Integer;
+function BE_BodyHitPart(V, B, Style: Integer; X, Y, VX, VY: Single): Integer;
 external {$IFDEF WIN32} 'BE_BodyHitPart@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_BodyHitPart@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 function BE_BodyHit(V, By, W, Style: Integer; Damage, MaxHP: Single; Part, Tick: Integer): Integer;
 external {$IFDEF WIN32} 'BE_BodyHit@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_BodyHit@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
@@ -686,6 +692,15 @@ external {$IFDEF WIN32} 'BE_AmmoGroundAge@scripts/Basic-Extended/basicext_dll.dl
 procedure BE_FileSave(FileName, Text: PChar);
 external {$IFDEF WIN32} 'BE_FileSave@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_FileSave@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+{ 4.2 (API 25, LEAD-01): what BE_Init took over from the data folder of an earlier release ('' = nothing) }
+function BE_DataNote(): PChar;
+external {$IFDEF WIN32} 'BE_DataNote@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_DataNote@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+{ 4.2 (API 25, BE3-07): the whole file FileName becomes Text now, in one step (FileName.tmp to the disk, then put in
+  the file's place); 1 = done, 0 = the old file is as it was }
+function BE_FileReplace(FileName, Text: PChar): Integer;
+external {$IFDEF WIN32} 'BE_FileReplace@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_FileReplace@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 { round 26 (API 22): the HUD lines' places, what each player's game shows and what is sent (be_hud) }
 procedure BE_HudCfgLine(L, Layer, Stacked, FX, FY: Integer; FSc: Single);
 external {$IFDEF WIN32} 'BE_HudCfgLine@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_HudCfgLine@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
@@ -758,13 +773,77 @@ external {$IFDEF WIN32} 'BE_AmmoPassOp@scripts/Basic-Extended/basicext_dll.dll c
 function BE_ChatWeigh(Text: PChar; var Caps, OneChar: Integer): PChar;
 external {$IFDEF WIN32} 'BE_ChatWeigh@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ChatWeigh@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+{ 4.1 [Spawns]: the spawn point layouts of the maps (Respawns-Control built in) - data/spawns.bdb in the library,
+  the server's spawn table read through Map.Spawns[1] and [2], the check against the map's walls, the takeover of
+  the old script }
+function BE_SpSelect(Name: PChar): Integer;
+external {$IFDEF WIN32} 'BE_SpSelect@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpSelect@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpPoint(K: Integer; var Style, X, Y: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpPoint@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpPoint@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpStyles(): Integer;
+external {$IFDEF WIN32} 'BE_SpStyles@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpStyles@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_SpBegin(Name: PChar);
+external {$IFDEF WIN32} 'BE_SpBegin@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpBegin@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpAdd(Style, X, Y: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpAdd@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpAdd@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpCommit(): Integer;
+external {$IFDEF WIN32} 'BE_SpCommit@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpCommit@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpDelete(Name: PChar): Integer;
+external {$IFDEF WIN32} 'BE_SpDelete@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpDelete@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpMaps(): Integer;
+external {$IFDEF WIN32} 'BE_SpMaps@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpMaps@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpMapName(Index: Integer): PChar;
+external {$IFDEF WIN32} 'BE_SpMapName@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpMapName@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpMapPoints(Index: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpMapPoints@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpMapPoints@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpExport(Dir: PChar): Integer;
+external {$IFDEF WIN32} 'BE_SpExport@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpExport@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpFindOld(ScriptsDir, OwnDir: PChar): PChar;
+external {$IFDEF WIN32} 'BE_SpFindOld@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpFindOld@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpImport(Dir: PChar): Integer;
+external {$IFDEF WIN32} 'BE_SpImport@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpImport@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpImportInfo(): PChar;
+external {$IFDEF WIN32} 'BE_SpImportInfo@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpImportInfo@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpRetire(Folder, ScriptsDir: PChar; DeleteIt: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpRetire@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpRetire@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpRetired(): PChar;
+external {$IFDEF WIN32} 'BE_SpRetired@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpRetired@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_SpRecompile(Host: PChar; Port: Integer; Password, Folder, ScriptsDir: PChar; DeleteIt: Integer);
+external {$IFDEF WIN32} 'BE_SpRecompile@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpRecompile@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpRecompileState(): Integer;
+external {$IFDEF WIN32} 'BE_SpRecompileState@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpRecompileState@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpRecompileDone(): Integer;
+external {$IFDEF WIN32} 'BE_SpRecompileDone@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpRecompileDone@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpBind(O1: TActiveSpawnPoint; A1, X1, Y1, S1: Integer; O2: TActiveSpawnPoint; A2, X2, Y2, S2: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpBind@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpBind@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpCount(Style: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpCount@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpCount@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpNearest(X, Y, MaxDist: Single): Integer;
+external {$IFDEF WIN32} 'BE_SpNearest@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpNearest@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpNext(Prev: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpNext@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpNext@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+procedure BE_SpPickReset();
+external {$IFDEF WIN32} 'BE_SpPickReset@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpPickReset@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpPick(Style: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpPick@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpPick@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpNear(X, Y: Single; N, Must: Integer; MaxDist: Single): Integer;
+external {$IFDEF WIN32} 'BE_SpNear@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpNear@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpNearGet(K: Integer): Integer;
+external {$IFDEF WIN32} 'BE_SpNearGet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpNearGet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpCheck(FloorPx, MinGap: Single): Integer;
+external {$IFDEF WIN32} 'BE_SpCheck@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpCheck@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpCheckGet(K: Integer; var ID, Kind, Other: Integer; var Value: Single): Integer;
+external {$IFDEF WIN32} 'BE_SpCheckGet@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpCheckGet@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+function BE_SpInfo(): PChar;
+external {$IFDEF WIN32} 'BE_SpInfo@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_SpInfo@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 
 implementation
 
 const
-  VERSION = '4.0';
+  VERSION = '4.2';
   { the library this main.pas was written for (source_dll/be_main.pas BE_API_VERSION) }
-  BE_API = 23;
+  BE_API = 25;
   TAG = '[Basic-Extended] ';
   TEAM_SPECTATOR = 5;
   MAX_BULLET_ID = 254;
@@ -806,6 +885,10 @@ const
   MAPCHANGE_TIMEOUT = 600;
   { a ban waits until the lines that tell the player about it are out }
   BAN_DELAY_TICKS = 20;
+  { [Admin] SharedIp }
+  SHARE_ALLOW = 0;
+  SHARE_SUSPEND = 1;
+  SHARE_KICK = 2;
   STYLE_COUNT = 5;
   MAX_WORDS = 512;
   MAX_LINES = 20;
@@ -974,7 +1057,31 @@ const
   C_INSINFO = 168;
   C_GIVEVEST = 169;
   C_TAKEVEST = 170;
-  C_LAST = 170;
+  { 4.1 [Spawns]: the spawn point layouts (Respawns-Control's commands and four new ones) }
+  C_RCSHOW = 171;
+  C_RCCREATE = 172;
+  C_RCREMOVE = 173;
+  C_RCCLEAR = 174;
+  C_RCEDIT = 175;
+  C_RCTEST = 176;
+  C_RCCOUNT = 177;
+  C_RCSAVE = 178;
+  C_RCCHECK = 179;
+  C_RCLIST = 180;
+  C_RCDELETE = 181;
+  C_RCEXPORT = 182;
+  C_LAST = 182;
+  { [Spawns]: the mark layers at most (RcMk* arrays), how often a viewer's marks are looked at (three times slower
+    without the library's table), how long a mark lives, how far from the viewer a point gets one, the ticks a
+    /testrespawn waits for the respawn, the ticks after the start before the old script is taken over }
+  RC_MARKS = 64;
+  RC_MARK_EVERY = 10;
+  RC_MARK_LIFE = 300;
+  RC_MARK_RANGE = 900;
+  RC_TEST_WAIT = 5;
+  { 4.2 (X-10): 30 s, not 3 s - the /recompile of the takeover must not come while the databases of ZitroStats and
+    AntiFake are still loading at the server's start (the game stands until they finish) }
+  RC_TAKEOVER_TICKS = 1800;
   { [LagGuard]: BE_LagSet keys }
   LG_ON = 1;
   LG_WARP_PX = 2;
@@ -1176,7 +1283,6 @@ const
   BDE_TREAT = 16;
   BDE_TREATED = 17;
   BC_CLOTTED = 1;
-  BC_BANDAGE = 2;
   BC_KIT = 3;
   BC_HEALED = 4;
   BDC_ON = 1;
@@ -1635,7 +1741,6 @@ const
   RE_PROX = 5;
   RE_WALL = 6;
   RE_AIR = 7;
-  RE_BURNOUT = 8;
   RE_LOST = 9;
   RKC_EJECT_SPEED = 1;
   RKC_EJECT_TICKS = 2;
@@ -1687,8 +1792,15 @@ var
   { ---------------- settings ---------------- }
   Cfg: TIniFile;
   CfgOk: Boolean;
+  { 4.2 (BE1-01): settings.ini could not be opened for reading (another program writes it); at the start the defaults
+    are used and the file is read again a few times, a /reloadsettings changes nothing }
+  SetsReadFailed: Boolean;
+  SetsRetryLeft, SetsRetryAt: Integer;
   CfgKeys: TStringList;
-  DataDir: string;
+  { 4.2 (LEAD-01): the data folder lies outside the script's folder - a file written in the script's own folder makes
+    the server compile the script again at every /recompile (about 4 s of a stopped game); OldDataDir is where 4.0
+    and 4.1 kept it (the library moves what is in it, once) }
+  DataDir, OldDataDir: string;
   { the script's folder and the settings file read (settings.ini next to main.pas) }
   ScriptDir, CfgPath: string;
 
@@ -1755,7 +1867,7 @@ var
   OvlTextsAll, OvlStart: Integer;
   OvlArrowLayer, OvlListMeters, OvlTextsPerTick, OvlArrowSteps, OvlRingColorBy: Integer;
   OvlShowTeam: Boolean;
-  OvlRate, OvlRateTick, OvlBurst: Single;
+  OvlRate, OvlRateTick, OvlBurst, OvlPubRateTick, OvlPubBurst: Single;
   OvlTags: Boolean;
   { [Radar] SkeletonSight: the realistic rule's rays from the server's skeletons; the soldiers already
     looked up in the server's memory (BE_SpriteBind) }
@@ -1809,6 +1921,7 @@ var
   AmmoChainsawDrainTicks, AmmoChainsawIdleDrainTicks, AmmoChainsawAttackDrain: Integer;
   AmmoMax: array[0..16] of Integer;
   LootEnabled, LootCorpse: Boolean;
+  LootTextLayer: Integer;
   LootRadius: Single;
   LootTimeTicks, LootRepackTicks: Integer;
   { [Looting] DeadMagazines: a dead soldier's spare magazines lie with his weapon (0), with his body (1),
@@ -1838,7 +1951,7 @@ var
   AsMinPct, AsPerPoint, AsPoints, AsLayer, AsTicks, AsX, AsY: Integer;
   McWindow, FbPoints, SvWindow, SvPoints: Integer;
   SkPoints, SkLayer, SkTicks, SkX, SkY: Integer;
-  PhFactor, PhStyle, TkAlive, TkSeconds, TkLayer, TkX, TkY, MdCooldown, RsSlots: Integer;
+  PhFactor, PhStyle, TkAlive, TkMin, TkSeconds, TkLayer, TkX, TkY, MdCooldown, RsSlots: Integer;
   AsScale, SkScale, PhPower, TkScale, MdDist, MdRate, MdPointEvery: Single;
   AsColor, McColor, FbColor, SvColor, SkColor, PhColor, TkColor, MdColor: Longint;
   AsText, AsPointText, FbText, FbPointsText, SvText, SvSavedText, SkText, PhText, PhNoText: string;
@@ -1960,6 +2073,9 @@ var
 
   { chat lines and commands typed, run on the next tick }
   PendSlot, PendKind: array[0..63] of Integer;
+  { the player of a slot, counted up with every join: a queued line of a player who left is not run as the next one's }
+  PendGen: array[0..63] of Integer;
+  SlotGen: array[1..32] of Integer;
   PendText: array[0..63] of string;
   PendHead, PendCount: Integer;
   { commands of admins arrive through OnCommand and OnAdminCommand; the second copy is skipped }
@@ -2017,6 +2133,9 @@ var
   LowCount, DueBlink: Integer;
   { the admin rights this script gave (the IP it put into remote.txt), taken back when he leaves }
   GrantedIp: array[1..32] of string;
+  { [Admin] SharedIp (SHARE_*) and: the sharing of an address with this player was reported in this visit }
+  AdSharedMode: Integer;
+  ShareSeen: array[1..32] of Boolean;
   HudAnyDirty: Boolean;
 
   { regeneration }
@@ -2106,6 +2225,8 @@ var
   AcSlack, AcJumpSlack, AcJumpLag, AcRate, AcBinkTicks, AcGrace: Single;
   AcLogName: string;
   AcWep, AcTold, AcSkip, AcVoted: array[1..32] of Integer;
+  { the wall clock of the last anticheat tick: a stall of the server is a gap in it }
+  AcClock: TDateTime;
   AcList: array[0..31] of Integer;
   AcI: TBEInts;
   TrMargin: Single;
@@ -2159,6 +2280,10 @@ var
   BlLay: array[0..31] of Integer;
   BlNm: array[0..31] of string;
   BlN: Integer;
+  { the WorldText layers in use (BigLayerCheck): from, to }
+  WlLo, WlHi: array[0..39] of Integer;
+  WlNm: array[0..39] of string;
+  WlN: Integer;
   { /be_prof: the parts of the tick are timed (from the tick ProfFrom on) }
   ProfOn: Boolean;
   ProfFrom: Integer;
@@ -2261,6 +2386,9 @@ var
     (slot bits), its fuse, when and where the word was sent (and how far ahead the thrower's own), the
     place now and a tick ago, the speed }
   FnSlot, FnOwner, FnKind, FnLayer, FnLabelTo, FnTimeOut, FnSentTick: array[0..63] of Integer;
+  { the thrower's seat (SeatGen) when the flash was thrown: another player on his slot is not the thrower }
+  FnOwnerGen: array[0..63] of Integer;
+  SeatGen: array[1..32] of Integer;
   FnX, FnY, FnPX, FnPY, FnSentX, FnSentY, FnVX, FnVY, FnLeadX, FnLeadY: array[0..63] of Single;
   FnCount, FnNextLayer, FnScanTop: Integer;
   { a bullet slot -> its place in the list + 1 (0 = not followed); where and when a flash hurt somebody }
@@ -2281,9 +2409,10 @@ var
   FfBigScale, FfLineR, FfEnemyR, FfSprayShare, FfSplashR, FfBanForgetDays: Single;
   FfSpawnTicks, FfRevengeTicks, FfShieldTicks, FfBanMin, FfBanMaxMin, FfVoteTicks, FfLayer, FfBigX, FfBigY: Integer;
   FfBigTicks, FfSprayShots, FfSprayTicks, FfCurIntent, FfCurReason, FfDecayAfter: Integer;
+  FfVoteMinIntent, FfMirrorMinIntent: Integer;
   FfColor, FfInfoColor: Longint;
   FfIdleWhy, FfLogName, FfHitText, FfWarnText, FfShieldText, FfShieldTeamText, FfSprayText, FfSprayVicText: string;
-  FfKillText, FfVictimText, FfVictimNext, FfSlayText, FfNextText, FfKickText, FfBanText: string;
+  FfKillText, FfVictimText, FfVictimNext, FfVictimAccident, FfSlayText, FfNextText, FfKickText, FfBanText: string;
   { per player: the points, the step of the ladder reached, his bans and team kills ever, this map's team
     kills and team damage (% of a health), fire at the team blocked until (a tick), damage to mirror back
     on him, slain after the next respawn (survival), when he respawned / carried a flag / got points /
@@ -2301,7 +2430,7 @@ var
   FfLastFriendly: array[1..32] of Boolean;
   FfLastIntent, FfLastReason: array[1..32] of Integer;
   { the victim's decision: the killer, until when, the points in question, his name (to see he is the same) }
-  FfVoteBy, FfVoteUntil: array[1..32] of Integer;
+  FfVoteBy, FfVoteUntil, FfVoteIntent: array[1..32] of Integer;
   FfVotePts: array[1..32] of Single;
   FfVoteName: array[1..32] of string;
   FfStatHits, FfStatKills, FfStatSprays, FfStatPunished: Integer;
@@ -2366,6 +2495,8 @@ var
   { per player: the blood (whole percent) and open wounds as the library told last, his worst wound's kind,
     bandage, kits; the shock (until, the place he is held at), the work shown; the HUD line }
   BdBlood, BdWounds, BdWorst, BdKits, BdBand: array[1..32] of Integer;
+  { how many players have a wound (the AirBandage loop is not run for nobody) }
+  BdWoundN: Integer;
   BdShockUntil: array[1..32] of Integer;
   BdHoldX, BdHoldY: array[1..32] of Single;
   BdHoldAt: array[1..32] of Integer;
@@ -2431,6 +2562,8 @@ var
   { CLS6: [Classes] BotSkills - the bots use their class's skills; the tick a bot sets its C4 off }
   ClsBotSkillsOn: Boolean;
   ClsBotC4At: array[1..32] of Integer;
+  { BE5-01: the tick before which a bot does not try a skill again (it did not work: no C4 left, no room, no sky) }
+  ClsBotRetry: array[1..32] of array[1..2] of Integer;
   { G24: a skill's cooldown belongs to the skill (its kind), not to the class's first or second place }
   ClsKindCool: array[1..32] of array[0..15] of Integer;
   { the mark layers a viewer has in use (SgMarksTick) }
@@ -2480,6 +2613,8 @@ var
   SfStatGiven, SfStatStopped, SfStatEnded: Integer;
   { [PrivateMessages]: /pm, /r, /pmmute, /pmunmute }
   PmEnabled, PmAdminsSee, PmLog, PmMutedCan: Boolean;
+  { |pm|msg|r|reply|: the words that send a private message, for the logger }
+  PmWordList: string;
   PmCoolTicks, PmMaxLen: Integer;
   PmToText, PmFromText, PmSpyText: string;
   PmColor, PmSpyColor: Longint;
@@ -2507,6 +2642,8 @@ var
   NtDay: TStringList;
   NtNextOk: array[1..32] of Integer;
   NtLoaded: Boolean;
+  { 4.2: a file of [Notes] could not be read: its state and blacklist files are not written over }
+  NtReadFailed: Boolean;
   NtStatNew: Integer;
   { [AdminChat]: /col, /colteam, /colp, /announce }
   CcEnabled: Boolean;
@@ -2530,10 +2667,16 @@ var
   { the mutes file is written from the tick (SqSavedTick: the last time) }
   SqDirty: Boolean;
   SqSavedTick: Integer;
+  { a mute of the server's own /gmute is on him (an admin's): the end of this script's timed mute leaves it }
+  SqAdminMute: array[1..32] of Boolean;
   { [Pause]: !p, !up, /pause, /unpause }
   PzEnabled, PzPlayers, PzByAdmin: Boolean;
+  { the countdown running now was started by the player who paused, with his own !up }
+  PzCountPlayer: Boolean;
   PzWho, PzPerMap, PzMinPlayers, PzMaxSecs, PzCountSecs, PzBy, PzLastShown, PzBigLayer: Integer;
   PzSince, PzCountEnd: Double;
+  { 4.2 (BE1-02): the pause now running was made by this module; [Pause] was on before /reloadsettings }
+  PzOurs, WasPz: Boolean;
   PzByKey, PzPauseText, PzResumeText, PzPausedText, PzCountText, PzGoText: string;
   PzColor: Longint;
   PzBigScale: Single;
@@ -2562,6 +2705,8 @@ var
   WnBigScale: Single;
   WnBigX, WnBigY: Integer;
   WnCount: array[1..32] of Integer;
+  { the warnings of this map by the key of the player ('key=n'): leaving and coming back does not start again }
+  WnKeys: TStringList;
   NtHintAt: array[1..32] of Integer;
   { ---- round 19: [Shop] (the economy, the shop, the items) and [Supply] (supply crates) ---- }
   ShEnabled, ShActive, ShGlobal, ShGlobalHwid, ShBots, ShAlive, ShLoseOnDeath, ShBuyOnly, ShOldToSecondary: Boolean;
@@ -2597,6 +2742,8 @@ var
   ShSavedTick, ShJoinTick, ShSpawnTick, ShNextBuy, ShIncomeAt: array[1..32] of Integer;
   { this life: the items bought (count), the weapons bought (price) }
   ShBought: array[1..32] of array[0..39] of Integer;
+  { VB1-N01: what a weapon cost when he bought it (!sell gives back a share of that, not of today's price) }
+  ShPaid: array[1..32] of array[0..16] of Integer;
   { BuyOnly: the weapons he owns (the menu slots 1-14) }
   ShOwned: array[1..32] of array[1..14] of Boolean;
   ShCheckTick: array[1..32] of Integer;
@@ -2608,6 +2755,8 @@ var
   { /moneyreset of a global account not loaded yet: done when it comes }
   ShResetPending: array[1..32] of Boolean;
   ShNoAcct: array[1..32] of Boolean;
+  { BE5-03: told once that his account is in use by another session }
+  ShDupTold: array[1..32] of Boolean;
   { the money line on his screen }
   ShGainSum, ShGainUntil: array[1..32] of Integer;
   ShGainWhy: array[1..32] of string;
@@ -2624,6 +2773,8 @@ var
   ShDamageAcc: array[1..32] of Single;
   { the special items: stationary guns (object id, owner, end), AP rounds, UAV }
   ShStatObj, ShStatOwner, ShStatEnd: array[0..15] of Integer;
+  { BE5-16: where the gun stood when it was made (a slot taken by another object of the same style is not ours) }
+  ShStatPX, ShStatPY: array[0..15] of Single;
   { H12: a stationary gun stands (its end is watched even with the shop and the classes switched off) }
   ShStatLive: Boolean;
   ShApLeft: array[1..32] of Integer;
@@ -2656,7 +2807,8 @@ var
   ShDmgPool, BpDmgPool: array[1..32] of Single;
   { F7: the same victim again and again (two friends on both sides feeding kills): the kill money from the third kill
     of the same enemy within a minute is RepeatKillPercent of it }
-  ShVicLast, ShVicTick, ShVicN: array[1..32] of Integer;
+  { BE5-08: counted per (killer, victim) pair, not only for the last victim }
+  ShVicTick, ShVicN: array[1..32] of array[1..32] of Integer;
   { F20: the tick of the lethal hit's place (a hit another script cancelled must not pay the next killer) }
   ShLastPartTick: array[1..32] of Integer;
   ShRepeatPct: Integer;
@@ -2747,11 +2899,16 @@ var
   ClsUsed: array[1..32] of Boolean;
   { a human given his class's primary because he had none (at most twice a life) }
   ClsArmN: array[1..32] of Integer;
+  { BE5-07: he threw his primary away in this life (the late-menu rule must not give him a new one) }
+  ClsThrew: array[1..32] of Boolean;
   { CLS2: the tick a C4 charge was put on him (it goes off only 2 s later) }
   ClsC4At: array[1..32] of Integer;
   { B7: what his class's loadout left him (grenades, flashes, mines, claymores, Javelins used, C4, kits): the quick
     change of the class is allowed only while none of it was used }
   ClsLoGiven: array[1..32] of array[0..6] of Integer;
+  { BE5-02: the same things as the modules gave them at the respawn (the quick class change goes back to it) }
+  ClsLoBase: array[1..32] of array[0..7] of Single;
+  ClsLoBaseOk: array[1..32] of Boolean;
   { the rally: whose rally he died in (0 = none) }
   ClsRallyBy: array[1..32] of Integer;
   { the mortar: the barrage under way (shells left, where, the next shell's tick) }
@@ -2808,6 +2965,8 @@ var
   { who killed him last (revenge), the multi kill, the enemy he hurt last and when (savior), the place of the last
     hit on him }
   BpKilledBy, BpMultiN, BpMultiTick, BpSvTarget, BpSvTick, BpLastPart: array[1..32] of Integer;
+  { BE5-16: the tick of the lethal hit's place (as ShLastPartTick) }
+  BpLastPartTick: array[1..32] of Integer;
   BpFirstDone: Boolean;
   { the scores of the players who left this map (key=score): a rejoin keeps his }
   BpKept: TStringList;
@@ -2839,6 +2998,9 @@ var
   SbFileName, SbText: string;
   SbIpMinutes, SbStatKicked: Integer;
   SbList, SbPend: TStringList;
+  { 4.2 (BE6-04): the file could not be read: nothing is saved over it; the next try (at most once a second) }
+  SbLoadFailed: Boolean;
+  SbRetryAt: Integer;
   SbChecked: array[1..32] of string;
   { [BanJournal] names: the leavers of the last minutes (a ring), the names the script's own bans hand over ('kind
     value' #1 name), how long a leaver's name is good for a new ban }
@@ -2891,6 +3053,9 @@ var
     the start of this life, the last refusal told, the blast's tick and its kills (the message after it), a vest an
     admin gave (-1 none), the vest to be looked at again (a new class), the place of a killing hit (a headshot) }
   InsVest, InsArmAt, InsLifeAt, InsToldAt, InsBlastAt, InsKills, InsGiven, InsHitPart: array[1..32] of Integer;
+  { BE6-07: the tick before which a vest that was stopped is not armed again (a beep and a mark for everybody around
+    at every arming otherwise) }
+  InsReArmAt: array[1..32] of Integer;
   InsArmKey, InsVestDirty, InsJoinTold: array[1..32] of Boolean;
   InsTeamCool: array[1..4] of Integer;
   { the vest's bullets (by slot): the bomber and the tick }
@@ -2936,6 +3101,47 @@ var
   ClsRallyGOk: array[1..32] of Boolean;
   { round 25: the tick a rally last took a mate (0 = none yet in this rally): the rallies of a team take turns }
   ClsRallyLast: array[1..32] of Integer;
+  { ---- 4.1: [Spawns] - the spawn point layouts of the maps (Respawns-Control built in) ---- }
+  RcEnabled, RcActive, RcNoDamage, RcImport, RcDelete, RcAutoRec, WasRc: Boolean;
+  RcMoveDelay, RcTimeout, RcMarkFirst, RcMarkN: Integer;
+  RcNearPx, RcMarkScale, RcFloorPx, RcMinGap: Single;
+  RcIdleWhy, RcSaveWord, RcListWord: string;
+  { the old script: looked for once a start of this script; its folder until it is taken over; found at this start
+    (loaded in the server until a recompile, so this module waits) }
+  RcDetected, RcOldRunning: Boolean;
+  RcOldDir, RcScriptsDir: string;
+  { the takeover's tick (0 = none); the recompile asked through the admin port (1 = waiting) and until when }
+  RcConvDue, RcRecState, RcRecUntil: Integer;
+  { the first tick of this start went (a recompile's admin connection may close then); no admin password: the old
+    folder leaves the scripts when an admin's /recompile comes }
+  RcTicked, RcRetireOnCmd: Boolean;
+  { 4.2 (BE6-08): neither spawns.bdb nor its .bak could be read at the start (they were put aside, not deleted) }
+  RcLoadBad: Boolean;
+  { the map change: no damage while RcChanging; RcLoaded = the new map is in and its players wait MoveDelayTicks;
+    the styles of the map's layout (bits) }
+  RcChanging, RcLoaded: Boolean;
+  RcChangeTick, RcStyles: Integer;
+  RcMovePend: array[1..32] of Boolean;
+  RcMoveTeam: array[1..32] of Integer;
+  { the library reads the server's spawn table; without it the points taken in a round of moves are kept here }
+  RcTabOk: Boolean;
+  RcTaken: array[1..255] of Boolean;
+  { the point being edited and its editor; /testrespawn: the point, when it was asked, the last one tested }
+  RcEditId, RcEditor, RcTestAny: Integer;
+  RcTestTo, RcTestTick, RcTestLast: array[1..32] of Integer;
+  { the marks: who sees them; per viewer the point on each layer (0 = none), where it was drawn, when it is drawn
+    again; the layer of each point (+1, 0 = none); where he was last seen alive }
+  RcShow: array[1..32] of Boolean;
+  RcShowN: Integer;
+  RcMkId, RcMkX, RcMkY, RcMkUntil: array[1..32] of array[0..63] of Integer;
+  RcMkOf: array[1..32] of array[0..255] of Integer;
+  RcViewX, RcViewY: array[1..32] of Single;
+  { one viewer's pass: the points he gets marks for, their distances (without the table), the layers kept }
+  RcWant: array[0..63] of Integer;
+  RcWantD: array[0..63] of Single;
+  RcKeep: array[0..63] of Boolean;
+  { /be_status }
+  RcStatPlaced, RcStatMoved, RcStatFailed: Integer;
 
 { ================================ text and number helpers ================================ }
 
@@ -2996,6 +3202,16 @@ function BoolInt(B: Boolean): Integer;
 begin
   Result := 0;
   if B then
+    Result := 1;
+end;
+
+{ 1 when the crouch key is held or he lies (ScriptCore evaluates both sides of an "or": a held key spares a read) }
+function LowInt(P: TActivePlayer): Integer;
+begin
+  Result := 0;
+  if P.KeyCrouch then
+    Result := 1
+  else if P.IsProne then
     Result := 1;
 end;
 
@@ -3550,6 +3766,24 @@ begin
     Say(ID, Text, Color);
 end;
 
+{ the player's Steam account is on the [Admin] list }
+function IsSteamAdmin(ID: Integer): Boolean;
+begin
+  Result := False;
+  if SteamId[ID] <> '' then
+    Result := AdSteams.IndexOf(SteamId[ID]) >= 0;
+end;
+
+{ an admin as this script sees him: the server's admin rights of his address (remote.txt), or a Steam account
+  of the [Admin] list - that one follows the account, so it holds when the address is shared and the server's
+  rights of it are off (SharedIp = suspend) }
+function AdminOf(ID: Integer): Boolean;
+begin
+  Result := IsSteamAdmin(ID);
+  if not Result then
+    Result := PL[ID].IsAdmin;
+end;
+
 { how many admins are in the game; each gets the text }
 function SayAdmins(Text: string; Color: Longint): Integer;
 var
@@ -3559,7 +3793,7 @@ begin
   for i := 1 to TopSlot do
     if PL[i].Active then
       if PL[i].Human then
-        if PL[i].IsAdmin then
+        if AdminOf(i) then
         begin
           Say(i, Text, Color);
           Result := Result + 1;
@@ -4106,6 +4340,18 @@ begin
     C_INSINFO: Result := 'insurgents';
     C_GIVEVEST: Result := 'givevest';
     C_TAKEVEST: Result := 'takevest';
+    C_RCSHOW: Result := 'displayspawns';
+    C_RCCREATE: Result := 'createspawn';
+    C_RCREMOVE: Result := 'removenearspawn';
+    C_RCCLEAR: Result := 'removeallspawn';
+    C_RCEDIT: Result := 'editnearspawn';
+    C_RCTEST: Result := 'testrespawn';
+    C_RCCOUNT: Result := 'countspawns';
+    C_RCSAVE: Result := 'saveallspawns';
+    C_RCCHECK: Result := 'checkspawns';
+    C_RCLIST: Result := 'spawnlayouts';
+    C_RCDELETE: Result := 'deletespawnlayout';
+    C_RCEXPORT: Result := 'exportspawns';
   else
     Result := '';
   end;
@@ -4262,7 +4508,7 @@ begin
     Result := False
   else if W = PW_ADMIN then
   begin
-    Result := PL[ID].IsAdmin;
+    Result := AdminOf(ID);
     if not Result then
       if Cmd = C_OVERLAY then
         Result := OvlAllowed[ID] or OvlPublic;
@@ -4387,6 +4633,18 @@ begin
   Nums.Free;
 end;
 
+{ 4.2 (BE3-07): a file the server and the next start read, written as a whole in one step - the text beside it, to
+  the disk, then put in the file's place - so a crash or a full disk in the middle leaves the old file and not half
+  of a new one. It is done at once (the next read sees it). Without the library, or when the file is in use, the plain
+  write of before (which can raise) }
+procedure SaveListNow(L: TStringList; Path: string);
+begin
+  if BeOk then
+    if BE_FileReplace(PChar(Path), PChar(L.Text)) = 1 then
+      Exit;
+  L.SaveToFile(Path);
+end;
+
 { settings.ini as text (so that its comments stay): Prefix-n = Value at the end of Section, n one
   more than the highest there; the section is made when it is missing }
 procedure IniAppendNumbered(Section, Prefix, Value: string);
@@ -4446,7 +4704,7 @@ begin
     L.Insert(Last + 1, Prefix + '-' + IntToStr(Top + 1) + ' = ' + Value);
   end;
   try
-    L.SaveToFile(CfgPath);
+    SaveListNow(L, CfgPath);
   except
     Log('cannot write ' + CfgPath);
   end;
@@ -4497,7 +4755,7 @@ begin
   end;
   if Result > 0 then
     try
-      L.SaveToFile(CfgPath);
+      SaveListNow(L, CfgPath);
     except
       Log('cannot write ' + CfgPath);
     end;
@@ -5075,6 +5333,8 @@ begin
   FfEnemyR := CfgFloat('TeamKill', 'EnemyRadius', 45, 0, 500);
   FfSplashR := CfgFloat('TeamKill', 'BlastEnemyRadius', 150, 0, 1000);
   FfVote := CfgBool('TeamKill', 'Vote', True);
+  FfVoteMinIntent := CfgInt('TeamKill', 'VoteMinIntent', 50, 0, 100);
+  FfMirrorMinIntent := CfgInt('TeamKill', 'MirrorMinIntent', 50, 0, 100);
   FfVoteTicks := Round(CfgFloat('TeamKill', 'VoteSeconds', 20, 1, 600) * 60);
   FfPunishPts := CfgFloat('TeamKill', 'PunishPoints', 0.5, 0, 100);
   FfColor := CfgColor('TeamKill', 'Color', $FF6060);
@@ -5093,6 +5353,7 @@ begin
   FfKillText := CfgStr('TeamKill', 'KillText', 'You killed your team mate {victim} ({why}): {points} team kill points of {max}.');
   FfVictimText := CfgStr('TeamKill', 'VictimText', 'Team killed by {killer} ({why}). Within {seconds} s: !1 forgive, !2 kill him, !3 points only');
   FfVictimNext := CfgStr('TeamKill', 'VictimNextText', ', !4 kill him next round');
+  FfVictimAccident := CfgStr('TeamKill', 'VictimAccidentText', 'Team killed by {killer} ({why}). It looks like an accident: !1 forgives him.');
   FfSlayText := CfgStr('TeamKill', 'SlayText', 'You were slain for team killing ({points} points).');
   FfNextText := CfgStr('TeamKill', 'NextRoundText', 'You will be slain after your next respawn for team killing.');
   FfKickText := CfgStr('TeamKill', 'KickText', '{player} was kicked for team killing ({points} points).');
@@ -5126,6 +5387,8 @@ begin
     BE_TkSet(TKC_SPRAY_TICKS, FfSprayTicks * 1.0);
     BE_TkSet(TKC_SPRAY_SHARE, FfSprayShare);
     BE_TkSet(TKC_SPLASH, FfSplashR);
+    BE_TkSet(TKC_RANGE, CfgFloat('TeamKill', 'Range', 900, 100, 3000));
+    BE_TkSet(TKC_HIT_TICKS, Round(CfgFloat('TeamKill', 'HitSeconds', 1.5, 0.2, 10) * 60));
   end;
   if FfEnabled then
     if not HookOn then
@@ -6044,6 +6307,8 @@ begin
 end;
 
 procedure PmLoadSettings();
+var
+  S: string;
 begin
   PmEnabled := CfgBool('PrivateMessages', 'Enabled', False);
   PmCoolTicks := Round(CfgFloat('PrivateMessages', 'CooldownSeconds', 1, 0, 60) * 60);
@@ -6060,8 +6325,12 @@ begin
     PmStore := File.CreateStringList();
   if PmEnabled then
   begin
-    AddWords(CfgStr('PrivateMessages', 'Commands', 'pm|msg'), C_PM, False);
-    AddWords(CfgStr('PrivateMessages', 'ReplyCommands', 'r|reply'), C_PMREPLY, False);
+    S := LowerCase(CfgStr('PrivateMessages', 'Commands', 'pm|msg'));
+    AddWords(S, C_PM, False);
+    PmWordList := S + '|';
+    S := LowerCase(CfgStr('PrivateMessages', 'ReplyCommands', 'r|reply'));
+    AddWords(S, C_PMREPLY, False);
+    PmWordList := '|' + ReplaceAll(ReplaceAll(ReplaceAll(PmWordList + S, '!', ''), '/', ''), ' ', '') + '|';
     AddWords(CfgStr('PrivateMessages', 'MuteCommands', 'pmmute|pmblock'), C_PMMUTE, False);
     AddWords(CfgStr('PrivateMessages', 'UnmuteCommands', 'pmunmute|pmunblock'), C_PMUNMUTE, False);
   end
@@ -6340,6 +6609,7 @@ begin
     SbList.Free;
     SbList := nil;
   end;
+  SbLoadFailed := False;
   for i := 1 to 32 do
     SbChecked[i] := '';
   if SbEnabled then
@@ -6405,6 +6675,124 @@ begin
     AddWords(CfgStr('LagGuard', 'Commands', 'lag|laggers'), C_LAG, True)
   else
     CfgStr('LagGuard', 'Commands', '');
+end;
+
+{ ============ 4.1: [Spawns] - settings ============ }
+
+{ the folder above D ('scripts\' for 'scripts\Basic-Extended\'), '' = none }
+function RcParentDir(D: string): string;
+var
+  i: Integer;
+begin
+  Result := '';
+  i := Length(D);
+  if i > 0 then
+    if (D[i] = '/') or (D[i] = '\') then
+      i := i - 1;
+  while i > 0 do
+  begin
+    if (D[i] = '/') or (D[i] = '\') then
+    begin
+      Result := Copy(D, 1, i);
+      Exit;
+    end;
+    i := i - 1;
+  end;
+end;
+
+{ a command's words: the key is read always (a known key), the words are taken only while the module works; the
+  first word (for the texts that name the command) }
+function RcWords(Key, Def: string; Id: Integer): string;
+var
+  S: string;
+  p: Integer;
+begin
+  S := CfgStr('Spawns', Key, Def);
+  if RcActive then
+    AddWords(S, Id, True);
+  p := Pos('|', S);
+  if p > 0 then
+    S := Copy(S, 1, p - 1);
+  S := Trim(S);
+  if S <> '' then
+    if (S[1] = '/') or (S[1] = '!') then
+      Delete(S, 1, 1);
+  if S = '' then
+    S := Def;
+  Result := S;
+end;
+
+procedure RcLoadSettings();
+var
+  S: string;
+begin
+  RcEnabled := CfgBool('Spawns', 'Enabled', True);
+  RcMoveDelay := CfgInt('Spawns', 'MoveDelayTicks', 30, 0, 600);
+  RcTimeout := CfgInt('Spawns', 'ChangeTimeoutTicks', 900, 60, 36000);
+  RcNoDamage := CfgBool('Spawns', 'NoDamageWhileChanging', True);
+  RcNearPx := CfgFloat('Spawns', 'NearPixels', 50, 5, 1000);
+  RcMarkFirst := CfgInt('Spawns', 'MarkLayerFirst', 20, 1, 255);
+  RcMarkN := CfgInt('Spawns', 'MarkLayers', 24, 1, RC_MARKS);
+  if RcMarkFirst + RcMarkN - 1 > 255 then
+    RcMarkN := 256 - RcMarkFirst;
+  RcMarkScale := CfgFloat('Spawns', 'MarkScale', 0.08, 0.01, 1);
+  RcFloorPx := CfgFloat('Spawns', 'FloorPixels', 120, 5, 2000);
+  RcMinGap := CfgFloat('Spawns', 'MinGapPixels', 8, 0, 500);
+  RcImport := CfgBool('Spawns', 'ImportOldScript', True);
+  S := LowerCase(Trim(CfgStr('Spawns', 'OldScriptAction', 'move')));
+  RcDelete := S = 'delete';
+  if (S <> 'move') and (S <> 'delete') then
+    CfgWarn('Spawns', 'OldScriptAction', S, 'move or delete; move used');
+  RcAutoRec := CfgBool('Spawns', 'AutoRecompile', True);
+  { 4.2 (BE6-09): a takeover that is planned or waits for an admin's /recompile ends when it is switched off here
+    (ImportOldScript = 0 or [Spawns] Enabled = 0 and /reloadsettings): the old folder is not moved later }
+  if not (RcEnabled and RcImport) then
+  begin
+    RcRetireOnCmd := False;
+    RcConvDue := 0;
+  end;
+  { the old script is looked for once a start of this script: loaded, it stays in the server until a recompile }
+  if RcEnabled then
+    if BeOk then
+      if not RcDetected then
+      begin
+        RcDetected := True;
+        RcScriptsDir := RcParentDir(ScriptDir);
+        if RcScriptsDir <> '' then
+          RcOldDir := BE_SpFindOld(PChar(RcScriptsDir), PChar(ScriptDir));
+        RcOldRunning := RcOldDir <> '';
+      end;
+  RcActive := False;
+  if not RcEnabled then
+    RcIdleWhy := 'switched off'
+  else if not BeOk then
+    RcIdleWhy := 'basicext_dll is not running (the layouts are kept there)'
+  else if RcOldDir <> '' then
+  begin
+    if RcImport then
+      RcIdleWhy := 'Respawns-Control (' + RcOldDir + ') works until it is taken over, a moment after the start'
+    else
+      RcIdleWhy := 'Respawns-Control (' + RcOldDir + ') is installed and ImportOldScript = 0: it keeps the work';
+  end
+  else if RcOldRunning then
+    RcIdleWhy := 'Respawns-Control is still loaded in the server: /recompile (or a restart) ends the takeover'
+  else
+  begin
+    RcActive := True;
+    RcIdleWhy := '';
+  end;
+  RcWords('ShowCommands', 'displayspawns', C_RCSHOW);
+  RcWords('CreateCommands', 'createspawn', C_RCCREATE);
+  RcWords('RemoveCommands', 'removenearspawn', C_RCREMOVE);
+  RcWords('ClearCommands', 'removeallspawn', C_RCCLEAR);
+  RcWords('EditCommands', 'editnearspawn', C_RCEDIT);
+  RcWords('TestCommands', 'testrespawn', C_RCTEST);
+  RcWords('CountCommands', 'countspawns', C_RCCOUNT);
+  RcSaveWord := RcWords('SaveCommands', 'saveallspawns', C_RCSAVE);
+  RcWords('CheckCommands', 'checkspawns', C_RCCHECK);
+  RcListWord := RcWords('ListCommands', 'spawnlayouts', C_RCLIST);
+  RcWords('DeleteCommands', 'deletespawnlayout', C_RCDELETE);
+  RcWords('ExportCommands', 'exportspawns', C_RCEXPORT);
 end;
 
 procedure AdLoadSettings();
@@ -6607,7 +6995,13 @@ begin
     ShServerW[k] := True;
   if not File.Exists('soldat.ini') then
     Exit;
-  L := File.CreateStringListFromFile('soldat.ini');
+  try
+    L := File.CreateStringListFromFile('soldat.ini');
+  except
+    { held open by another program just now: every weapon counts as on in the server's list until the next load }
+    Log('soldat.ini cannot be read now: the server''s weapon list is not checked');
+    Exit;
+  end;
   InGame := False;
   for i := 0 to L.Count - 1 do
   begin
@@ -6714,13 +7108,27 @@ begin
     if (Pr = 'off') or (Pr = '') or (Pr = '-1') then
       ShPrice[It] := -1
     else if Copy(Pr, Length(Pr), 1) = '%' then
+    begin
       { a share of the weapon's price (magazines, ammunition): kept as -100 - percent }
-      ShPrice[It] := -100 - StrToIntDef(Copy(Pr, 1, Length(Pr) - 1), 20)
+      P0 := StrToIntDef(Copy(Pr, 1, Length(Pr) - 1), 20);
+      if P0 < 0 then
+      begin
+        { BE1-07: -50% would be -50, a price below 0 }
+        CfgWarn('Shop', ShItemKey(It), S, 'a percent below 0: the item is not sold');
+        ShPrice[It] := -1;
+      end
+      else
+        ShPrice[It] := -100 - P0;
+    end
     else
     begin
       ShPrice[It] := StrToIntDef(Pr, -1);
       if ShPrice[It] < 0 then
-        CfgWarn('Shop', ShItemKey(It), S, 'a price (or off), then | the words to buy it, | the limit a life');
+      begin
+        CfgWarn('Shop', ShItemKey(It), S, 'a price (or off), then | the words to buy it, | the limit a life - a ' +
+          'negative or unreadable price: the item is not sold');
+        ShPrice[It] := -1;
+      end;
     end;
     W := LowerCase(ShField(S, 1));
     if Trim(W) = '' then
@@ -6847,13 +7255,18 @@ begin
   ShAlive := CfgBool('Shop', 'AliveOnly', True);
   ShLoseOnDeath := CfgBool('Shop', 'LoseOnDeath', True);
   ShBuyOnly := CfgBool('Shop', 'BuyOnly', False);
-  ShOldToSecondary := LowerCase(Trim(CfgStr('Shop', 'OldPrimary', 'secondary'))) <> 'lose';
+  S := LowerCase(Trim(CfgStr('Shop', 'OldPrimary', 'secondary')));
+  ShOldToSecondary := S <> 'lose';
+  if (S <> 'secondary') and (S <> 'lose') then
+    CfgWarn('Shop', 'OldPrimary', S, 'secondary or lose; secondary used');
   S := LowerCase(Trim(CfgStr('Shop', 'Transfer', 'team')));
   ShTransfer := 1;
   if S = 'off' then
     ShTransfer := 0
   else if S = 'all' then
-    ShTransfer := 2;
+    ShTransfer := 2
+  else if S <> 'team' then
+    CfgWarn('Shop', 'Transfer', S, 'team, all or off; team used');
   ShSellOn := CfgBool('Shop', 'Sell', False);
   ShSellShare := CfgFloat('Shop', 'SellShare', 0.5, 0, 1);
   S := LowerCase(CfgStr('Shop', 'ShopOnly', 'mines|claymores|javelins|flashes')) + '|';
@@ -6887,7 +7300,9 @@ begin
   S := LowerCase(Trim(CfgStr('Shop', 'HudPlace', 'ammo')));
   ShHudWhere := 1;
   if S = 'fixed' then
-    ShHudWhere := 0;
+    ShHudWhere := 0
+  else if S <> 'ammo' then
+    CfgWarn('Shop', 'HudPlace', S, 'ammo or fixed; ammo used');
   ShHudX := CfgInt('Shop', 'HudX', 20, -2000, 4000);
   ShHudY := CfgInt('Shop', 'HudY', 350, -2000, 4000);
   ShHudScale := CfgFloat('Shop', 'HudScale', 0.02, 0.005, 1);
@@ -8169,21 +8584,51 @@ var
   S, Sec: string;
   Sections, Keys: TStringList;
   Found: Boolean;
+  NewCfg: TIniFile;
 begin
+  CfgPath := ScriptDir + 'settings.ini';
+  if not File.Exists(CfgPath) then
+    if File.Exists(OldDataDir + 'settings.ini') then
+    begin
+      CfgPath := OldDataDir + 'settings.ini';
+      Log('settings.ini is read from ' + OldDataDir + ': it belongs next to main.pas now (' + ScriptDir + ')');
+    end;
+  CfgOk := File.Exists(CfgPath);
+  { 4.2 (BE1-01): the file is opened before anything is cleared: a file that another program holds open (an upload, an
+    editor saving) raises here, and the command words were already gone - no command of this script worked until the
+    next /recompile }
+  SetsReadFailed := False;
+  NewCfg := nil;
+  if CfgOk then
+    try
+      NewCfg := File.CreateINI(CfgPath);
+    except
+      SetsReadFailed := True;
+      CfgOk := False;
+    end;
+  if SetsReadFailed then
+    if Started then
+    begin
+      { a running script keeps what it has: nothing is cleared }
+      Log('settings.ini cannot be read now (another program has it open?): nothing was changed');
+      Exit;
+    end;
   CfgKeys.Clear;
   ChatWords.Clear;
   SlashWords.Clear;
   RegCount := 0;
-  CfgPath := ScriptDir + 'settings.ini';
-  if not File.Exists(CfgPath) then
-    if File.Exists(DataDir + 'settings.ini') then
-    begin
-      CfgPath := DataDir + 'settings.ini';
-      Log('settings.ini is read from ' + DataDir + ': it belongs next to main.pas now (' + ScriptDir + ')');
-    end;
-  CfgOk := File.Exists(CfgPath);
-  if CfgOk then
-    Cfg := File.CreateINI(CfgPath)
+  if SetsReadFailed then
+  begin
+    Log('settings.ini cannot be read now (another program has it open?): the defaults are used for now, the file is ' +
+      'read again in a few seconds');
+    SetsRetryLeft := 12;
+    SetsRetryAt := After(Game.TickCount, 300);
+  end
+  else if CfgOk then
+  begin
+    Cfg := NewCfg;
+    SetsRetryLeft := 0;
+  end
   else
     Log('settings.ini not found in ' + ScriptDir + ', the defaults are used');
 
@@ -8456,6 +8901,11 @@ begin
   OvlBurst := OvlRate / 5;
   if OvlBurst < OvlTextsPerTick then
     OvlBurst := OvlTextsPerTick;
+  { the public users have a lower limit of their own: with many of them at once the packets add up }
+  OvlPubRateTick := CfgFloat('Radar', 'PublicMaxTextsPerSecond', 60, 10, 2000) / 60;
+  OvlPubBurst := OvlPubRateTick * 12;
+  if OvlPubBurst < OvlTextsPerTick then
+    OvlPubBurst := OvlTextsPerTick;
   OvlArrowTicks := CfgInt('Radar', 'RingUpdateTicks', 5, 1, 600);
   OvlArrowsMax := CfgInt('Radar', 'RingPlayers', 6, 1, 32);
   OvlArrowSteps := CfgInt('Radar', 'RingSizeSteps', 4, 1, 16);
@@ -8717,6 +9167,7 @@ begin
     LootDeadMags := 0;
   end;
   LootTextScale := CfgFloat('Looting', 'TextScale', 0.022, 0.005, 0.5);
+  LootTextLayer := CfgInt('Looting', 'TextLayer', 249, 1, 255);
   LootTextX := CfgFloat('Looting', 'TextOffsetX', 2, -200, 200);
   LootTextY := CfgFloat('Looting', 'TextOffsetY', -30, -200, 200);
 
@@ -8752,7 +9203,10 @@ begin
       HookThings := (n and 2) <> 0;
       if not HookThings then
         Log('the hooks in the server are not all in place: ' + BE_HookInfo());
-    end;
+    end
+    else
+      { 4.1: switched off by /reloadsettings - the server's own code back }
+      BE_HookStop();
     BE_AmmoConfig(BoolInt(AmmoEnabled), BoolInt(AmmoMagazineMode), BoolInt(AmmoEmptyDrop), BoolInt(AmmoPickupFullSet),
       BoolInt(AmmoTrackGround), AmmoChainsawIdleDrainTicks, AmmoChainsawDrainTicks, AmmoChainsawAttackDrain, LootRadius);
     BE_AmmoOptions(BoolInt(AmmoOneRound), BoolInt(AmmoKeepInterrupted), BoolInt(AmmoSortMags), AmmoRepackStart,
@@ -9227,6 +9681,7 @@ begin
 
   TkEnabled := CfgBool('TimeToKill', 'Enabled', False);
   TkAlive := CfgInt('TimeToKill', 'AlivePlayers', 2, 1, 32);
+  TkMin := CfgInt('TimeToKill', 'MinPlayers', 3, 2, 32);
   TkSeconds := CfgInt('TimeToKill', 'Seconds', 30, 5, 3600);
   TkText := CfgStr('TimeToKill', 'Text', 'End in: {seconds}');
   TkColor := CfgColor('TimeToKill', 'Color', $00FF33);
@@ -9281,7 +9736,8 @@ begin
   LgChat := CfgBool('Logger', 'Chat', True);
   LgCommands := CfgBool('Logger', 'Commands', True);
   LgHideArgs := LowerCase(ReplaceAll(CfgStr('Logger', 'HideArgs',
-    'adminlog|password|pass|register|login|changepass|resetpass|removemypass|forgotpass|yes|zs_setpass|setemail'),
+    'adminlog|password|pass|register|login|changepass|resetpass|removemypass|forgotpass|yes|zs_setpass|setemail|' +
+    'verifyemail|account'),
     ' ', ''));
   LgAdmins := CfgBool('Logger', 'Admins', True);
   LgMaps := CfgBool('Logger', 'Maps', True);
@@ -9580,6 +10036,7 @@ begin
   LfLoadSettings();
   AdLoadSettings();
   ShAllLoadSettings();
+  RcLoadSettings();
   if RkEnabled then
   begin
     if not BeOk then
@@ -9597,6 +10054,17 @@ begin
   { ---- admin ---- }
   AdSteamFile := '[Admin] Steam-<n> of settings.ini';
   LoadAdminSteams();
+  S := LowerCase(Trim(CfgStr('Admin', 'SharedIp', 'suspend')));
+  if S = 'allow' then
+    AdSharedMode := SHARE_ALLOW
+  else if S = 'kick' then
+    AdSharedMode := SHARE_KICK
+  else
+  begin
+    AdSharedMode := SHARE_SUSPEND;
+    if S <> 'suspend' then
+      CfgWarn('Admin', 'SharedIp', S, 'allow, suspend or kick');
+  end;
   AddWords(CfgStr('Admin', 'SteamAdminCommands', 'steamadmin'), C_STEAMADMIN, True);
   AddWords(CfgStr('Admin', 'ListCommands', 'admincommands'), C_ADMINLIST, True);
   AdListLines.Free;
@@ -11619,10 +12087,12 @@ end;
 
 { Every enemy bullet is taken as the line it flies until the next look; a line that passes near a
   player who waits for regeneration delays it. Bullets take the lowest free slot, so the slots above
-  the highest one in use (plus a margin for new ones) are empty and not looked at. }
+  the highest one in use (plus a margin for new ones) are empty and not looked at. With the bullet bridge one
+  call tells whether a slot is in use and who owns it and its style (a property read costs about twice that),
+  so the position and the speed are read only of the bullets in flight. }
 procedure SuppressionScan(Tick: Integer);
 var
-  b, k, n, o, Top, M: Integer;
+  b, k, n, o, Top, M, Info, A, O2, W, St, TOut: Integer;
   Bul: TActiveMapBullet;
   List: array[1..32] of Integer;
   P: TActivePlayer;
@@ -11648,19 +12118,42 @@ begin
     ScanTop := MAX_BULLET_ID;
   for b := 1 to ScanTop do
   begin
-    Bul := BL[b];
-    if Bul.Active then
+    Info := 0;
+    if BeOk then
+      Info := BE_BulletInfo(b, A, O2, W, St, TOut);
+    if Info = 1 then
     begin
-      Top := b;
-      StatBullets := StatBullets + 1;
-      o := Bul.Owner;
-      if (o >= 1) and (o <= 32) then
+      if A = 1 then
       begin
-        M := BE_SupBullet(o, Bul.Style, Bul.X, Bul.Y, Bul.VelX, Bul.VelY);
-        if M <> 0 then
-          for k := 1 to n do
-            if (M and SlotBit[List[k]]) <> 0 then
-              LastSupp[List[k]] := Tick;
+        Top := b;
+        StatBullets := StatBullets + 1;
+        if (O2 >= 1) and (O2 <= 32) then
+        begin
+          Bul := BL[b];
+          M := BE_SupBullet(O2, St, Bul.X, Bul.Y, Bul.VelX, Bul.VelY);
+          if M <> 0 then
+            for k := 1 to n do
+              if (M and SlotBit[List[k]]) <> 0 then
+                LastSupp[List[k]] := Tick;
+        end;
+      end;
+    end
+    else
+    begin
+      Bul := BL[b];
+      if Bul.Active then
+      begin
+        Top := b;
+        StatBullets := StatBullets + 1;
+        o := Bul.Owner;
+        if (o >= 1) and (o <= 32) then
+        begin
+          M := BE_SupBullet(o, Bul.Style, Bul.X, Bul.Y, Bul.VelX, Bul.VelY);
+          if M <> 0 then
+            for k := 1 to n do
+              if (M and SlotBit[List[k]]) <> 0 then
+                LastSupp[List[k]] := Tick;
+        end;
       end;
     end;
   end;
@@ -12290,9 +12783,14 @@ begin
   FfStatHits := FfStatHits + 1;
   if FfShielded(S, Tick) then
   begin
-    FfMirror[S] := FfMirror[S] + Damage * FfMirrorShare;
-    if FfMirrorShare > 0 then
-      FfMirrorAny := True;
+    { a hit that looks like running into the fire or crossfire (less meant than MirrorMinIntent) is only
+      blocked: a griefer must not make the blocked one hurt himself }
+    if Intent >= FfMirrorMinIntent then
+    begin
+      FfMirror[S] := FfMirror[S] + Damage * FfMirrorShare;
+      if FfMirrorShare > 0 then
+        FfMirrorAny := True;
+    end;
     Result := Damage * FfShieldShare;
   end;
 end;
@@ -12421,13 +12919,20 @@ begin
     if PL[V].Human or DebugBots then
     begin
       FfVoteBy[V] := K;
+      FfVoteIntent[V] := Intent;
       FfVoteUntil[V] := After(Tick, FfVoteTicks);
       FfVotePts[V] := FfPair[K][V];
       FfVoteName[V] := PL[K].Name;
       Secs := FfVoteTicks div 60;
-      T := FfFill(FfVictimText, V, K, FfWhy(Reason) + Extra, Secs);
-      if Game.Survival then
-        T := T + FfVictimNext;
+      if Intent >= FfVoteMinIntent then
+      begin
+        T := FfFill(FfVictimText, V, K, FfWhy(Reason) + Extra, Secs);
+        if Game.Survival then
+          T := T + FfVictimNext;
+      end
+      else
+        { it looks like an accident: the victim may only forgive (!2-!4 would punish an innocent) }
+        T := FfFill(FfVictimAccident, V, K, FfWhy(Reason) + Extra, Secs);
       FfSay(V, T, FfInfoColor);
     end;
   FfLadder(K, Tick);
@@ -12479,6 +12984,12 @@ begin
     FfVoteBy[V] := 0;
     Exit;
   end;
+  if Choice <> TKV_FORGIVE then
+    if FfVoteIntent[V] < FfVoteMinIntent then
+    begin
+      Say(V, 'That looked like an accident: only !1 (forgive) is possible.', ColorBad);
+      Exit;
+    end;
   if Choice = TKV_NEXT then
     if not Game.Survival then
     begin
@@ -13121,7 +13632,7 @@ begin
   if SteamId[ID] <> '' then
     OvlAllowed[ID] := OvlSteams.IndexOf(SteamId[ID]) >= 0;
   if OvlAdminsFull then
-    if PL[ID].IsAdmin then
+    if AdminOf(ID) then
       OvlAllowed[ID] := True;
   if DebugBots then
     if not PL[ID].Human then
@@ -13712,6 +14223,7 @@ procedure OverlayTick(Tick: Integer);
 var
   k, j, i, n, Budget, T, Next, Spent: Integer;
   Fresh, Extra: Boolean;
+  Rt, Bu: Single;
 begin
   if Tick < OvlNextTick then
     Exit;
@@ -13754,10 +14266,20 @@ begin
           T := 1;
         RdDue[i] := After(Tick - (Tick + i) mod T, T);
       end;
-      RdTokens[i] := RdTokens[i] + (Tick - RdTokTick[i]) * OvlRateTick;
+      if OvlAllowed[i] then
+      begin
+        Rt := OvlRateTick;
+        Bu := OvlBurst;
+      end
+      else
+      begin
+        Rt := OvlPubRateTick;
+        Bu := OvlPubBurst;
+      end;
+      RdTokens[i] := RdTokens[i] + (Tick - RdTokTick[i]) * Rt;
       RdTokTick[i] := Tick;
-      if RdTokens[i] > OvlBurst then
-        RdTokens[i] := OvlBurst;
+      if RdTokens[i] > Bu then
+        RdTokens[i] := Bu;
       Budget := Trunc(RdTokens[i]);
       if Budget > OvlTextsPerTick then
         Budget := OvlTextsPerTick;
@@ -13772,7 +14294,7 @@ begin
         n := n - 65536;
         T := 1;
         if RdTokens[i] - n < RdNeed[i] then
-          T := Trunc((RdNeed[i] - RdTokens[i] + n) / OvlRateTick) + 1;
+          T := Trunc((RdNeed[i] - RdTokens[i] + n) / Rt) + 1;
         if Tick + T < RdRetry[i] then
           RdRetry[i] := Tick + T;
       end;
@@ -14204,7 +14726,25 @@ procedure AcTick(Tick: Integer);
 var
   i, k, n, F: Integer;
   P: TActivePlayer;
+  Tn: TDateTime;
 begin
+  { a stall of the server (the clock stood for a quarter of a second): it runs the missed ticks back to back and
+    corrects the positions of the players who turned meanwhile - no teleports, so a grace for everybody }
+  Tn := Now();
+  if AcClock > 0 then
+    if Tn > AcClock then
+      if (Tn - AcClock) * 86400 >= 0.25 then
+        for i := 1 to TopSlot do
+          if ActiveSlot[i] then
+            if HumanOf[i] then
+              BE_AcMoved(i, Tick);
+  AcClock := Tn;
+  { the pings, for the jump rule (a bad connection is corrected all the time) }
+  if Tick mod 30 = 0 then
+    for i := 1 to TopSlot do
+      if ActiveSlot[i] then
+        if HumanOf[i] then
+          BE_AcPing(i, PL[i].Ping);
   { the weapon in the hands: a few players a tick, each one every WeaponCheckTicks }
   for i := 1 to TopSlot do
     if (Tick + i) mod AcWatchTicks = 0 then
@@ -14284,9 +14824,13 @@ begin
     Exit;
   if Tick < VoteBusyUntil then
     Exit;
+  { ZitroStats runs its own vote (map vote from the chat) with the vote percent at 200: a kick vote started now
+    would replace its vote on the screens and could not pass }
+  if Game.VotePercent >= 200 then
+    Exit;
   if Tick - AcVoted[ID] < AcVoteEvery then
     Exit;
-  if PL[ID].IsAdmin then
+  if AdminOf(ID) then
     Exit;
   if BE_AcFindings(ID) < AcVoteMin then
     Exit;
@@ -14343,7 +14887,8 @@ end;
 procedure AcDamage(S, V, Tick, BulletId: Integer; Shooter: TActivePlayer);
 var
   Bul: TActiveMapBullet;
-  W: Integer;
+  W, OT: Integer;
+  OX, OY: Single;
 begin
   if AcWep[V] >= 0 then
     BE_AcHurt(V, Tick, AcWep[V]);
@@ -14359,7 +14904,17 @@ begin
   W := Bul.GetOwnerWeaponId;
   if (W < 0) or (W > 16) then
     Exit;
-  BE_AcHit(Tick, S, W, BulletId, Bul.X, Bul.Y, Bul.VelX, Bul.VelY, Shooter.X, Shooter.Y - 10);
+  OX := Shooter.X;
+  OY := Shooter.Y - 10;
+  { the flight is measured from where the bullet was made (the shooter may have walked away from there, or a LAW
+    rocket flown for a long time), when the bullet bridge knows it }
+  if BeOk then
+    if BE_BulletOrigin(BulletId, OX, OY, OT) <> 1 then
+    begin
+      OX := Shooter.X;
+      OY := Shooter.Y - 10;
+    end;
+  BE_AcHit(Tick, S, W, BulletId, Bul.X, Bul.Y, Bul.VelX, Bul.VelY, OX, OY);
 end;
 
 { the aimbot's key: FlagKey while the player carries a flag (the flag key would throw it) }
@@ -15289,7 +15844,7 @@ end;
 procedure SaveGrants();
 begin
   try
-    GrantList.SaveToFile(DataDir + 'granted_admins.txt');
+    SaveListNow(GrantList, DataDir + 'granted_admins.txt');
   except
     Log('cannot write ' + DataDir + 'granted_admins.txt');
   end;
@@ -15299,7 +15854,9 @@ end;
   HWID can be faked, a Steam account cannot). Soldat keeps admins by IP, and setting IsAdmin makes
   the server write the IP into remote.txt (taking it away removes it from there). So the script takes
   back only an IP it put there itself, and only when no other player it made admin uses that IP; an
-  admin by remote.txt, 127.0.0.1 or a TCP login is left alone. }
+  admin by remote.txt, 127.0.0.1 or a TCP login is left alone. The commands of this script follow the
+  Steam account itself (AdminOf); the server's own rights (kick, map ...) follow the address, so they
+  are not given while somebody who is no Steam admin plays from the same address ([Admin] SharedIp). }
 { his admin rights changed: the full radar follows them ([Radar] AdminsFull) }
 procedure RadarRightsChanged(ID: Integer);
 var
@@ -15317,38 +15874,108 @@ begin
   end;
 end;
 
-procedure GrantSteamAdmin(ID: Integer);
+{ the IPs this script once put into remote.txt are taken out of the file again: the server stops (Ctrl+C, a
+  shutdown) without an OnLeave for anybody, and the file keeps what the server wrote when it made them admins -
+  the next start would load them, and whoever comes from there would be an admin from the first moment (and enter
+  past the password and the bans). Only the file; an admin in the game keeps his rights until the process ends.
+  remote.txt lies next to the server in 2.8.2 and in configs/ in later releases. }
+procedure GrantsOutOfFile();
 var
-  P: TActivePlayer;
-  Ip: string;
+  L: TStringList;
+  n, k: Integer;
+  Path: string;
+  Changed: Boolean;
 begin
-  if GrantedIp[ID] <> '' then
+  if GrantList.Count = 0 then
     Exit;
-  if SteamId[ID] = '' then
-    Exit;
-  if AdSteams.IndexOf(SteamId[ID]) < 0 then
-    Exit;
-  P := PL[ID];
-  Ip := P.IP;
-  if Ip = '' then
-    Exit;
-  if P.IsAdmin then
+  for n := 0 to 1 do
   begin
-    { already an admin: ours only when an earlier run of the script put the IP there }
-    if GrantList.IndexOf(Ip) >= 0 then
-      GrantedIp[ID] := Ip;
-    Exit;
+    Path := 'remote.txt';
+    if n = 1 then
+      Path := 'configs/remote.txt';
+    try
+      if File.Exists(Path) then
+      begin
+        L := File.CreateStringListFromFile(Path);
+        Changed := False;
+        for k := L.Count - 1 downto 0 do
+          if GrantList.IndexOf(Trim(L[k])) >= 0 then
+          begin
+            L.Delete(k);
+            Changed := True;
+          end;
+        if Changed then
+          L.SaveToFile(Path);
+        L.Free;
+      end;
+    except
+      Log('cannot clean ' + Path);
+    end;
   end;
-  P.IsAdmin := True;
-  GrantedIp[ID] := Ip;
-  RadarRightsChanged(ID);
-  if GrantList.IndexOf(Ip) < 0 then
+end;
+
+{ at the start: the IPs of GrantList the server really holds (it loaded remote.txt, and the script was not there
+  to take them back - a window closed, a crash, a kill) are listed loudly; the ones the file no longer has are
+  history and leave the list }
+procedure StaleGrantsAtStart();
+var
+  InFile: TStringList;
+  L: TStringList;
+  i, j, n, k: Integer;
+  Path, Ip: string;
+  GotFile, Held, Changed: Boolean;
+begin
+  if GrantList.Count = 0 then
+    Exit;
+  InFile := File.CreateStringList();
+  GotFile := False;
+  for n := 0 to 1 do
   begin
-    GrantList.Add(Ip);
+    Path := 'remote.txt';
+    if n = 1 then
+      Path := 'configs/remote.txt';
+    try
+      if File.Exists(Path) then
+      begin
+        GotFile := True;
+        L := File.CreateStringListFromFile(Path);
+        for k := 0 to L.Count - 1 do
+          InFile.Add(Trim(L[k]));
+        L.Free;
+      end;
+    except
+      GotFile := False;
+    end;
+  end;
+  Changed := False;
+  for i := GrantList.Count - 1 downto 0 do
+  begin
+    Ip := GrantList[i];
+    Held := False;
+    for j := 1 to 32 do
+      if GrantedIp[j] = Ip then
+        Held := True;
+    if not Held then
+    begin
+      if GotFile and (InFile.IndexOf(Ip) < 0) then
+      begin
+        GrantList.Delete(i);
+        Changed := True;
+      end
+      else
+      begin
+        Log('remote.txt holds ' + Ip + ': made admin for ' + AdSteamFile + ' and not taken back (the server stopped ' +
+          'while that player was in the game). Anybody from this address is an admin and enters past the password ' +
+          'and the bans until a player from it joins and the script takes it back - to do it now: /unadm ' + Ip +
+          ' (server console or an admin).');
+        SayAdmins('remote.txt holds ' + Ip + ' from an earlier visit of a Steam admin: /unadm ' + Ip + ' takes it out.',
+          ColorBad);
+      end;
+    end;
+  end;
+  if Changed then
     SaveGrants();
-  end;
-  Log(P.Name + ' is an admin for this visit (' + AdSteamFile + ': ' + SteamId[ID] + ').');
-  Say(ID, 'You are an admin on this server (Steam account ' + SteamId[ID] + ').', ColorGood);
+  InFile.Free;
 end;
 
 procedure RevokeGrant(ID: Integer);
@@ -15363,14 +15990,170 @@ begin
   for i := 1 to 32 do
     if GrantedIp[i] = Ip then
       Exit;
-  PL[ID].IsAdmin := False;
-  RadarRightsChanged(ID);
-  k := GrantList.IndexOf(Ip);
-  if k >= 0 then
+  { unadm goes to the address of the player in the slot: when the player has changed (the one who got the rights
+    left without an OnLeave) it would take the rights from the new one, so the address stays listed to be taken
+    back when a player from it joins }
+  if PL[ID].IP = Ip then
   begin
-    GrantList.Delete(k);
+    PL[ID].IsAdmin := False;
+    RadarRightsChanged(ID);
+    k := GrantList.IndexOf(Ip);
+    if k >= 0 then
+    begin
+      GrantList.Delete(k);
+      SaveGrants();
+    end;
+  end;
+end;
+
+{ the first human on the address who is no Steam admin of the list (0 = nobody) }
+function SharedOther(ID: Integer; Ip: string): Integer;
+var
+  i: Integer;
+begin
+  Result := 0;
+  for i := 1 to 32 do
+    if i <> ID then
+      if ActiveSlot[i] then
+        if PL[i].Human then
+          if PL[i].IP = Ip then
+            if not IsSteamAdmin(i) then
+            begin
+              Result := i;
+              Exit;
+            end;
+end;
+
+{ [Admin] SharedIp: Other is no Steam admin and plays from the address of Holder, who is. Soldat keeps admins by
+  IP, so the server would make Other an admin as well (he also came in past the password and the bans). allow =
+  he stays one and the admins are told; suspend = the address is taken out of remote.txt while he is here, the
+  Steam admin keeps the commands of this script (they follow his account); kick = he is removed. Reported once
+  for the Holder's visit. True when Holder must not get the server's rights now. }
+function ShareFound(Holder, Other: Integer): Boolean;
+var
+  Mode: Integer;
+  T: string;
+begin
+  Mode := AdSharedMode;
+  { Steam has not answered for him yet: he may be on the list - he is judged again when it does }
+  if Mode = SHARE_KICK then
+    if SteamId[Other] = '' then
+      Mode := SHARE_SUSPEND;
+  if Mode = SHARE_KICK then
+  begin
+    if BanAt[Other] = 0 then
+    begin
+      Say(Other, 'You are removed: your address belongs to an admin of this server.', ColorBad);
+      ScheduleBan(Other, 0, 'shared address');
+    end;
+  end
+  else if Mode = SHARE_SUSPEND then
+    RevokeGrant(Holder);
+  Result := Mode = SHARE_SUSPEND;
+  if ShareSeen[Holder] then
+    Exit;
+  ShareSeen[Holder] := True;
+  if Mode = SHARE_ALLOW then
+    T := 'the server treats both as admins while they share the address (SharedIp = allow)'
+  else if Mode = SHARE_KICK then
+    T := 'he is removed (SharedIp = kick)'
+  else
+    T := 'the server''s admin rights of the address are off while he is here (SharedIp = suspend)';
+  Log(PL[Other].Name + ' plays from the address of ' + PL[Holder].Name + ', an admin by ' + AdSteamFile + ': ' + T + '.');
+  if Mode = SHARE_ALLOW then
+    SayAdmins(PL[Other].Name + ' plays from the address of admin ' + PL[Holder].Name + ': the server treats both as admins.',
+      ColorBad)
+  else if Mode = SHARE_SUSPEND then
+    Say(Holder, PL[Other].Name + ' plays from your address: the server''s admin rights of it (kick, map ...) are off ' +
+      'while he is here; the commands of this script stay yours.', ColorBad);
+end;
+
+procedure GrantSteamAdmin(ID: Integer);
+var
+  P: TActivePlayer;
+  Ip: string;
+  Who: Integer;
+begin
+  if GrantedIp[ID] <> '' then
+    Exit;
+  if SteamId[ID] = '' then
+    Exit;
+  if AdSteams.IndexOf(SteamId[ID]) < 0 then
+    Exit;
+  P := PL[ID];
+  Ip := P.IP;
+  if Ip = '' then
+    Exit;
+  Who := SharedOther(ID, Ip);
+  if P.IsAdmin then
+  begin
+    { already an admin: ours only when an earlier run of the script put the IP there }
+    if GrantList.IndexOf(Ip) >= 0 then
+    begin
+      GrantedIp[ID] := Ip;
+      if Who > 0 then
+        ShareFound(ID, Who);
+    end;
+    Exit;
+  end;
+  { somebody on this address who is no Steam admin would be an admin as well }
+  if Who > 0 then
+    if ShareFound(ID, Who) then
+      Exit;
+  P.IsAdmin := True;
+  GrantedIp[ID] := Ip;
+  ShareSeen[ID] := False;
+  RadarRightsChanged(ID);
+  if GrantList.IndexOf(Ip) < 0 then
+  begin
+    GrantList.Add(Ip);
     SaveGrants();
   end;
+  Log(P.Name + ' is an admin for this visit (' + AdSteamFile + ': ' + SteamId[ID] + ').');
+  Say(ID, 'You are an admin on this server (Steam account ' + SteamId[ID] + ').', ColorGood);
+end;
+
+{ a player who is no Steam admin is in the game (he joined, or Steam has just answered): does he share the address
+  of one who is - one the script made an admin by that address, or one it has taken the rights from because of
+  another who shares it (ShareSeen)? }
+procedure ShareJoin(ID: Integer);
+var
+  i: Integer;
+  Ip: string;
+begin
+  if AdSteams.Count = 0 then
+    Exit;
+  if IsSteamAdmin(ID) then
+    Exit;
+  Ip := PL[ID].IP;
+  if Ip = '' then
+    Exit;
+  for i := 1 to 32 do
+    if i <> ID then
+      if ActiveSlot[i] then
+        if (GrantedIp[i] = Ip) or ShareSeen[i] then
+          if IsSteamAdmin(i) then
+            if PL[i].IP = Ip then
+            begin
+              ShareFound(i, ID);
+              Exit;
+            end;
+end;
+
+{ somebody left: a Steam admin whose address he shared gets the server's rights back (when nobody else shares it) }
+procedure RegrantShared();
+var
+  i: Integer;
+begin
+  if AdSharedMode = SHARE_ALLOW then
+    Exit;
+  if AdSteams.Count = 0 then
+    Exit;
+  for i := 1 to 32 do
+    if ActiveSlot[i] then
+      if GrantedIp[i] = '' then
+        if IsSteamAdmin(i) then
+          GrantSteamAdmin(i);
 end;
 
 { An IP this script once made admin (the server stopped while that admin played, or his IP changed)
@@ -15674,22 +16457,27 @@ begin
     Say(V, PhText, PhColor);
 end;
 
-{ [TimeToKill], once a second: when exactly AlivePlayers are alive a countdown starts; at 0 they all
-  die (the server's own kill: no suicide penalty) }
+{ [TimeToKill], once a second: when exactly AlivePlayers are alive a countdown starts (only in a game of at
+  least MinPlayers players in the teams, alive or dead: a duel is no standoff); at 0 they all die (the
+  server's own kill: no suicide penalty) }
 procedure TimeToKillSecond(Tick: Integer);
 var
-  i, n: Integer;
+  i, n, Tot: Integer;
 begin
   { a pause or a map change: the countdown waits }
   if PausedNow or MapChanging then
     Exit;
   n := 0;
+  Tot := 0;
   if Game.Survival then
     for i := 1 to TopSlot do
       if ActiveSlot[i] then
         if TeamOf[i] <> TEAM_SPECTATOR then
+        begin
+          Tot := Tot + 1;
           if PL[i].Alive then
             n := n + 1;
+        end;
   if n <> TkAlive then
   begin
     if TkLeft > 0 then
@@ -15698,7 +16486,12 @@ begin
     Exit;
   end;
   if TkLeft = 0 then
+  begin
+    { too few players in the game: no countdown (once it runs, it runs) }
+    if Tot < TkMin then
+      Exit;
     TkLeft := TkSeconds + 1;
+  end;
   TkLeft := TkLeft - 1;
   if TkLeft > 0 then
   begin
@@ -15946,7 +16739,7 @@ begin
   if not PL[ID].Human then
     Exit;
   { the server's admins (remote.txt) always get in }
-  if PL[ID].IsAdmin then
+  if AdminOf(ID) then
     Exit;
   { the players count, not the bots (a bot's slot is free for a player) }
   n := 0;
@@ -16047,16 +16840,35 @@ end;
 { a command as the log shows it: the arguments of the commands of [Logger] HideArgs (passwords) are left out }
 function LogCommand(Text: string): string;
 var
-  W: string;
+  W, Clean, Tabs: string;
+  i: Integer;
 begin
   Result := Trim(Text);
-  W := LowerCase(FirstWord(Result));
+  { a team chat line comes as ^text and a radio line as *text, and a tab is no space to FirstWord: the word
+    that decides is taken from the line without them }
+  Clean := Result;
+  if Length(Clean) > 1 then
+    if (Copy(Clean, 1, 1) = '^') or (Copy(Clean, 1, 1) = '*') then
+      Clean := Trim(Copy(Clean, 2, Length(Clean)));
+  Tabs := '';
+  for i := 1 to Length(Clean) do
+    if Copy(Clean, i, 1) = #9 then
+      Tabs := Tabs + ' '
+    else
+      Tabs := Tabs + Copy(Clean, i, 1);
+  Clean := Tabs;
+  W := LowerCase(FirstWord(Clean));
   if W <> '' then
     if (Copy(W, 1, 1) = '/') or (Copy(W, 1, 1) = '!') then
       Delete(W, 1, 1);
   if W <> '' then
+  begin
     if Pos('|' + W + '|', '|' + LgHideArgs + '|') > 0 then
-      Result := FirstWord(Result) + ' ***';
+      Result := FirstWord(Clean) + ' ***'
+    { [PrivateMessages] Log = 0: the text of a private message is not written anywhere }
+    else if PmEnabled and (not PmLog) and (Pos('|' + W + '|', PmWordList) > 0) then
+      Result := FirstWord(Clean) + ' ***';
+  end;
 end;
 
 function TeamName(T: Integer): string;
@@ -16273,7 +17085,7 @@ begin
     Names := File.CreateStringList();
     for i := 1 to TopSlot do
       if PL[i].Active then
-        if PL[i].IsAdmin then
+        if AdminOf(i) then
           Names.Add(PL[i].Name);
     if Names.Count = 0 then
       SayAll('There''s no In-Game admin connected.', ColorBad)
@@ -16567,6 +17379,14 @@ begin
     Say(ID, 'There is no such player on the server.', ColorBad);
     Exit;
   end;
+  { a Steam admin is banned (his Steam account too, with [SteamBan] BanAlsoSteam) by a Steam admin or the console only }
+  if IsSteamAdmin(T) then
+    if (ID >= 1) and (ID <= 32) then
+      if not IsSteamAdmin(ID) then
+      begin
+        Say(ID, PL[T].Name + ' is a Steam admin: only a Steam admin or the server console can ban him.', ColorBad);
+        Exit;
+      end;
   if Reason = '' then
   begin
     Say(ID, 'You probably didn''t give a reason.', ColorBad);
@@ -16593,6 +17413,59 @@ begin
     if SteamId[T] <> '' then
       if SbPend <> nil then
         SbPend.Add(SteamId[T] + #1 + IntToStr(Minutes) + #1 + AdminName(ID) + #1 + PL[T].Name + #1 + Reason);
+end;
+
+{ The server writes banned.txt and bannedhw.txt when it bans, kicks or lets a ban run out, but not when a script
+  adds or lifts one (Game.BanLists changes the lists in memory only): after a change of this script the files are
+  written too, in the server's own format (IP:time:reason), or a restart brings the lifted bans back and loses the
+  new ones. The files lie next to the server in 2.8.2 and in configs/ in later releases (an existing one is used). }
+procedure BansToFile();
+var
+  L: TStringList;
+  i, n, f: Integer;
+  Path, Name: string;
+  R: TBannedIP;
+  H: TBannedHW;
+begin
+  if not BeOk then
+    Exit;
+  for f := 0 to 1 do
+  begin
+    Name := 'banned.txt';
+    if f = 1 then
+      Name := 'bannedhw.txt';
+    Path := Name;
+    if not File.Exists(Path) then
+      if File.Exists('configs/' + Name) then
+        Path := 'configs/' + Name;
+    try
+      L := File.CreateStringList();
+      if f = 0 then
+      begin
+        n := Game.BanLists.BannedIPCount;
+        for i := 1 to n do
+        begin
+          R := Game.BanLists.IP[i];
+          if R.IP <> '' then
+            L.Add(R.IP + ':' + IntToStr(R.Time) + ':' + R.Reason);
+        end;
+      end
+      else
+      begin
+        n := Game.BanLists.BannedHWCount;
+        for i := 1 to n do
+        begin
+          H := Game.BanLists.HW[i];
+          if H.HW <> '' then
+            L.Add(H.HW + ':' + IntToStr(H.Time) + ':' + H.Reason);
+        end;
+      end;
+      L.SaveToFile(Path);
+      L.Free;
+    except
+      Log('cannot write ' + Path);
+    end;
+  end;
 end;
 
 { /banhwr <time> <hwid> <reason> and /banipr <time> <ip> <reason> }
@@ -16627,6 +17500,7 @@ begin
     Game.BanLists.AddHWBan(UpperCase(Target), Reason, Minutes * 3600)
   else
     Game.BanLists.AddIPBan(Target, Reason, Minutes * 3600);
+  BansToFile();
   for i := 1 to 6 do
     SayAll(' ', ColorGood);
   if Hw then
@@ -16752,7 +17626,13 @@ begin
     Log('maps list not found: ' + MapsFile);
     Exit;
   end;
-  L := File.CreateStringListFromFile(MapsFile);
+  try
+    L := File.CreateStringListFromFile(MapsFile);
+  except
+    { held open by another program: left as it is (a start or a /recompile goes on) }
+    Log('cannot read ' + MapsFile + ' now: the maps list is not shuffled');
+    Exit;
+  end;
   for i := L.Count - 1 downto 0 do
     if Trim(L[i]) = '' then
       L.Delete(i);
@@ -16764,7 +17644,7 @@ begin
     L[j] := S;
   end;
   try
-    L.SaveToFile(MapsFile);
+    SaveListNow(L, MapsFile);
     Game.LoadList(MapsFile);
   except
     Log('cannot write ' + MapsFile);
@@ -16936,6 +17816,10 @@ begin
       Say(ID, 'spawn protection: ' + iif(SfActive, 'on', 'idle (' + SfIdleWhy + ')') + ', given ' + IntToStr(SfStatGiven) +
         ', hits stopped ' + IntToStr(SfStatStopped) + ', ended by a shot or a step ' + IntToStr(SfStatEnded) +
         ', protected now ' + IntToStr(SfCount), ColorGood);
+    if RcEnabled then
+      Say(ID, 'spawn layouts: ' + iif(RcActive, 'on', 'idle (' + RcIdleWhy + ')') + ', put in place ' +
+        IntToStr(RcStatPlaced) + ' times, players moved ' + IntToStr(RcStatMoved) + ', points that did not fit ' +
+        IntToStr(RcStatFailed) + '; ' + BE_SpInfo(), ColorGood);
     if PmEnabled or NtEnabled or SqEnabled then
       Say(ID, 'private messages ' + IntToStr(PmStatSent) + ' (blocked ' + IntToStr(PmStatBlocked) + '), notes ' +
         IntToStr(NtStatNew) + ', chat warnings ' + IntToStr(SqStatWarns) + ', mutes ' + IntToStr(SqStatMutes), ColorGood);
@@ -17461,8 +18345,22 @@ begin
   BlN := BlN + 1;
 end;
 
+procedure WlAdd(On: Boolean; First, Count: Integer; Name: string);
+begin
+  if not On then
+    Exit;
+  if WlN > 39 then
+    Exit;
+  if Count < 1 then
+    Count := 1;
+  WlLo[WlN] := First;
+  WlHi[WlN] := First + Count - 1;
+  WlNm[WlN] := Name;
+  WlN := WlN + 1;
+end;
+
 { the BigText layers of the HUD lines and the big texts of the modules on: two users of one layer replace each
-  other's text }
+  other's text; the same for the WorldText layers (the labels, marks and numbers over the players) }
 procedure BigLayerCheck();
 var
   i, j: Integer;
@@ -17502,11 +18400,39 @@ begin
       if BlLay[i] = BlLay[j] then
         Log('settings.ini: ' + BlNm[i] + ' and ' + BlNm[j] + ' are the same BigText layer (' + IntToStr(BlLay[i]) +
           '): one replaces the other''s text');
+  { ZitroStats draws its lines on the BigText layers 12-15 }
+  for i := 0 to BlN - 1 do
+    if (BlLay[i] >= 12) and (BlLay[i] <= 15) then
+      Log('settings.ini: ' + BlNm[i] + ' is BigText layer ' + IntToStr(BlLay[i]) +
+        ', which ZitroStats draws on (12-15): one replaces the other''s text');
+  WlN := 0;
+  WlAdd(DmgEnabled, DmgLayerFirst, DmgLayerLast - DmgLayerFirst + 1, '[DamageNumbers] LayerFirst..LayerLast');
+  WlAdd(LootEnabled, LootTextLayer, 1, '[Looting] TextLayer');
+  WlAdd(RcEnabled, RcMarkFirst, RcMarkN, '[Spawns] MarkLayerFirst');
+  WlAdd(MnEnabled, MnWorkLayer, 1, '[Mines] WorkLayer');
+  WlAdd(MnEnabled, MnPlantLayer, 1, '[Mines] PlantLayer');
+  WlAdd(BdEnabled, BdShockLayer, 1, '[Bleeding] ShockLayer');
+  WlAdd(BdEnabled, BdWorkLayer, 1, '[Bleeding] WorkLayer');
+  WlAdd(FnEnabled, FnWorldLayer, 1, '[FlashNades] WorldLayer');
+  WlAdd(FnEnabled, FnLabelFirst, FnLabelCount, '[FlashNades] LabelLayerFirst');
+  WlAdd(SgEnabled, SgLayer0, SgLayers, '[Spotting] MarkLayerFirst');
+  WlAdd(RkEnabled, RkLockLayer, 2, '[ExtraRocket] LockLayer');
+  WlAdd(RkEnabled, RkWarnLayer, 1, '[ExtraRocket] WarnLayer');
+  WlAdd(ClsEnabled, ClsMortarLayer, 1, '[Classes] MortarLayer');
+  for i := 0 to WlN - 1 do
+    for j := i + 1 to WlN - 1 do
+      if (WlLo[i] <= WlHi[j]) and (WlLo[j] <= WlHi[i]) then
+        Log('settings.ini: ' + WlNm[i] + ' (' + IntToStr(WlLo[i]) + '-' + IntToStr(WlHi[i]) + ') and ' + WlNm[j] +
+          ' (' + IntToStr(WlLo[j]) + '-' + IntToStr(WlHi[j]) + ') share a WorldText layer: one replaces the other''s text');
 end;
 
 procedure LoadAll();
 begin
   LoadSettings();
+  { a /reloadsettings while the file cannot be read: nothing changed, nothing to apply }
+  if SetsReadFailed then
+    if Started then
+      Exit;
   BigLayerCheck();
   BuildCommandList();
   WpDefaults();
@@ -17954,6 +18880,7 @@ begin
     41: Result := 'resupply';
     42: Result := 'insurgents';
     43: Result := 'shop AP rounds';
+    44: Result := 'spawns';
   else
     Result := '';
   end;
@@ -17989,7 +18916,7 @@ begin
   end;
   Ticks := Game.TickCount - ProfFrom;
   Say(ID, 'Profile of ' + IntToStr(Ticks) + ' ticks (' + IntToStr(Ticks div 60) + ' s); a tick has 16667 us:', ColorGood);
-  for k := 0 to 43 do
+  for k := 0 to 44 do
   begin
     T := BE_ProfText(k, Ticks);
     if T <> '' then
@@ -18066,7 +18993,7 @@ begin
   end;
   if Drop > 16 then
     Drop := 16;
-  P.WorldText(249, Text, Delay, ColorGood, LootTextScale, X - W / 2 + LootTextX, Y + LootTextY + Drop);
+  P.WorldText(LootTextLayer, Text, Delay, ColorGood, LootTextScale, X - W / 2 + LootTextX, Y + LootTextY + Drop);
 end;
 
 { a dead soldier's spare magazines stay with his body now (DeadMagazines; only with corpse looting) }
@@ -18435,6 +19362,18 @@ begin
         end;
 end;
 
+{ 4.1: the library kept the places over a /recompile (or another start of the script): the reading goes on
+  without a new calibration }
+procedure AmMemTakeOver();
+var
+  j: Integer;
+begin
+  AmMemOn := True;
+  Log('[Ammo] ' + BE_SpriteMemInfo());
+  for j := 1 to 32 do
+    BE_AmmoLastW(j, AmLastW[j]);
+end;
+
 { round 26: once a second the next living soldier's record against his properties - a mismatch switches the reading
   off for good (the properties are read again, as before) }
 procedure AmMemCheck();
@@ -18594,7 +19533,9 @@ begin
           AmMemCheck()
         else if not AmMemTold then
           if BE_SpriteMemReady() = 0 then
-            AmMemCalibrate();
+            AmMemCalibrate()
+          else
+            AmMemTakeOver();
       end;
   if AmmoTrackGround then
     if Tick mod 30 = 0 then
@@ -19886,6 +20827,7 @@ begin
   begin
     FnSlot[k] := FnSlot[n];
     FnOwner[k] := FnOwner[n];
+    FnOwnerGen[k] := FnOwnerGen[n];
     FnKind[k] := FnKind[n];
     FnLayer[k] := FnLayer[n];
     FnLabelTo[k] := FnLabelTo[n];
@@ -19981,6 +20923,7 @@ begin
   FnCount := FnCount + 1;
   FnSlot[k] := B;
   FnOwner[k] := O;
+  FnOwnerGen[k] := SeatGen[O];
   FnKind[k] := Kind;
   FnLayer[k] := FnLabelFirst + (FnNextLayer mod FnLabelCount);
   FnNextLayer := FnNextLayer + 1;
@@ -20357,12 +21300,20 @@ end;
   push them - the humans near it are held - and the flash's own damage comes from here }
 procedure FnBoom(k: Integer; X, Y: Single; Tick: Integer; Defused: Boolean);
 var
+  Gone: Boolean;
   i, O, T, n: Integer;
   P: TActivePlayer;
   PX, PY, EX, EY, HX, HY, DX, DY, D2, R2, H2, AX, AY, F: Single;
   Ok: Boolean;
 begin
   O := FnOwner[k];
+  { the thrower left, and another player has his slot now: nobody's flash (no damage to credit, it blinds all) }
+  Gone := False;
+  if (O >= 1) and (O <= 32) then
+    if FnOwnerGen[k] <> SeatGen[O] then
+      Gone := True;
+  if Gone then
+    O := 0;
   R2 := FnRadius * FnRadius;
   H2 := FnPushRadius * FnPushRadius;
   for i := 1 to TopSlot do
@@ -20400,12 +21351,13 @@ begin
           Continue;
         Ok := True;
         if FnAffects <> FA_ALL then
-        begin
-          if i = O then
-            Ok := FnAffects = FA_ENEMIES_SELF
-          else
-            Ok := Enemies(O, i);
-        end;
+          if not Gone then
+          begin
+            if i = O then
+              Ok := FnAffects = FA_ENEMIES_SELF
+            else
+              Ok := Enemies(O, i);
+          end;
         if not Ok then
           Continue;
         { the flash is seen only with no wall between it and his eyes }
@@ -21413,6 +22365,21 @@ begin
   RkSeeking[i] := False;
 end;
 
+{ ID left the game or another player takes his slot: the rockets that fly at him lose their target and the locks
+  on him end (they would follow whoever sits on that slot) }
+procedure RkTargetGone(ID: Integer);
+var
+  k, i: Integer;
+begin
+  for k := 0 to RK_MAX - 1 do
+    if RkLive[k] then
+      if RkTgt[k] = ID then
+        RkTgt[k] := 0;
+  for i := 1 to 32 do
+    if RkLockOn[i] = ID then
+      RkLockEnd(i);
+end;
+
 { he is still a target of a shot from SX, SY: alive, in the game, in sight and in range }
 function RkStillThere(T: Integer; SX, SY: Single): Boolean;
 var
@@ -21505,7 +22472,11 @@ begin
       if HumanOf[i] then
         if Tick >= RkBeepAt[i] then
         begin
-          RkBeepAt[i] := Tick + 3 + ((RkLockDue[i] - Tick) * 12) div RkLockTicks;
+          { a lock that began before /reloadsettings set LockSeconds to 0 has RkLockTicks = 0 now: no division by it }
+          if RkLockTicks > 0 then
+            RkBeepAt[i] := Tick + 3 + ((RkLockDue[i] - Tick) * 12) div RkLockTicks
+          else
+            RkBeepAt[i] := Tick + 3;
           P.PlaySound(RkLockSound, P.X, P.Y);
         end;
     Exit;
@@ -22194,7 +23165,7 @@ begin
   T := ID;
   Adm := ID < 1;
   if not Adm then
-    Adm := PL[ID].IsAdmin;
+    Adm := AdminOf(ID);
   if W <> '' then
     if Adm then
     begin
@@ -22691,6 +23662,12 @@ begin
   if not P.OnGround then
   begin
     MnRefuse(ID, ByKey, 'Only on the ground.');
+    Exit;
+  end;
+  { BE5-11: the game makes no bullet of a script for the server's last slot (32): its mine would never blow }
+  if ID = 32 then
+  begin
+    MnRefuse(ID, ByKey, 'Mines do not work from the server''s last player slot (32).');
     Exit;
   end;
   if Tick - MnLastPlant[ID] < MnPlantTicks then
@@ -23329,14 +24306,14 @@ begin
       for i := 1 to TopSlot do
         if (M and SlotBit[i]) <> 0 then
           if ActiveSlot[i] then
-            BE_MineLow(i, BoolInt(PL[i].KeyCrouch or PL[i].IsProne));
+            BE_MineLow(i, LowInt(PL[i]));
     M := BE_MineWants();
     if M <> 0 then
       for i := 1 to TopSlot do
         if (M and SlotBit[i]) <> 0 then
           if ActiveSlot[i] then
             if PL[i].Alive then
-              BE_MinePos(i, PL[i].X, PL[i].Y, BoolInt(PL[i].KeyCrouch or PL[i].IsProne));
+              BE_MinePos(i, PL[i].X, PL[i].Y, LowInt(PL[i]));
     n := BE_MineTick(Tick);
     for k := 1 to n do
       if BE_MineNext(Kind, Id, P, Q) = 1 then
@@ -23894,7 +24871,13 @@ begin
     Exit;
   BdBlood[ID] := Round(Blood);
   BdWorst[ID] := Worst;
+  if BdWounds[ID] > 0 then
+    BdWoundN := BdWoundN - 1;
   BdWounds[ID] := Wounds;
+  if Wounds > 0 then
+    BdWoundN := BdWoundN + 1;
+  if BdWoundN < 0 then
+    BdWoundN := 0;
   BdBand[ID] := Round(Band);
   BdKits[ID] := Kits;
   HudMark(ID, False);
@@ -24557,16 +25540,17 @@ begin
       if (M and SlotBit[i]) <> 0 then
         if ActiveSlot[i] then
           if PL[i].Alive then
-            BE_BodyPos(i, PL[i].X, PL[i].Y, BoolInt(PL[i].KeyCrouch or PL[i].IsProne));
+            BE_BodyPos(i, PL[i].X, PL[i].Y, LowInt(PL[i]));
   M := BE_BodyNear();
   if M <> 0 then
     for i := 1 to TopSlot do
       if (M and SlotBit[i]) <> 0 then
         if ActiveSlot[i] then
-          BE_BodyLow(i, BoolInt(PL[i].KeyCrouch or PL[i].IsProne));
+          BE_BodyLow(i, LowInt(PL[i]));
   { [Bleeding] AirBandage: who of those who bleed falls freely (as low and still for bandaging) }
   if BdAirOn then
     if BdActive then
+      if BdWoundN > 0 then
       for i := 1 to TopSlot do
         if BdWounds[i] > 0 then
           if ActiveSlot[i] then
@@ -24755,7 +25739,7 @@ begin
     Style := BL[B].Style;
     if BL[B].Owner = S then
       W := BL[B].GetOwnerWeaponId;
-    Part := BE_BodyHitPart(V, Style, BL[B].X, BL[B].Y, BL[B].VelX, BL[B].VelY);
+    Part := BE_BodyHitPart(V, B, Style, BL[B].X, BL[B].Y, BL[B].VelX, BL[B].VelY);
     { E17: a mine's or claymore's blast: the down or the wound it leaves is the mine's (W = 17) }
     MK := MnBulletKind(B, S);
     if MK > 0 then
@@ -25614,6 +26598,10 @@ begin
   BdShockUntil[ID] := 0;
   BdWorkKind[ID] := 0;
   BdBlood[ID] := 100;
+  if BdWounds[ID] > 0 then
+    BdWoundN := BdWoundN - 1;
+  if BdWoundN < 0 then
+    BdWoundN := 0;
   BdWounds[ID] := 0;
   BdWorst[ID] := 0;
   BdBand[ID] := 100;
@@ -25649,12 +26637,17 @@ end;
 { he leaves: his bounty goes, nothing of him stays }
 procedure LfLeave(ID: Integer);
 var
-  v: Integer;
+  v, Tm: Integer;
 begin
   for v := 1 to 32 do
     if DwBy[v] = ID then
       DwBy[v] := 0;
   BnDrop(ID, 'he left');
+  { [Points] SpotKill: the enemies he had spotted are nobody's spotted by him any more (the slot may get another player) }
+  for v := 1 to 32 do
+    for Tm := 0 to 4 do
+      if SgBy[v][Tm] = ID then
+        SgBy[v][Tm] := 0;
   DwClear(ID);
   if BdShockUntil[ID] > 0 then
     BdShockEnd(ID);
@@ -26118,7 +27111,7 @@ begin
         if i <> T then
           if ActiveSlot[i] then
             if HumanOf[i] then
-              if PL[i].IsAdmin then
+              if AdminOf(i) then
                 Say(i, ReplaceAll(AdFill2(PmSpyText, '{from}', PL[ID].Name, '{to}', PL[T].Name), '{text}', S),
                   PmSpyColor);
   if PmLog then
@@ -26337,6 +27330,8 @@ procedure NtSaveState();
 var
   L: TStringList;
 begin
+  if NtReadFailed then
+    Exit;
   L := File.CreateStringList();
   L.Add('read=' + IntToStr(NtReadTo));
   L.Add('cleared=' + IntToStr(NtClearedTo));
@@ -26353,6 +27348,8 @@ procedure NtSaveBans();
 begin
   if NtBans = nil then
     Exit;
+  if NtReadFailed then
+    Exit;
   try
     NtBans.SaveToFile(DataDir + NtBanName);
   except
@@ -26367,10 +27364,12 @@ var
   L: TStringList;
   i, n, Skip: Integer;
   S: string;
+  Bad: Boolean;
 begin
   if NtLoaded then
     Exit;
   NtLoaded := True;
+  Bad := False;
   NtList := File.CreateStringList();
   NtBans := File.CreateStringList();
   NtDay := File.CreateStringList();
@@ -26381,7 +27380,12 @@ begin
   if NtFileName <> '' then
     if File.Exists(DataDir + NtFileName) then
     begin
-      L := File.CreateStringListFromFile(DataDir + NtFileName);
+      try
+        L := File.CreateStringListFromFile(DataDir + NtFileName);
+      except
+        Bad := True;
+        L := File.CreateStringList();
+      end;
       { F11: the last 500 notes (the numbers of all of them): the older ones are skipped, not deleted one by one }
       Skip := 0;
       for i := 0 to L.Count - 1 do
@@ -26418,7 +27422,12 @@ begin
   if NtStateName <> '' then
     if File.Exists(DataDir + NtStateName) then
     begin
-      L := File.CreateStringListFromFile(DataDir + NtStateName);
+      try
+        L := File.CreateStringListFromFile(DataDir + NtStateName);
+      except
+        Bad := True;
+        L := File.CreateStringList();
+      end;
       for i := 0 to L.Count - 1 do
       begin
         S := Trim(L[i]);
@@ -26436,12 +27445,25 @@ begin
   if NtBanName <> '' then
     if File.Exists(DataDir + NtBanName) then
     begin
-      L := File.CreateStringListFromFile(DataDir + NtBanName);
+      try
+        L := File.CreateStringListFromFile(DataDir + NtBanName);
+      except
+        Bad := True;
+        L := File.CreateStringList();
+      end;
       for i := 0 to L.Count - 1 do
         if Trim(L[i]) <> '' then
           NtBans.Add(Trim(L[i]));
       L.Free;
     end;
+  { 4.2 (BE6-02): a file that could not be read now: nothing is written over the state and the blacklist, and the
+    next use reads them again }
+  NtReadFailed := Bad;
+  if Bad then
+  begin
+    Log('[Notes] a file could not be read now (in use by another program?): tried again at the next use');
+    NtLoaded := False;
+  end;
 end;
 
 { the unread notes (not hidden) }
@@ -26842,7 +27864,7 @@ begin
     if i < 20 then
       Say(ID, IntToStr(i + 1) + '. ' + NtBans[i], NtColor);
   if NtBans.Count > 20 then
-    Say(ID, IntToStr(NtBans.Count - 20) + ' more in data/' + NtBanName + '.', NtColor);
+    Say(ID, IntToStr(NtBans.Count - 20) + ' more in ' + DataDir + NtBanName + '.', NtColor);
 end;
 
 { an admin who joined: the unread notes (once, 10 s after the join, when he is an admin by then) }
@@ -26856,7 +27878,7 @@ begin
     Exit;
   if not HumanOf[ID] then
     Exit;
-  if not PL[ID].IsAdmin then
+  if not AdminOf(ID) then
     Exit;
   NtLoad();
   n := NtUnread();
@@ -27266,9 +28288,13 @@ begin
   if (ID < 1) or (ID > 32) then
     Exit;
   SqMutedUntil[ID] := 0;
+  { an admin muted him as well (the server's /gmute): this script's mute is over, his is not }
+  if SqAdminMute[ID] then
+    Tell := False;
   if ActiveSlot[ID] then
     if PL[ID].Muted then
-      PL[ID].Muted := False;
+      if not SqAdminMute[ID] then
+        PL[ID].Muted := False;
   SqLoad();
   k := SqFind(PL[ID].IP, AdKeyOf(ID));
   if k >= 0 then
@@ -27296,6 +28322,7 @@ begin
   SqLastTick[ID] := 0;
   SqWarnTick[ID] := 0;
   SqMutedUntil[ID] := 0;
+  SqAdminMute[ID] := False;
   SqLine1[ID] := '';
   SqLine2[ID] := '';
   SqLine3[ID] := '';
@@ -27330,7 +28357,7 @@ begin
   if not HumanOf[ID] then
     Exit;
   if SqIgnoreAdmins then
-    if PL[ID].IsAdmin then
+    if AdminOf(ID) then
       Exit;
   if SqMutedUntil[ID] > 0 then
     Exit;
@@ -27603,6 +28630,18 @@ begin
   PzKeys.Add(K0 + '=' + IntToStr(PzUsed[ID]));
 end;
 
+{ the players in the game, not the bots }
+function PzHumans(): Integer;
+var
+  i: Integer;
+begin
+  Result := 0;
+  for i := 1 to TopSlot do
+    if ActiveSlot[i] then
+      if HumanOf[i] then
+        Result := Result + 1;
+end;
+
 procedure CmdPause(ID: Integer; Console: Boolean);
 var
   Admin: Boolean;
@@ -27613,20 +28652,43 @@ begin
   Admin := Console;
   if not Admin then
     if (ID >= 1) and (ID <= 32) then
-      Admin := PL[ID].IsAdmin;
+      Admin := AdminOf(ID);
   if Game.Paused then
   begin
     if PzCountEnd > 0 then
     begin
       if not Admin then
-        if (PzByAdmin) or (PzBy <> ID) then
+      begin
+        { the one who paused may stop only the countdown he started himself with !up - not the end of a pause that
+          lasted too long (MaxSeconds), nor an admin's }
+        if PzByAdmin or (not PzCountPlayer) or (AdKeyOf(ID) <> PzByKey) then
         begin
-          Say(ID, 'Only an admin (or the one who paused) can stop the countdown.', ColorBad);
+          Say(ID, 'Only an admin (or the one who paused, in his own countdown) can stop the countdown.', ColorBad);
           Exit;
         end;
+        { a pause again is a new pause of his: it counts, and the time of the pause goes on (MaxSeconds) }
+        if PzPerMap > 0 then
+          if PzUsed[ID] >= PzPerMap then
+          begin
+            Say(ID, 'You used your pause' + iif(PzPerMap = 1, '', 's') + ' on this map.', ColorBad);
+            Exit;
+          end;
+        PzUsed[ID] := PzUsed[ID] + 1;
+        PzRemember(ID);
+      end
+      else
+      begin
+        { an admin's pause in the countdown is his: it is an admin's pause from now on }
+        PzByAdmin := True;
+        PzBy := ID;
+        PzByKey := '';
+        if (ID >= 1) and (ID <= 32) then
+          PzByKey := AdKeyOf(ID);
+        PzSince := PzClock();
+      end;
       { a pause again during the countdown: it stays paused }
       PzCountEnd := 0;
-      PzSince := PzClock();
+      PzCountPlayer := False;
       SayAll('The countdown is stopped: the game stays paused.', PzColor);
       PzBig(PzPausedText, 600, PzColor);
       Exit;
@@ -27646,7 +28708,7 @@ begin
       Say(ID, 'Only the admins pause the game here.', ColorBad);
       Exit;
     end;
-    if Game.NumPlayers < PzMinPlayers then
+    if PzHumans() < PzMinPlayers then
     begin
       Say(ID, 'A pause needs at least ' + IntToStr(PzMinPlayers) + ' players.', ColorBad);
       Exit;
@@ -27661,6 +28723,7 @@ begin
     PzRemember(ID);
   end;
   Game.Paused := True;
+  PzOurs := True;
   PzBy := ID;
   PzByKey := '';
   Who := 'The server';
@@ -27697,7 +28760,7 @@ begin
   Admin := Console;
   if not Admin then
     if (ID >= 1) and (ID <= 32) then
-      Admin := PL[ID].IsAdmin;
+      Admin := AdminOf(ID);
   if not Admin then
   begin
     if PzWho = 2 then
@@ -27717,6 +28780,9 @@ begin
     Who := PL[ID].Name;
   PzCountEnd := PzClock() + PzCountSecs;
   PzLastShown := -1;
+  PzCountPlayer := False;
+  if not Admin then
+    PzCountPlayer := AdKeyOf(ID) = PzByKey;
   SayAll(ReplaceAll(ReplaceAll(PzResumeText, '{player}', Who), '{seconds}', IntToStr(PzCountSecs)), PzColor);
 end;
 
@@ -27731,9 +28797,11 @@ begin
     if (PzCountEnd > 0) or (PzSince > 0) then
     begin
       PzCountEnd := 0;
+      PzCountPlayer := False;
       PzSince := 0;
       PzBy := 0;
     end;
+    PzOurs := False;
     Exit;
   end;
   { paused by somebody else (the server's own /pause from another script) }
@@ -27749,6 +28817,7 @@ begin
         if PzClock() - PzSince >= PzMaxSecs then
         begin
           PzCountEnd := PzClock() + PzCountSecs;
+          PzCountPlayer := False;
           PzLastShown := -1;
           SayAll('The pause is over (' + IntToStr(PzMaxSecs) + ' s).', PzColor);
         end;
@@ -27758,8 +28827,10 @@ begin
   if Left <= 0 then
   begin
     PzCountEnd := 0;
+    PzCountPlayer := False;
     PzSince := 0;
     PzBy := 0;
+    PzOurs := False;
     Game.Paused := False;
     PzBig(PzGoText, 90, PzColor);
     Exit;
@@ -27841,7 +28912,12 @@ begin
   if UbFileName <> '' then
     if File.Exists(DataDir + UbFileName) then
     begin
-      L := File.CreateStringListFromFile(DataDir + UbFileName);
+      try
+        L := File.CreateStringListFromFile(DataDir + UbFileName);
+      except
+        Log('[BanJournal] cannot read ' + DataDir + UbFileName + ' now: the journal starts empty (the file is not written over)');
+        L := File.CreateStringList();
+      end;
       { F11: only the last 1000 entries are kept (the file only grows): the ones before are skipped, not deleted }
       n := 0;
       for i := 0 to L.Count - 1 do
@@ -28015,10 +29091,15 @@ begin
     Exit;
   UbLoad();
   n := Game.BanLists.BannedIPCount + Game.BanLists.BannedHWCount;
-  if UbBaseDone then
-    if n = UbLastCount then
-      if Tick - UbFullTick < 3600 then
-        Exit;
+  { the count is the highest slot of the server's lists, which does not shrink: a lifted or expired ban leaves an
+    empty slot and the next ban takes it, so the count says nothing about a new ban. The lists are read in full
+    (50 a tick) - the count only spares a very long list (a full pass once a minute then), and never a command }
+  if Tick > 0 then
+    if UbBaseDone then
+      if n = UbLastCount then
+        if n > 4000 then
+          if Tick - UbFullTick < 3600 then
+            Exit;
   UbLastCount := n;
   UbFullTick := Tick;
   if Tick > 0 then
@@ -28037,16 +29118,11 @@ begin
   Cur.Free;
 end;
 
+{ is a ban of the journal in the lists now: the set of the last full pass (the commands read the lists in full
+  first, UbTickRun(0)) - the server's FindBan would compare the address with every ban of the list for every line }
 function UbStillBanned(Hd: string): Boolean;
-var
-  V: string;
 begin
-  Result := False;
-  V := Copy(Hd, 3, Length(Hd));
-  if Copy(Hd, 1, 2) = 'i ' then
-    Result := Game.BanLists.GetIPBanId(V) > 0
-  else if Copy(Hd, 1, 2) = 'h ' then
-    Result := Game.BanLists.GetHWBanId(V) > 0;
+  Result := UbHeads.IndexOf(Hd) >= 0;
 end;
 
 function UbLift(Hd: string): Boolean;
@@ -28137,6 +29213,7 @@ begin
       ColorBad)
   else
   begin
+    BansToFile();
     UbStatLifted := UbStatLifted + Done;
     Log('[Bans] /unbanlast ' + W + ': ' + IntToStr(Done) + ' bans lifted');
   end;
@@ -28242,6 +29319,8 @@ begin
           Done := Done + 1;
     end;
   end;
+  if Done > 0 then
+    BansToFile();
   UbStatLifted := UbStatLifted + Done;
   Say(ID, 'Unbanned ' + Nm + ': ' + IntToStr(Done) + ' ban' + iif(Done = 1, '', 's') + ' lifted.', ColorGood);
   Log('[Bans] /unbanname ' + Nm + ' by ' + AdminName(ID) + ': ' + IntToStr(Done) + ' lifted');
@@ -28430,7 +29509,7 @@ begin
     Posn := L.Count + 1;
   L.Insert(Posn - 1, Name);
   try
-    L.SaveToFile(MapsFile);
+    SaveListNow(L, MapsFile);
     Game.LoadList(MapsFile);
     Say(ID, Name + ' added as map ' + IntToStr(Posn) + ' of ' + IntToStr(L.Count) + '.', ColorGood);
     Log('[Maps] ' + Name + ' added to the list at ' + IntToStr(Posn));
@@ -28506,6 +29585,34 @@ end;
 
 { ---------------- /warn ---------------- }
 
+{ his warnings on this map (by his key: coming back in another slot, or after leaving, keeps them) }
+function WnBy(ID: Integer): Integer;
+var
+  k: Integer;
+begin
+  Result := 0;
+  if WnKeys = nil then
+    Exit;
+  k := WnKeys.IndexOfName(ReplaceAll(AdKeyOf(ID), '=', '_'));
+  if k >= 0 then
+    Result := StrToIntDef(Copy(WnKeys[k], Pos('=', WnKeys[k]) + 1, 10), 0);
+end;
+
+procedure WnRemember(ID: Integer);
+var
+  k: Integer;
+  K0: string;
+begin
+  if WnKeys = nil then
+    WnKeys := File.CreateStringList();
+  K0 := ReplaceAll(AdKeyOf(ID), '=', '_');
+  k := WnKeys.IndexOfName(K0);
+  if k >= 0 then
+    WnKeys.Delete(k);
+  if WnCount[ID] > 0 then
+    WnKeys.Add(K0 + '=' + IntToStr(WnCount[ID]));
+end;
+
 procedure CmdWarn(ID: Integer; Args: string);
 var
   Rest, W: string;
@@ -28528,6 +29635,7 @@ begin
     Rest := 'the rules';
   WnCount[T] := WnCount[T] + 1;
   n := WnCount[T];
+  WnRemember(T);
   if HumanOf[T] then
     PL[T].BigText(WnBigLayer, ReplaceAll(ReplaceAll(WnText, '{reason}', Rest), '{count}', IntToStr(n)), WnBigTicks,
       ColorBad, WnBigScale, WnBigX, WnBigY);
@@ -28542,6 +29650,7 @@ begin
     if n >= WnKickAt then
     begin
       WnCount[T] := 0;
+      WnRemember(T);
       SayAll(PL[T].Name + ' is kicked after ' + IntToStr(n) + ' warnings.', ColorBad);
       ScheduleBan(T, WnBanMinutes, 'Warnings: ' + Rest);
     end;
@@ -28587,7 +29696,7 @@ begin
   PmNextOk[ID] := 0;
   NtNextOk[ID] := 0;
   NtHintAt[ID] := Game.TickCount + 600;
-  WnCount[ID] := 0;
+  WnCount[ID] := WnBy(ID);
   PzUsed[ID] := PzUsedBy(ID);
   SqJoin(ID);
   PmRestore(ID);
@@ -28642,8 +29751,11 @@ begin
   if SteamId[ID] <> '' then
     Result := SteamId[ID]
   else if ShGlobalHwid then
-    if Trim(PL[ID].HWID) <> '' then
-      Result := 'H' + Trim(PL[ID].HWID);
+    { BE5-04: a Steam player's id may come after the join - the computer id is his key only when Steam did not answer in
+      15 s (the same time ShTickRun waits before a wallet of the map) }
+    if Game.TickCount - ShJoinTick[ID] > 900 then
+      if Trim(PL[ID].HWID) <> '' then
+        Result := 'H' + Trim(PL[ID].HWID);
 end;
 
 procedure ShSave(ID: Integer);
@@ -28685,6 +29797,22 @@ begin
     Exit;
   if not BeOk then
     Exit;
+  { BE5-03: an account is in one slot at a time (two sessions of one key would both load the whole sum and the later
+    save would win): it loads when the other session has left - ShTickRun asks again every second }
+  for n := 1 to TopSlot do
+    if n <> ID then
+      if ActiveSlot[n] then
+        if ShLoaded[n] then
+          if ShKey[n] = Key then
+          begin
+            if not ShDupTold[ID] then
+            begin
+              ShDupTold[ID] := True;
+              Say(ID, 'Your account is in use by another connection of yours - it loads when that one is gone.',
+                ShBadColor);
+            end;
+            Exit;
+          end;
   ShKey[ID] := Key;
   n := BE_Pref_Load(PChar('$' + Key), V);
   M := ShGStartMoney;
@@ -28725,6 +29853,9 @@ begin
     Exit;
   if not ActiveSlot[ID] then
     Exit;
+  { BE5-09: a sum above the room left is cut first - the script's Integer wraps (a /givemoney of 2147483647 made 0) }
+  if Amount > ShMax() - ShMoney[ID] then
+    Amount := ShMax() - ShMoney[ID];
   M := ShMoney[ID] + Amount;
   if M < 0 then
   begin
@@ -29000,6 +30131,20 @@ begin
   SuDrop(X, GY - 4, 0, Tick, Where);
 end;
 
+{ BE5-13: a human's cursor farther from him than any screen of the game reaches (an altered client): the skills and
+  items that fall where he aims refuse it }
+function AimTooFar(ID: Integer): Boolean;
+var
+  DX, DY: Single;
+begin
+  Result := False;
+  if not HumanOf[ID] then
+    Exit;
+  DX := PL[ID].MouseAimX - PL[ID].X;
+  DY := PL[ID].MouseAimY - PL[ID].Y;
+  Result := DX * DX + DY * DY > 1500.0 * 1500.0;
+end;
+
 { the shop's supply drop: at the buyer's cursor (on the ground under it), his team's for TeamSeconds }
 function SuCall(ID, Tick: Integer): Boolean;
 var
@@ -29007,6 +30152,11 @@ var
   k, n: Integer;
 begin
   Result := False;
+  if AimTooFar(ID) then
+  begin
+    Say(ID, 'Your aim is too far from you for a crate.', ColorBad);
+    Exit;
+  end;
   n := 0;
   for k := 0 to SuMax - 1 do
     if SuState[k] <> 0 then
@@ -29202,12 +30352,14 @@ begin
       else if What = 'javelin' then
       begin
         { F17: no more than the shop's MaxJavelins }
+        { BE5-11: not for slot 32 (the game makes no bullet of a script for it) }
         if RkEnabled then
-          if RkRockets - RkUsed[ID] < ShMaxJav then
-          begin
-            RkUsed[ID] := RkUsed[ID] - 1;
-            Got := 'a Javelin';
-          end;
+          if ID < 32 then
+            if RkRockets - RkUsed[ID] < ShMaxJav then
+            begin
+              RkUsed[ID] := RkUsed[ID] - 1;
+              Got := 'a Javelin';
+            end;
       end
       else if What = 'medical' then
       begin
@@ -29240,7 +30392,9 @@ begin
       begin
         W := Random(1, 11);
         { a weapon the shop does not sell (the Minigun by default) is not in a crate either }
-        if (ShWeaponOk(W) and ((not ShEnabled) or (ShPrice[W] <> -1))) or ((not ShEnabled) and (W >= 1) and (W <= 10)) then
+        { BE5-06: also without the shop only what the server's weapon list (soldat.ini Weapon_N) lets him hold - else the
+          server bans the one who picks it up for a day }
+        if ShWeaponOk(W) and ((not ShEnabled) or (ShPrice[W] <> -1)) then
           if SpawnObject(WeaponObject(W), SuX[k], SuY[k] - 20) then
             Got := 'a ' + WeaponName(W) + ' (on the ground)';
       end;
@@ -29483,6 +30637,9 @@ begin
     if P < 1 then
       P := 1;
   end;
+  { BE1-07: never a price below 0 (the factors below would round it to a gift) }
+  if P < 0 then
+    Exit;
   F := 1;
   if Game.Realistic then
     F := F * ShPriceR;
@@ -29889,6 +31046,22 @@ begin
   end;
 end;
 
+{ BE5-16: the object in slot s is the one of Style we made at X, Y (an admin's /removestatgun can free the slot and another
+  object take it - the end of the first one's time must not kill the new one). A stationary gun falls on in its first
+  second (about 11 px onto the ground from where the shop puts it, 20 at the most) and then stays: so the place is
+  tested with that room below and a little sideways }
+function ObjStillAt(s, Style: Integer; X, Y: Single): Boolean;
+begin
+  Result := False;
+  if (s < 1) or (s > MAX_OBJECT_ID) then
+    Exit;
+  if not OB[s].Active then
+    Exit;
+  if OB[s].Style <> Style then
+    Exit;
+  Result := (Abs(OB[s].X - X) < 15) and (OB[s].Y - Y > -5) and (OB[s].Y - Y < 30);
+end;
+
 { the stationary gun of the shop (its object id; 0 = none) }
 function ShSpawnStat(X, Y: Single): Integer;
 var
@@ -29975,7 +31148,7 @@ function ShStatPlace(ID, Ticks, Tick: Integer): Boolean;
 var
   P: TActivePlayer;
   n, k: Integer;
-  H: Single;
+  H, GY: Single;
 begin
   Result := False;
   P := PL[ID];
@@ -30001,13 +31174,38 @@ begin
     H := P.X - 20
   else
     H := P.X + 20;
-  n := ShSpawnStat(H, P.Y - 20);
+  { NEW-STATGUN: the gun stands on the ground - on the floor a ray straight down finds under its place (within about a
+    soldier's height under his feet), else under him; no ground (he jets or falls, a ledge): no gun, no charge }
+  GY := P.Y;
+  if BeOk and MapOk then
+  begin
+    if BE_ShopGround(H, P.Y - 30, 75, GY) = 0 then
+    begin
+      H := P.X;
+      if BE_ShopGround(H, P.Y - 30, 75, GY) = 0 then
+      begin
+        Say(ID, 'No ground for a stationary gun here - stand on the ground.', ShBadColor);
+        Exit;
+      end;
+    end;
+    GY := GY - 20;
+  end
+  else if P.OnGround then
+    GY := P.Y - 20
+  else
+  begin
+    Say(ID, 'No ground for a stationary gun here - stand on the ground.', ShBadColor);
+    Exit;
+  end;
+  n := ShSpawnStat(H, GY);
   if n = 0 then
   begin
     Say(ID, 'No room for another object on the map.', ShBadColor);
     Exit;
   end;
   ShStatObj[k] := n;
+  ShStatPX[k] := H;
+  ShStatPY[k] := GY;
   ShStatOwner[k] := ID;
   ShStatEnd[k] := Tick + Ticks;
   ShStatLive := True;
@@ -30238,6 +31436,14 @@ begin
     Result := True;
     Exit;
   end;
+  { BE5-11: the game makes no bullet of a script for the server's last slot (32): a Javelin's blast and the rounds of
+    AP would be nothing }
+  if (It = IT_JAV) or (It = IT_AP) then
+    if ID = 32 then
+    begin
+      Say(ID, ShItemName(It) + ' does not work from the server''s last player slot (32).', ShBadColor);
+      Exit;
+    end;
   if It = IT_JAV then
   begin
     if not RkEnabled then
@@ -30391,6 +31597,8 @@ begin
     Exit;
   ShAdd(ID, -Price, '');
   ShBought[ID][It] := ShBought[ID][It] + 1;
+  if (It >= 0) and (It <= 16) then
+    ShPaid[ID][It] := Price;
   ClsUsed[ID] := True;
   ShStatSold := ShStatSold + 1;
   ShStatSpent := ShStatSpent + Price;
@@ -30543,6 +31751,14 @@ begin
       Say(ID, 'Only to your team.', ShBadColor);
       Exit;
     end;
+  { BE5-05: the global economy: an account's money goes to an account, the wallet of a map to a wallet of a map }
+  if ShGlobal then
+    if ShLoaded[ID] <> ShLoaded[T] then
+    begin
+      Say(ID, 'Money of an account goes only to a player with an account (and a map''s wallet to a map''s wallet).',
+        ShBadColor);
+      Exit;
+    end;
   if n > ShMoney[ID] then
   begin
     Say(ID, 'You have ' + ShCurrency + IntToStr(ShMoney[ID]) + '.', ShBadColor);
@@ -30581,7 +31797,7 @@ begin
     Say(ID, 'Only a weapon you bought this life is bought back.', ShBadColor);
     Exit;
   end;
-  n := Round(ShPriceOf(ID, W) * ShSellShare);
+  n := Round(ShPaid[ID][W] * ShSellShare);
   NW := TNewWeapon.Create;
   NS := TNewWeapon.Create;
   try
@@ -30805,13 +32021,12 @@ begin
     BotF := ShBotKill;
   F := F * BotF;
   { the same enemy again within a minute: from the third kill on RepeatKillPercent }
-  if (ShVicLast[K] = V) and (Tick - ShVicTick[K] < 3600) then
-    ShVicN[K] := ShVicN[K] + 1
+  if (ShVicTick[K][V] > 0) and (Tick - ShVicTick[K][V] < 3600) then
+    ShVicN[K][V] := ShVicN[K][V] + 1
   else
-    ShVicN[K] := 0;
-  ShVicLast[K] := V;
-  ShVicTick[K] := Tick;
-  if ShVicN[K] >= 2 then
+    ShVicN[K][V] := 0;
+  ShVicTick[K][V] := Tick;
+  if ShVicN[K][V] >= 2 then
     F := F * ShRepeatPct / 100;
   Why := 'kill';
   Base := ShKillMoney;
@@ -30824,10 +32039,10 @@ begin
   { AssistMoney: the others who did AssistPercent of the damage to him }
   if ShAssistMoney <> 0 then
     for i := 1 to TopSlot do
-      if ActiveSlot[i] then
-        if (i <> K) and (i <> V) then
-          if Enemies(i, V) then
-            if Dealt[i][V] * 100 >= ShAssistPct * MaxHealth then
+      if Dealt[i][V] * 100 >= ShAssistPct * MaxHealth then
+        if ActiveSlot[i] then
+          if (i <> K) and (i <> V) then
+            if Enemies(i, V) then
               ShEarn(i, ShAssistMoney, BotF, 'assist');
 end;
 
@@ -30860,7 +32075,7 @@ begin
     Exit;
   if (B < 1) or (B > MAX_BULLET_ID) then
     Exit;
-  ShLastPart[V] := BE_BodyHitPart(V, BL[B].Style, BL[B].X, BL[B].Y, BL[B].VelX, BL[B].VelY);
+  ShLastPart[V] := BE_BodyHitPart(V, B, BL[B].Style, BL[B].X, BL[B].Y, BL[B].VelX, BL[B].VelY);
   ShLastPartTick[V] := Game.TickCount;
 end;
 
@@ -31174,9 +32389,8 @@ begin
     begin
       if Tick >= ShStatEnd[k] then
       begin
-        if OB[ShStatObj[k]].Active then
-          if OB[ShStatObj[k]].Style = 27 then
-            OB[ShStatObj[k]].Kill;
+        if ObjStillAt(ShStatObj[k], 27, ShStatPX[k], ShStatPY[k]) then
+          OB[ShStatObj[k]].Kill;
         if (ShStatOwner[k] >= 1) and (ShStatOwner[k] <= 32) then
           if ActiveSlot[ShStatOwner[k]] then
             Say(ShStatOwner[k], 'Your stationary gun is gone.', ShColor);
@@ -31350,6 +32564,14 @@ begin
   ShDelta[ID] := 0;
   ShKey[ID] := '';
   ShLoaded[ID] := False;
+  ShDupTold[ID] := False;
+  for k := 1 to 32 do
+  begin
+    ShVicN[ID][k] := 0;
+    ShVicTick[ID][k] := 0;
+    ShVicN[k][ID] := 0;
+    ShVicTick[k][ID] := 0;
+  end;
   ShDirty[ID] := False;
   ShJoinTick[ID] := Tick;
   ShSpawnTick[ID] := Tick;
@@ -31495,7 +32717,13 @@ begin
     Exit;
   if not File.Exists(DataDir + 'shop_wallets.txt') then
     Exit;
-  L := File.CreateStringListFromFile(DataDir + 'shop_wallets.txt');
+  try
+    L := File.CreateStringListFromFile(DataDir + 'shop_wallets.txt');
+  except
+    { held open by another program (a backup, a scan): the start goes on, only this map's wallets are not brought back }
+    Log('[Shop] cannot read ' + DataDir + 'shop_wallets.txt now: the wallets of this map start empty');
+    Exit;
+  end;
   if L.Count >= 2 then
     if L[0] = Game.CurrentMap then
     begin
@@ -31718,7 +32946,7 @@ begin
     end;
 end;
 
-{ the commands the server must not run itself (the script answers them): /pause, /unpause; /pm of a player;
+{ the commands the server must not run itself (the script answers them): /pause, /unpause; /pm and /r of a player;
   /unbanlast with a number or a time; /map with a part of a name }
 function AdSuppress(Cmd: Integer; Command: string; Console: Boolean): Boolean;
 var
@@ -31732,7 +32960,7 @@ begin
     Args := Trim(Copy(Command, p + 1, Length(Command)));
   if (Cmd = C_PAUSE) or (Cmd = C_UNPAUSE) then
     Result := PzEnabled
-  else if Cmd = C_PM then
+  else if (Cmd = C_PM) or (Cmd = C_PMREPLY) then
     Result := PmEnabled and not Console
   else if Cmd = C_UNBANLAST then
     Result := UbEnabled and (Args <> '')
@@ -32003,6 +33231,15 @@ end;
 function GiveBlocked(ID, W: Integer): Boolean;
 begin
   Result := False;
+  { BE5-06: a primary weapon switched off in soldat.ini (Weapon_N = 0): the server bans the player who holds it }
+  if (W >= 1) and (W <= 10) then
+    if not ShServerW[W] then
+    begin
+      Say(ID, 'The ' + WeaponName(W) + ' is switched off in soldat.ini (Weapon_N = 0): the server bans a player ' +
+        'holding it for a day ("Not allowed weapon", admins too).', ColorBad);
+      Result := True;
+      Exit;
+    end;
   if (W = 15) or (W = 16) then
     if Game.GameStyle <> 4 then
     begin
@@ -33082,7 +34319,10 @@ begin
     if BpVal[PE_HEADSHOT] <> 0 then
       if BeOk then
         if (B >= 1) and (B <= 254) then
-          BpLastPart[V] := BE_BodyHitPart(V, BL[B].Style, BL[B].X, BL[B].Y, BL[B].VelX, BL[B].VelY);
+        begin
+          BpLastPart[V] := BE_BodyHitPart(V, B, BL[B].Style, BL[B].X, BL[B].Y, BL[B].VelX, BL[B].VelY);
+          BpLastPartTick[V] := Game.TickCount;
+        end;
 end;
 
 function BpMultiWord(n: Integer): string;
@@ -33125,7 +34365,8 @@ begin
   end;
   BpEvent(K, PE_KILL);
   if BpLastPart[V] = 12 then
-    BpEvent(K, PE_HEADSHOT);
+    if BpLastPartTick[V] = Tick then
+      BpEvent(K, PE_HEADSHOT);
   if not BpFirstDone then
   begin
     BpFirstDone := True;
@@ -33134,15 +34375,16 @@ begin
   { the others who did AssistPercent of a health to him }
   if BpVal[PE_ASSIST] <> 0 then
     for i := 1 to TopSlot do
-      if ActiveSlot[i] then
-        if (i <> K) and (i <> V) then
-          if Enemies(i, V) then
-            if Dealt[i][V] * 100 >= BpAssistPct * MaxHealth then
+      if Dealt[i][V] * 100 >= BpAssistPct * MaxHealth then
+        if ActiveSlot[i] then
+          if (i <> K) and (i <> V) then
+            if Enemies(i, V) then
               BpEvent(i, PE_ASSIST);
   { a kill from far away (the class's distance perk): his own round, from where it was fired }
   if BpVal[PE_DISTANCE] <> 0 then
     if OwnRound then
     if (B >= 1) and (B <= 254) then
+    if BeOk then
     if BE_BulletOrigin(B, OX, OY, T) = 1 then
     begin
       DX := OX - PL[V].X;
@@ -33556,31 +34798,38 @@ begin
 end;
 
 { at most this many of team Tm in class k (1000 = no limit; a percent of the team: at least 1) }
-function ClsCap(k, Tm: Integer): Integer;
-var
-  i, n: Integer;
+function ClsCapOf(k, TeamN: Integer): Integer;
 begin
   Result := 1000;
   if ClsMaxN[k] > 0 then
     Result := ClsMaxN[k]
   else if ClsMaxPct[k] > 0 then
   begin
-    n := 0;
-    for i := 1 to TopSlot do
-      if ActiveSlot[i] then
-        if TeamOf[i] = Tm then
-          n := n + 1;
-    Result := (n * ClsMaxPct[k] + 99) div 100;
+    Result := (TeamN * ClsMaxPct[k] + 99) div 100;
     if Result < 1 then
       Result := 1;
   end;
+end;
+
+function ClsCap(k, Tm: Integer): Integer;
+var
+  i, n: Integer;
+begin
+  n := 0;
+  if ClsMaxN[k] <= 0 then
+    if ClsMaxPct[k] > 0 then
+      for i := 1 to TopSlot do
+        if ActiveSlot[i] then
+          if TeamOf[i] = Tm then
+            n := n + 1;
+  Result := ClsCapOf(k, n);
 end;
 
 { the class rolled for him: of this mode, with a primary the server allows, not full; Balance: the fewest of his team,
   then the one he played least on this map; not his class again (Repeat = 0) while another is left }
 function ClsRoll(ID: Integer): Integer;
 var
-  k, Tm, n, r, MinC, MinP, Cur: Integer;
+  i, k, Tm, n, r, MinC, MinP, Cur, TeamN: Integer;
   Cand: array[1..20] of Boolean;
   Cnt: array[1..20] of Integer;
 begin
@@ -33588,14 +34837,30 @@ begin
   if ClsCount = 0 then
     Exit;
   Tm := TeamOf[ID];
+  { BE6-01: one pass over the players for all the classes: how many of his team (not he) are in each, and how many the
+    team has (he too: the percent of a class's limit) - it was a pass per class and one more per class with a percent }
+  for k := 1 to ClsCount do
+    Cnt[k] := 0;
+  TeamN := 0;
+  for i := 1 to TopSlot do
+    if ActiveSlot[i] then
+      if TeamOf[i] = Tm then
+      begin
+        TeamN := TeamN + 1;
+        if i <> ID then
+        begin
+          k := ClsNow(i);
+          if (k >= 1) and (k <= ClsCount) then
+            Cnt[k] := Cnt[k] + 1;
+        end;
+      end;
   n := 0;
   for k := 1 to ClsCount do
   begin
-    Cnt[k] := ClsTeamCount(Tm, k, ID);
     Cand[k] := False;
-    if ClsFor(ID, k) then
-      if ClsHasPrimary(k) then
-        if Cnt[k] < ClsCap(k, Tm) then
+    if Cnt[k] < ClsCapOf(k, TeamN) then
+      if ClsFor(ID, k) then
+        if ClsHasPrimary(k) then
           Cand[k] := True;
     if Cand[k] then
       n := n + 1;
@@ -33827,7 +35092,10 @@ begin
     begin
       k := ClsMapStore.IndexOfName(K0);
       if k >= 0 then
-        ClsMapStore.Delete(k);
+        ClsMapStore.Delete(k)
+      else if ClsMapStore.Count >= 400 then
+        { BE5-16: as the shop's wallets of the map - the oldest goes }
+        ClsMapStore.Delete(0);
       ClsMapStore.Add(K0 + '=' + IntToStr(c));
     end;
   end;
@@ -33942,11 +35210,12 @@ begin
     OkW := ClsPrimaryFor(ID, True) < 0
   else if Game.TickCount - ClsSpawnTick[ID] <= 180 then
     if ClsArmN[ID] < 2 then
-    begin
+      if not ClsThrew[ID] then
+      begin
       { his choice was refused by his game (the new menu came after it) or came too late: his class's own }
-      ClsArmN[ID] := ClsArmN[ID] + 1;
-      OkW := ClsPrimaryFor(ID, False) < 0;
-    end;
+        ClsArmN[ID] := ClsArmN[ID] + 1;
+        OkW := ClsPrimaryFor(ID, False) < 0;
+      end;
   OkS := (S = WEP_NONE) or ClsWeaponOk(ID, S);
   if (W >= 1) and (W <= 10) then
     if OkW then
@@ -34029,6 +35298,40 @@ begin
   ClsLoGiven[ID][4] := RkUsed[ID];
   ClsLoGiven[ID][5] := ClsC4Left[ID];
   ClsLoGiven[ID][6] := BdKits[ID];
+end;
+
+{ BE5-02: what the modules gave him at the respawn, before the loadout of a class (the quick class change puts it back
+  first: a class names only some of these, the rest must not stay from the class before) }
+procedure ClsLoBaseSave(ID: Integer);
+begin
+  ClsLoBase[ID][0] := FnNadeLeft[ID];
+  ClsLoBase[ID][1] := FnFlashLeft[ID];
+  ClsLoBase[ID][2] := MnHave[ID];
+  ClsLoBase[ID][3] := MnHaveC[ID];
+  ClsLoBase[ID][4] := RkUsed[ID];
+  ClsLoBase[ID][5] := BdBand[ID];
+  ClsLoBase[ID][6] := BdKits[ID];
+  ClsLoBase[ID][7] := PL[ID].Vest;
+  ClsLoBaseOk[ID] := True;
+end;
+
+procedure ClsLoBaseBack(ID: Integer);
+begin
+  if not ClsLoBaseOk[ID] then
+    Exit;
+  FnNadeLeft[ID] := Round(ClsLoBase[ID][0]);
+  FnFlashLeft[ID] := Round(ClsLoBase[ID][1]);
+  MnHave[ID] := Round(ClsLoBase[ID][2]);
+  MnHaveC[ID] := Round(ClsLoBase[ID][3]);
+  RkUsed[ID] := Round(ClsLoBase[ID][4]);
+  PL[ID].Vest := ClsLoBase[ID][7];
+  if BdActive then
+  begin
+    if BeOk then
+      BE_BodySupplies(ID, ClsLoBase[ID][5], Round(ClsLoBase[ID][6]), 0);
+    BdSync(ID);
+  end;
+  FnNeed[ID] := True;
 end;
 
 procedure ClsGiveLoadout(ID, c: Integer);
@@ -34426,33 +35729,39 @@ function ClsC4Target(ID: Integer; Range: Single): Integer;
 var
   e: Integer;
   P: TActivePlayer;
-  AX, AY, D, Best: Single;
+  PX, PY, EX, EY, AX, AY, D, Best, R2: Single;
 begin
   Result := 0;
   P := PL[ID];
+  PX := P.X;
+  PY := P.Y;
   AX := P.MouseAimX;
   AY := P.MouseAimY;
   Best := 100000000;
+  R2 := Range * Range;
+  { BE5-01: as ClsAimedEnemy - the range first, the ray only for a better candidate }
   for e := 1 to TopSlot do
     if ActiveSlot[e] then
       if e <> ID then
         if ClsC4By[e] = 0 then
-          if PL[e].Alive then
-            if Enemies(ID, e) then
-            begin
-              D := (PL[e].X - P.X) * (PL[e].X - P.X) + (PL[e].Y - P.Y) * (PL[e].Y - P.Y);
-              if D <= Range * Range then
-                if ClsRealSees(P.X, P.Y, AX, AY, PL[e].X, PL[e].Y) then
-                if not Ray(P.X, P.Y - 10, PL[e].X, PL[e].Y - 10, False) then
-                begin
-                  D := (PL[e].X - AX) * (PL[e].X - AX) + (PL[e].Y - AY) * (PL[e].Y - AY);
-                  if D < Best then
-                  begin
-                    Best := D;
-                    Result := e;
-                  end;
-                end;
-            end;
+        begin
+          EX := PL[e].X;
+          EY := PL[e].Y;
+          D := (EX - PX) * (EX - PX) + (EY - PY) * (EY - PY);
+          if D <= R2 then
+          begin
+            D := (EX - AX) * (EX - AX) + (EY - AY) * (EY - AY);
+            if D < Best then
+              if PL[e].Alive then
+                if Enemies(ID, e) then
+                  if ClsRealSees(PX, PY, AX, AY, EX, EY) then
+                    if not Ray(PX, PY - 10, EX, EY - 10, False) then
+                    begin
+                      Best := D;
+                      Result := e;
+                    end;
+          end;
+        end;
 end;
 
 { !skill c4: a charge stuck on the enemy nearest to his aim; True when it stuck }
@@ -34620,12 +35929,13 @@ end;
 
 { once a second: the sensor (the enemies within its reach on his team's radar) and the mine detector (the enemy
   mines within its reach found, with a beep) }
-procedure ClsSensorTick(Tick: Integer);
+procedure ClsSensorTick(Tick, Slot: Integer);
 var
   i, c, n, e, Tm: Integer;
   R: Single;
 begin
-  for i := 1 to TopSlot do
+  { BE5-01: one slot a call (its turn of the second) }
+  for i := Slot to Slot do
     if ActiveSlot[i] then
       if PL[i].Alive then
         if not DwDown[i] then
@@ -34684,32 +35994,39 @@ function ClsAimedEnemy(ID: Integer; Range: Single): Integer;
 var
   e: Integer;
   P: TActivePlayer;
-  AX, AY, D, Best: Single;
+  PX, PY, EX, EY, AX, AY, D, Best, R2: Single;
 begin
   Result := 0;
   P := PL[ID];
+  PX := P.X;
+  PY := P.Y;
   AX := P.MouseAimX;
   AY := P.MouseAimY;
   Best := 100000000;
+  R2 := Range * Range;
+  { BE5-01: the range first (a position read once), then the rest; the map ray only for an enemy nearer to the aim
+    than the best so far }
   for e := 1 to TopSlot do
     if ActiveSlot[e] then
       if e <> ID then
-        if PL[e].Alive then
-          if Enemies(ID, e) then
-          begin
-            D := (PL[e].X - P.X) * (PL[e].X - P.X) + (PL[e].Y - P.Y) * (PL[e].Y - P.Y);
-            if D <= Range * Range then
-              if ClsRealSees(P.X, P.Y, AX, AY, PL[e].X, PL[e].Y) then
-              if not Ray(P.X, P.Y - 10, PL[e].X, PL[e].Y - 10, False) then
-              begin
-                D := (PL[e].X - AX) * (PL[e].X - AX) + (PL[e].Y - AY) * (PL[e].Y - AY);
-                if D < Best then
-                begin
-                  Best := D;
-                  Result := e;
-                end;
-              end;
-          end;
+      begin
+        EX := PL[e].X;
+        EY := PL[e].Y;
+        D := (EX - PX) * (EX - PX) + (EY - PY) * (EY - PY);
+        if D <= R2 then
+        begin
+          D := (EX - AX) * (EX - AX) + (EY - AY) * (EY - AY);
+          if D < Best then
+            if PL[e].Alive then
+              if Enemies(ID, e) then
+                if ClsRealSees(PX, PY, AX, AY, EX, EY) then
+                  if not Ray(PX, PY - 10, EX, EY - 10, False) then
+                  begin
+                    Best := D;
+                    Result := e;
+                  end;
+        end;
+      end;
 end;
 
 { steal: the weapon in the hands of the enemy nearest to his aim comes into his (with its magazine), his own goes to
@@ -35127,9 +36444,11 @@ begin
   ClsRallyBy[V] := 0;
   if not TeamGame() then
     Exit;
+  { BE6-01: ClsRallyUntil is the end of a rally that was called - the others are passed by at once }
   for g := 1 to TopSlot do
-    if g <> V then
-      if ActiveSlot[g] then
+    if ClsRallyUntil[g] > Tick then
+      if g <> V then
+        if ActiveSlot[g] then
           if TeamOf[g] = TeamOf[V] then
           begin
             c := ClsOf[g];
@@ -35281,6 +36600,11 @@ var
   k, Free0: Integer;
 begin
   Result := False;
+  if AimTooFar(ID) then
+  begin
+    Say(ID, 'Your aim is too far from you for a crate.', ColorBad);
+    Exit;
+  end;
   Free0 := 0;
   for k := 0 to SuMax - 1 do
     if SuState[k] = 0 then
@@ -35474,6 +36798,9 @@ begin
           BpEvent(ID, PE_STATGUN);
       end;
     SK_MORTAR:
+      if AimTooFar(ID) then
+        Say(ID, 'Your aim is too far from you for a mortar.', ColorBad)
+      else
       begin
         ClsMortX[ID] := P.MouseAimX;
         ClsMortY[ID] := P.MouseAimY;
@@ -35713,14 +37040,15 @@ begin
 end;
 
 { once a second: the heal, repair and ammo of the classes for the mates around (and the healer himself) }
-procedure ClsAuras(Tick: Integer);
+procedure ClsAuras(Tick, Slot: Integer);
 var
   i, j, c: Integer;
   X, Y, DX, DY, R, H, Add, Vs: Single;
   Q: TActivePlayer;
   Ammo: Boolean;
 begin
-  for i := 1 to TopSlot do
+  { BE5-01: one slot a call (its turn of the second) }
+  for i := Slot to Slot do
     if ActiveSlot[i] then
     begin
       c := ClsOf[i];
@@ -35911,6 +37239,8 @@ var
 begin
   if not ClsActive then
     Exit;
+  ClsLoBaseOk[ID] := False;
+  ClsThrew[ID] := False;
   OldC := ClsOf[ID];
   { the respawn before the join: the join sets the class up }
   if not ActiveSlot[ID] then
@@ -35933,6 +37263,7 @@ begin
   ClsSpawnTick[ID] := Tick;
   ClsUsed[ID] := False;
   ClsMortN[ID] := 0;
+  ClsLoBaseSave(ID);
   { a survivor of a survival round keeps what he had (no new loadout) - unless he changed the class (CLS18) }
   if (not CyWasKept[ID]) or (c <> OldC) then
     ClsGiveLoadout(ID, c)
@@ -35968,6 +37299,11 @@ begin
   ClsCheckAt[ID] := 0;
   ClsAmmoAt[ID] := 0;
   ClsBotC4At[ID] := 0;
+  ClsLoBaseOk[ID] := False;
+  ClsThrew[ID] := False;
+  ClsCloakUntil[ID] := 0;
+  ClsGunUntil[ID] := 0;
+  ClsArmN[ID] := 0;
   ClsUsed[ID] := False;
   for k := 1 to 20 do
     ClsPlayed[ID][k] := 0;
@@ -36031,6 +37367,7 @@ begin
   if PL[ID].Alive then
   begin
     ClsSpawnTick[ID] := Tick;
+    ClsLoBaseSave(ID);
     ClsGiveLoadout(ID, c);
     if HumanOf[ID] then
     begin
@@ -36058,6 +37395,8 @@ begin
     ClsRallyUntil[ID] := 0;
     ClsGunUntil[ID] := 0;
     ClsMortN[ID] := 0;
+    { BE5-12: a cloak ends too (its end would give the weapons of the life before) }
+    ClsCloakUntil[ID] := 0;
     for k := 1 to 2 do
       ClsOn[ID][k] := 0;
   end;
@@ -36139,6 +37478,10 @@ begin
   ClsOf[ID] := 0;
   ClsNext[ID] := 0;
   ClsMortN[ID] := 0;
+  { BE5-16: what ran for him does not wait for the next one in his slot }
+  ClsCloakUntil[ID] := 0;
+  ClsGunUntil[ID] := 0;
+  ClsArmN[ID] := 0;
   for k := 1 to 32 do
     if ClsRallyBy[k] = ID then
       ClsRallyBy[k] := 0;
@@ -36381,7 +37724,11 @@ begin
     SK_RESUPPLY:
       if FnEnabled then
         Result := FnNadeLeft[ID] <= 0;
-    SK_STATGUN, SK_CLOAK:
+    SK_STATGUN:
+      { NEW-STATGUN: a bot puts its gun down only when it stands on the ground }
+      if PL[ID].OnGround then
+        Result := ClsAimedEnemy(ID, 600) > 0;
+    SK_CLOAK:
       Result := ClsAimedEnemy(ID, 600) > 0;
     SK_MORTAR, SK_BARRAGE:
       Result := ClsAimedEnemy(ID, 1000) > 0;
@@ -36390,7 +37737,9 @@ begin
         R := ClsSkP1[c][n];
         if R < 50 then
           R := 50;
-        Result := ClsAimedEnemy(ID, R) > 0;
+        { BE5-01: no scan for a C4 that is not there (!skill says "no C4 left") }
+        if (Kind <> SK_C4) or (ClsC4Left[ID] > 0) then
+          Result := ClsAimedEnemy(ID, R) > 0;
       end;
     SK_GUNSHIP:
       begin
@@ -36427,11 +37776,12 @@ end;
 
 { CLS6: [Classes] BotSkills - the bots use their skills (one a second at most); a bot's C4 goes off 2-3 s after it
   stuck }
-procedure ClsBotSkills(Tick: Integer);
+procedure ClsBotSkills(Tick, Slot: Integer);
 var
-  i, c, n, Kind: Integer;
+  i, c, n, k, Kind: Integer;
 begin
-  for i := 1 to TopSlot do
+  { BE5-01: one slot a call (its turn of the second) }
+  for i := Slot to Slot do
     if ActiveSlot[i] then
       if not HumanOf[i] then
       begin
@@ -36456,11 +37806,21 @@ begin
             Continue;
           if (ClsCool[i][n] > Tick) or (ClsOn[i][n] > Tick) then
             Continue;
+          if (ClsBotRetry[i][n] > Tick) and (ClsBotRetry[i][n] <= Tick + 300) then
+            Continue;
           if ClsSkWhy(Kind) <> '' then
             Continue;
           if ClsBotWants(i, c, n, Kind) then
           begin
+            k := ClsStatSkills;
             ClsSkillUse(i, n);
+            { BE5-01: it did not work (no C4 left, both crates' places taken, no open sky): the bot looks again in 5 s
+              and its other skill has its turn now (a failed skill gives no cooldown) }
+            if ClsStatSkills = k then
+            begin
+              ClsBotRetry[i][n] := Tick + 300;
+              Continue;
+            end;
             if Kind = SK_C4 then
               if ClsCool[i][n] > Tick then
                 ClsBotC4At[i] := Tick + 150;
@@ -36527,6 +37887,24 @@ begin
     ClsGunTick(Tick);
   if ClsCloakAny > 0 then
     ClsCloakTick(Tick);
+  { BE5-01: the auras, the sensors and the bots' skills - every slot once a second as before, but its turn comes at
+    (Tick + 2 * slot) mod 60 = 0, so the slots are spread over the ticks (at most two in one) and not all in one tick }
+  if ClsActive then
+    if Tick mod 2 = 0 then
+    begin
+      i := ((60 - Tick mod 60) mod 60) div 2;
+      if i = 0 then
+        i := 30;
+      for k := 0 to 1 do
+        if i + k * 30 <= TopSlot then
+        begin
+          ClsAuras(Tick, i + k * 30);
+          ClsSensorTick(Tick, i + k * 30);
+          if ClsBotSkillsOn then
+            if not PausedNow then
+              ClsBotSkills(Tick, i + k * 30);
+        end;
+    end;
   if Tick mod 60 <> 0 then
     Exit;
   for k := ClsObjN - 1 downto 0 do
@@ -36537,11 +37915,6 @@ begin
     ShStatTick(Tick);
   if not ClsActive then
     Exit;
-  ClsAuras(Tick);
-  ClsSensorTick(Tick);
-  if ClsBotSkillsOn then
-    if not PausedNow then
-      ClsBotSkills(Tick);
   { the lines with a cooldown or a skill running: their seconds }
   for i := 1 to TopSlot do
     if ActiveSlot[i] then
@@ -36670,6 +38043,8 @@ begin
             if ClsFresh(ID) then
           begin
             ClsSet(ID, c, True);
+            { BE5-02: what the class before gave goes first, the new class's loadout comes on what the respawn gave }
+            ClsLoBaseBack(ID);
             ClsGiveLoadout(ID, c);
             ClsArm(ID);
             Exit;
@@ -36913,21 +38288,46 @@ end;
   empty lines) is kept as it is }
 procedure SbLoad();
 var
-  L: TStringList;
+  L, Tmp: TStringList;
   i: Integer;
 begin
+  { read first, replace after: a file that cannot be read (held by another program) must not become an empty list
+    that the next change writes over the file - SbLoadFailed says so, and the read is tried again }
+  Tmp := File.CreateStringList();
+  if SbFileName <> '' then
+    if File.Exists(DataDir + SbFileName) then
+      try
+        L := File.CreateStringListFromFile(DataDir + SbFileName);
+        for i := 0 to L.Count - 1 do
+          if Trim(L[i]) <> '' then
+            Tmp.Add(Trim(L[i]));
+        L.Free;
+      except
+        if not SbLoadFailed then
+          Log('[SteamBan] cannot read ' + DataDir + SbFileName + ' now: bans are not checked and the file is not written ' +
+            'over until it can be read');
+        SbLoadFailed := True;
+        SbRetryAt := SqNow() + 1;
+        Tmp.Free;
+        if SbList = nil then
+          SbList := File.CreateStringList();
+        Exit;
+      end;
+  if SbList <> nil then
+    SbList.Free;
+  SbList := Tmp;
+  SbLoadFailed := False;
+end;
+
+{ the list is there (read again, once a second at most, while the file could not be read); SbLoadFailed says whether it
+  is a true copy of the file }
+procedure SbEnsure();
+begin
   if SbList = nil then
-    SbList := File.CreateStringList();
-  SbList.Clear;
-  if SbFileName = '' then
-    Exit;
-  if not File.Exists(DataDir + SbFileName) then
-    Exit;
-  L := File.CreateStringListFromFile(DataDir + SbFileName);
-  for i := 0 to L.Count - 1 do
-    if Trim(L[i]) <> '' then
-      SbList.Add(Trim(L[i]));
-  L.Free;
+    SbLoad()
+  else if SbLoadFailed then
+    if SqNow() >= SbRetryAt then
+      SbLoad();
 end;
 
 procedure SbSave();
@@ -36936,6 +38336,11 @@ begin
     Exit;
   if SbFileName = '' then
     Exit;
+  if SbLoadFailed then
+  begin
+    Log('[SteamBan] not written: the file could not be read, and the list in memory is not a copy of it');
+    Exit;
+  end;
   if not SaveListFile(SbList, DataDir + SbFileName) then
     Log('[SteamBan] cannot write ' + DataDir + SbFileName);
 end;
@@ -37046,8 +38451,12 @@ var
   k: Integer;
   U: string;
 begin
-  if SbList = nil then
-    SbLoad();
+  SbEnsure();
+  if SbLoadFailed then
+  begin
+    Log('[SteamBan] ' + Steam + ' not banned: the list file cannot be read now');
+    Exit;
+  end;
   k := SbFind(Steam);
   if k >= 0 then
     SbList.Delete(k);
@@ -37109,8 +38518,13 @@ begin
   if SbChecked[ID] = S then
     Exit;
   SbChecked[ID] := S;
-  if SbList = nil then
-    SbLoad();
+  SbEnsure();
+  if SbLoadFailed then
+  begin
+    { not looked at yet: tried again with the next second }
+    SbChecked[ID] := '';
+    Exit;
+  end;
   k := SbFind(S);
   if k < 0 then
     Exit;
@@ -37151,7 +38565,11 @@ begin
           if SbChecked[i] <> SteamId[i] then
             SbCheck(i);
   if SbPend <> nil then
-    while SbPend.Count > 0 do
+    if SbPend.Count > 0 then
+      SbEnsure();
+  { a ban waits in the queue while the list file cannot be read }
+  if SbPend <> nil then
+    while (SbPend.Count > 0) and (not SbLoadFailed) do
     begin
       L := SbPend[0] + #1;
       SbPend.Delete(0);
@@ -37178,7 +38596,7 @@ end;
 procedure CmdBanSteam(ID: Integer; Args: string);
 var
   Rest, Wt, Who, Steam, Name, Reason: string;
-  T, Minutes: Integer;
+  T, Minutes, N, j: Integer;
 begin
   if not SbEnabled then
     Exit;
@@ -37212,28 +38630,71 @@ begin
   end;
   Steam := '';
   Name := '-';
+  { a Steam id in the text is a Steam id: the account is banned, not the player whose name happens to hold the same
+    characters (a slot number 1-32 is a slot) }
+  N := StrToIntDef(Who, 0);
+  if (N < 1) or (N > 32) then
+    Steam := NormalizeSteam(Who);
   T := FindPlayerOnly(Who);
-  if T = -2 then
+  if Steam <> '' then
   begin
-    Say(ID, 'More than one player has "' + Who + '" in the name - type more of it, or the id.', ColorBad);
-    Exit;
-  end;
-  if (T >= 1) and (T <= 32) then
-    if PL[T].Active then
+    if T = -2 then
     begin
-      Name := PL[T].Name;
-      Steam := SteamId[T];
-      if Steam = '' then
+      Say(ID, '"' + Who + '" is a Steam id and also part of the names of several players: nobody is banned. Give ' +
+        'the player''s slot number to ban him.', ColorBad);
+      Exit;
+    end;
+    if T >= 1 then
+      if SteamId[T] <> Steam then
       begin
-        Say(ID, Name + '''s Steam id is not confirmed (no Steam, or not yet) - give the id itself.', ColorBad);
+        Say(ID, '"' + Who + '" is a Steam id and also part of the name of ' + PL[T].Name + ' (another account): ' +
+          'nobody is banned. Give his slot number to ban him.', ColorBad);
         Exit;
       end;
+    for j := 1 to TopSlot do
+      if ActiveSlot[j] then
+        if SteamId[j] = Steam then
+          Name := PL[j].Name;
+  end
+  else
+  begin
+    if T = -2 then
+    begin
+      Say(ID, 'More than one player has "' + Who + '" in the name - type more of it, or the id.', ColorBad);
+      Exit;
     end;
+    if (T >= 1) and (T <= 32) then
+      if PL[T].Active then
+      begin
+        Name := PL[T].Name;
+        Steam := SteamId[T];
+        if Steam = '' then
+        begin
+          Say(ID, Name + '''s Steam id is not confirmed (no Steam, or not yet) - give the id itself.', ColorBad);
+          Exit;
+        end;
+      end;
+  end;
   if Steam = '' then
     Steam := NormalizeSteam(Who);
   if Steam = '' then
   begin
     Say(ID, 'No player or Steam id "' + Who + '" (S123456789, 7656119..., [U:1:...] or STEAM_0:...).', ColorBad);
+    Exit;
+  end;
+  { a Steam admin's account is banned by a Steam admin or the console only }
+  if AdSteams.IndexOf(Steam) >= 0 then
+    if (ID >= 1) and (ID <= 32) then
+      if not IsSteamAdmin(ID) then
+      begin
+        Say(ID, Steam + ' is a Steam admin: only a Steam admin or the server console can ban the account.', ColorBad);
+        Exit;
+      end;
+  SbEnsure();
+  if SbLoadFailed then
+  begin
+    Say(ID, 'The Steam ban list (' + SbFileName + ') cannot be read now (in use by another program?) - nothing was changed, ' +
+      'try again in a moment.', ColorBad);
     Exit;
   end;
   SbAdd(Steam, Minutes, AdminName(ID), Name, Reason);
@@ -37257,8 +38718,13 @@ var
 begin
   if not SbEnabled then
     Exit;
-  if SbList = nil then
-    SbLoad();
+  SbEnsure();
+  if SbLoadFailed then
+  begin
+    Say(ID, 'The Steam ban list (' + SbFileName + ') cannot be read now (in use by another program?) - nothing was changed, ' +
+      'try again in a moment.', ColorBad);
+    Exit;
+  end;
   W := Trim(Args);
   if W = '' then
   begin
@@ -37328,8 +38794,13 @@ var
 begin
   if not SbEnabled then
     Exit;
-  if SbList = nil then
-    SbLoad();
+  SbEnsure();
+  if SbLoadFailed then
+  begin
+    Say(ID, 'The Steam ban list (' + SbFileName + ') cannot be read now (in use by another program?) - try again in a ' +
+      'moment.', ColorBad);
+    Exit;
+  end;
   SbPrune();
   n := StrToIntDef(Trim(Args), 10);
   if n < 1 then
@@ -37358,8 +38829,16 @@ end;
 procedure TeMove(ID, Team: Integer);
 begin
   PL[ID].ChangeTeam(Team, TJoinSilent);
-  TeStatMoved := TeStatMoved + 1;
   TeUnevenSince := 0;
+  { another script may refuse the move (ZitroStats' [Balance] answers -1 to a player who plays in a team and whom
+    it would put on the other side): then nothing is announced or counted }
+  if PL[ID].Team <> Team then
+  begin
+    Log('[Teams] ' + PL[ID].Name + ' stays in ' + TeamName(PL[ID].Team) + ': the move to ' + TeamName(Team) +
+      ' was refused by another script (the balance of ZitroStats?)');
+    Exit;
+  end;
+  TeStatMoved := TeStatMoved + 1;
   SayAll(ReplaceAll(ReplaceAll(TeAutoText, '{player}', PL[ID].Name), '{team}', TeamName(Team)), ColorGood);
   Log('[Teams] ' + PL[ID].Name + ' moved to ' + TeamName(Team) + ' (the balance)');
 end;
@@ -37402,7 +38881,7 @@ begin
     if ActiveSlot[i] then
       if TeamOf[i] = Big then
         if not PL[i].Alive then
-          if TeAutoAdmins or (not PL[i].IsAdmin) then
+          if TeAutoAdmins or (not AdminOf(i)) then
           begin
             Sc := TeJoinTick[i] div 60;
             if TeAutoBots then
@@ -37558,7 +39037,7 @@ begin
         if LgdN[i] < 10 then
           Continue;
         if LgdIgnoreAdmins then
-          if PL[i].IsAdmin then
+          if AdminOf(i) then
             Continue;
         LgdStats(i, Avg, Jit, Mx, Wm);
         { step 1: he is told }
@@ -37810,7 +39289,9 @@ begin
   else if PL[ID].Flagger and (not InsFlagCarrier) then
     Result := 'not with a flag'
   else if PausedNow then
-    Result := 'not during a pause';
+    Result := 'not during a pause'
+  else if (InsReArmAt[ID] > Tick) and (InsReArmAt[ID] <= Tick + 60) then
+    Result := 'wait a second after you stop it';
   if Result <> '' then
     Exit;
   Tm := TeamOf[ID];
@@ -37852,6 +39333,7 @@ begin
   if InsArmAt[ID] = 0 then
     Exit;
   InsArmAt[ID] := 0;
+  InsReArmAt[ID] := Game.TickCount + 60;
   InsStatCancel := InsStatCancel + 1;
   LfOver(ID, InsArmLayer, '', 0, 0, 0.01, 0, 1, ColorGood);
   HudMarkL(ID, HLB_VEST);
@@ -38294,6 +39776,1276 @@ begin
     Say(ID, 'No vest for: ' + TgtDesc() + ' (this life).', ColorGood);
 end;
 
+{ ============ 4.1: [Spawns] - the spawn point layouts of the maps (Respawns-Control built in) ============ }
+
+{ The players' spawn points of a map (styles 0-4: 0 no team, 1 Alpha .. 4 Delta) can be replaced by a layout of its
+  own. The layouts live in basicext_dll (data/spawns.bdb, written whole by its thread, the old file kept as .bak).
+  When the next map is announced nobody takes damage (NoDamageWhileChanging) until the players stand on the layout;
+  when the map is in, its own player points of the styles the layout has are switched off, the layout's points are
+  added and MoveDelayTicks later the players of those styles go to a point of the layout. Flags and kits are never
+  touched. The library reads the server's spawn table (bound through Map.Spawns[1] and [2]): the nearest point, a
+  free point for a player, the marks' points, the check against the walls; every change goes through ScriptCore.
+  Without the table the properties are read, as the old script did. }
+
+function RcStyleName(S: Integer): string;
+begin
+  case S of
+    1: Result := 'Alpha';
+    2: Result := 'Bravo';
+    3: Result := 'Charlie';
+    4: Result := 'Delta';
+  else
+    Result := 'no team';
+  end;
+end;
+
+function RcStyleColor(S: Integer): Longint;
+begin
+  case S of
+    1: Result := $FF0000;
+    2: Result := $0000FF;
+    3: Result := $FFFF00;
+    4: Result := $00FF00;
+  else
+    Result := $808080;
+  end;
+end;
+
+{ an active spawn point of a player (styles 0-4; the others are flags and kits) }
+function RcIsPoint(ID: Integer): Boolean;
+begin
+  Result := False;
+  if (ID < 1) or (ID > MAX_SPAWN_ID) then
+    Exit;
+  if SP[ID].Active then
+    Result := SP[ID].Style <= 4;
+end;
+
+function RcPointText(ID: Integer): string;
+begin
+  Result := '#' + IntToStr(ID) + ' (' + RcStyleName(SP[ID].Style) + ') X: ' + IntToStr(SP[ID].X) + ', Y: ' +
+    IntToStr(SP[ID].Y);
+end;
+
+function RcSaveHint(): string;
+begin
+  Result := 'Do not forget /' + RcSaveWord + '.';
+end;
+
+{ the console and every admin in the game }
+procedure RcTell(Text: string; Color: Longint);
+begin
+  Log('[Spawns] ' + Text);
+  SayAdmins('[Spawns] ' + Text, Color);
+end;
+
+{ the library learns where the server keeps its spawn table from the first two entries (their objects and what
+  their properties say) }
+procedure RcBind();
+begin
+  RcTabOk := False;
+  if BeOk then
+    RcTabOk := BE_SpBind(SP[1], BoolInt(SP[1].Active), SP[1].X, SP[1].Y, SP[1].Style, SP[2], BoolInt(SP[2].Active),
+      SP[2].X, SP[2].Y, SP[2].Style) = 1;
+end;
+
+{ the active player points of a style (-1 = all) }
+function RcCount(Style: Integer): Integer;
+var
+  i: Integer;
+begin
+  if RcTabOk then
+  begin
+    Result := BE_SpCount(Style);
+    if Result >= 0 then
+      Exit;
+  end;
+  Result := 0;
+  for i := 1 to MAX_SPAWN_ID do
+    if RcIsPoint(i) then
+      if (Style < 0) or (SP[i].Style = Style) then
+        Result := Result + 1;
+end;
+
+{ the nearest active player point to X, Y within MaxDist (0 = however far), 0 = none }
+function RcNearest(X, Y, MaxDist: Single): Integer;
+var
+  i: Integer;
+  D, Best: Single;
+begin
+  if RcTabOk then
+  begin
+    Result := BE_SpNearest(X, Y, MaxDist);
+    Exit;
+  end;
+  Result := 0;
+  Best := 0;
+  for i := 1 to MAX_SPAWN_ID do
+    if RcIsPoint(i) then
+    begin
+      D := Sqrt((SP[i].X - X) * (SP[i].X - X) + (SP[i].Y - Y) * (SP[i].Y - Y));
+      if (MaxDist <= 0) or (D < MaxDist) then
+        if (Result = 0) or (D < Best) then
+        begin
+          Result := i;
+          Best := D;
+        end;
+    end;
+end;
+
+{ the first active player point after Prev (from the first again after the last), 0 = none }
+function RcNext(Prev: Integer): Integer;
+var
+  k, ID: Integer;
+begin
+  if RcTabOk then
+  begin
+    Result := BE_SpNext(Prev);
+    Exit;
+  end;
+  Result := 0;
+  for k := 1 to MAX_SPAWN_ID do
+  begin
+    ID := Prev + k;
+    while ID > MAX_SPAWN_ID do
+      ID := ID - MAX_SPAWN_ID;
+    if RcIsPoint(ID) then
+    begin
+      Result := ID;
+      Exit;
+    end;
+  end;
+end;
+
+{ a round of moves: no point taken yet }
+procedure RcPickReset();
+var
+  i: Integer;
+begin
+  if RcTabOk then
+    BE_SpPickReset();
+  for i := 1 to MAX_SPAWN_ID do
+    RcTaken[i] := False;
+end;
+
+{ a random active point of a style, one nobody got in this round of moves while there is one; 0 = none }
+function RcPick(Style: Integer): Integer;
+var
+  i, NFree, NAll, k: Integer;
+begin
+  if RcTabOk then
+  begin
+    Result := BE_SpPick(Style);
+    Exit;
+  end;
+  Result := 0;
+  NFree := 0;
+  NAll := 0;
+  for i := 1 to MAX_SPAWN_ID do
+    if RcIsPoint(i) then
+      if SP[i].Style = Style then
+      begin
+        NAll := NAll + 1;
+        if not RcTaken[i] then
+          NFree := NFree + 1;
+      end;
+  if NAll = 0 then
+    Exit;
+  if NFree > 0 then
+    k := Random(0, NFree)
+  else
+    k := Random(0, NAll);
+  for i := 1 to MAX_SPAWN_ID do
+    if RcIsPoint(i) then
+      if SP[i].Style = Style then
+        if (NFree = 0) or (not RcTaken[i]) then
+        begin
+          if k = 0 then
+          begin
+            RcTaken[i] := True;
+            Result := i;
+            Exit;
+          end;
+          k := k - 1;
+        end;
+end;
+
+{ ---- the marks: '+' and the number of a point in its team's colour, for the MarkLayers points nearest to the
+  admin (to his cursor while he is dead or spectating), each on a layer of its own that it keeps while it stays
+  near; sent again only when the point moved or its text is about to fade ---- }
+
+{ the points one viewer's marks show, into RcWant (the edited one always): how many }
+function RcNearN(X, Y: Single): Integer;
+var
+  i, k, n, Worst: Integer;
+  D, R: Single;
+begin
+  Result := 0;
+  R := RC_MARK_RANGE;
+  if RcTabOk then
+  begin
+    n := BE_SpNear(X, Y, RcMarkN, RcEditId, R);
+    for k := 0 to n - 1 do
+    begin
+      i := BE_SpNearGet(k);
+      if i > 0 then
+        if Result < RcMarkN then
+        begin
+          RcWant[Result] := i;
+          Result := Result + 1;
+        end;
+    end;
+    Exit;
+  end;
+  { without the library's table: one pass over the slots; when the layers are full a nearer point takes the place
+    of the farthest one kept }
+  for i := 1 to MAX_SPAWN_ID do
+    if RcIsPoint(i) then
+    begin
+      D := (SP[i].X - X) * (SP[i].X - X) + (SP[i].Y - Y) * (SP[i].Y - Y);
+      if i = RcEditId then
+        D := -1;
+      if D <= R * R then
+      begin
+        if Result < RcMarkN then
+        begin
+          RcWant[Result] := i;
+          RcWantD[Result] := D;
+          Result := Result + 1;
+        end
+        else
+        begin
+          Worst := 0;
+          for k := 1 to Result - 1 do
+            if RcWantD[k] > RcWantD[Worst] then
+              Worst := k;
+          if D < RcWantD[Worst] then
+          begin
+            RcWant[Worst] := i;
+            RcWantD[Worst] := D;
+          end;
+        end;
+      end;
+    end;
+end;
+
+{ point ID's mark on viewer V's layer K }
+procedure RcMarkPut(V, K, ID, Tick: Integer);
+var
+  Old: Integer;
+begin
+  Old := RcMkId[V][K];
+  if Old > 0 then
+    if Old <> ID then
+      RcMkOf[V][Old] := 0;
+  RcMkId[V][K] := ID;
+  RcMkOf[V][ID] := K + 1;
+  RcMkX[V][K] := SP[ID].X;
+  RcMkY[V][K] := SP[ID].Y;
+  RcMkUntil[V][K] := After(Tick, RC_MARK_LIFE - 60);
+  PL[V].WorldText(RcMarkFirst + K, '+' + IntToStr(ID), RC_MARK_LIFE, RcStyleColor(SP[ID].Style), RcMarkScale,
+    RcMkX[V][K] - 5, RcMkY[V][K] - 17);
+end;
+
+procedure RcMarkHide(V, K: Integer);
+begin
+  if RcMkId[V][K] > 0 then
+    RcMkOf[V][RcMkId[V][K]] := 0;
+  RcMkId[V][K] := 0;
+  PL[V].WorldText(RcMarkFirst + K, ' ', 1, ColorGood, 0.01, 0, 0);
+end;
+
+{ every mark of a viewer forgotten; Hide: taken off his screen too }
+procedure RcMarksOff(V: Integer; Hide: Boolean);
+var
+  k: Integer;
+begin
+  for k := 0 to RC_MARKS - 1 do
+  begin
+    if Hide then
+      if RcMkId[V][k] > 0 then
+        PL[V].WorldText(RcMarkFirst + k, ' ', 1, ColorGood, 0.01, 0, 0);
+    RcMkId[V][k] := 0;
+    RcMkUntil[V][k] := 0;
+  end;
+  for k := 0 to 255 do
+    RcMkOf[V][k] := 0;
+end;
+
+{ a /reloadsettings: the marks go (their layers may change) and come back on the next look }
+procedure RcMarksAllOff();
+var
+  v: Integer;
+begin
+  if RcShowN <= 0 then
+    Exit;
+  for v := 1 to 32 do
+    if RcShow[v] then
+      if ActiveSlot[v] then
+        RcMarksOff(v, True);
+end;
+
+procedure RcMarksFor(V, Tick: Integer);
+var
+  n, j, k, ID, L: Integer;
+  X, Y: Single;
+begin
+  if PL[V].Alive then
+  begin
+    X := PL[V].X;
+    Y := PL[V].Y;
+    RcViewX[V] := X;
+    RcViewY[V] := Y;
+  end
+  else if (PL[V].MouseAimX <> 0) or (PL[V].MouseAimY <> 0) then
+  begin
+    X := PL[V].MouseAimX;
+    Y := PL[V].MouseAimY;
+  end
+  else
+  begin
+    X := RcViewX[V];
+    Y := RcViewY[V];
+  end;
+  n := RcNearN(X, Y);
+  for k := 0 to RcMarkN - 1 do
+    RcKeep[k] := False;
+  { a point shown already keeps its layer }
+  for j := 0 to n - 1 do
+  begin
+    ID := RcWant[j];
+    k := RcMkOf[V][ID] - 1;
+    if k >= 0 then
+      if k < RcMarkN then
+      begin
+        RcKeep[k] := True;
+        RcWant[j] := 0;
+        if (RcMkX[V][k] <> SP[ID].X) or (RcMkY[V][k] <> SP[ID].Y) or (Tick >= RcMkUntil[V][k]) then
+          RcMarkPut(V, k, ID, Tick);
+      end;
+  end;
+  { the new ones on the layers left }
+  L := 0;
+  for j := 0 to n - 1 do
+    if RcWant[j] > 0 then
+    begin
+      while L < RcMarkN do
+      begin
+        if not RcKeep[L] then
+          Break;
+        L := L + 1;
+      end;
+      if L < RcMarkN then
+      begin
+        RcKeep[L] := True;
+        RcMarkPut(V, L, RcWant[j], Tick);
+      end;
+    end;
+  { the marks of the points no longer near }
+  for k := 0 to RcMarkN - 1 do
+    if not RcKeep[k] then
+      if RcMkId[V][k] > 0 then
+        RcMarkHide(V, k);
+end;
+
+procedure RcMarksTick(Tick: Integer);
+var
+  v, Every: Integer;
+begin
+  Every := RC_MARK_EVERY;
+  if not RcTabOk then
+    Every := 3 * RC_MARK_EVERY;
+  for v := 1 to TopSlot do
+    if RcShow[v] then
+      if (Tick + v) mod Every = 0 then
+        if ActiveSlot[v] then
+          RcMarksFor(v, Tick);
+end;
+
+{ ---- the map change ---- }
+
+{ the edit of a point ends, with a line for the admin who edited it }
+procedure RcEndEdit(Text: string);
+var
+  p: Integer;
+begin
+  p := RcEditor;
+  RcEditId := 0;
+  RcEditor := 0;
+  { [Mines], [Shop], [Insurgents], [Supply]: the points where they are now }
+  MnMapScan();
+  if Text <> '' then
+    if (p >= 1) and (p <= 32) then
+      Say(p, Text, ColorGood);
+end;
+
+{ a new map: the point numbers mean other points now }
+procedure RcResetMap();
+var
+  i: Integer;
+begin
+  if RcEditId > 0 then
+    RcEndEdit('The map changes: editing of spawn point #' + IntToStr(RcEditId) + ' stopped.');
+  for i := 1 to 32 do
+  begin
+    RcTestTo[i] := 0;
+    RcTestLast[i] := 0;
+    RcMovePend[i] := False;
+  end;
+  RcTestAny := 0;
+  RcLoaded := False;
+end;
+
+{ Map.OnBeforeMapChange: the next map is announced, about five seconds before it comes }
+procedure RcBeforeMap();
+begin
+  RcResetMap();
+  RcChanging := RcNoDamage;
+  RcChangeTick := Game.TickCount;
+end;
+
+{ Map.OnAfterMapChange: the map is in and the server has put everybody at its own points (the first map after a
+  server start comes without an OnBeforeMapChange) }
+procedure RcAfterMap(NewMap: string);
+var
+  i, n, k, St, X, Y, Failed, Moves: Integer;
+  NP: TNewSpawnPoint;
+  Added: TActiveSpawnPoint;
+begin
+  RcResetMap();
+  RcBind();
+  RcStyles := 0;
+  n := BE_SpSelect(PChar(NewMap));
+  if n <= 0 then
+  begin
+    RcChanging := False;
+    Exit;
+  end;
+  RcStyles := BE_SpStyles();
+  { only the styles the layout has are replaced: a layout for deathmatch (style 0) leaves the bases of a team game
+    (styles 1-4) where the map has them }
+  for i := 1 to MAX_SPAWN_ID do
+    if SP[i].Active then
+    begin
+      St := SP[i].Style;
+      if St <= 4 then
+        if ((RcStyles shr St) and 1) <> 0 then
+          SP[i].Active := False;
+    end;
+  Failed := 0;
+  for k := 0 to n - 1 do
+    if BE_SpPoint(k, St, X, Y) = 1 then
+    begin
+      NP := TNewSpawnPoint.Create;
+      try
+        NP.Active := True;
+        NP.X := X;
+        NP.Y := Y;
+        NP.Style := St;
+        Added := Map.AddSpawnPoint(NP);
+        if Added = nil then
+          Failed := Failed + 1;
+      finally
+        NP.Free;
+      end;
+    end;
+  RcStatPlaced := RcStatPlaced + 1;
+  if Failed > 0 then
+  begin
+    RcStatFailed := RcStatFailed + Failed;
+    RcTell(NewMap + ': ' + IntToStr(Failed) + ' of the ' + IntToStr(n) + ' points of its layout did not fit (all ' +
+      IntToStr(MAX_SPAWN_ID) + ' spawn point slots are taken).', ColorBad);
+  end
+  else
+    Log('[Spawns] ' + NewMap + ': layout of ' + IntToStr(n) + ' spawn points in place');
+  { the players at the map's own points of a replaced style go to the layout in a moment }
+  Moves := 0;
+  for i := 1 to TopSlot do
+    if ActiveSlot[i] then
+      if PL[i].Alive then
+      begin
+        St := PL[i].Team;
+        if (St >= 0) and (St <= 4) then
+          if ((RcStyles shr St) and 1) <> 0 then
+          begin
+            RcMovePend[i] := True;
+            RcMoveTeam[i] := St;
+            Moves := Moves + 1;
+          end;
+      end;
+  RcChangeTick := Game.TickCount;
+  RcLoaded := Moves > 0;
+  RcChanging := RcNoDamage and (Moves > 0);
+end;
+
+{ MoveDelayTicks after the map change (a client still loading the map would put its player back): the players of a
+  replaced style go to a point of the layout the way the server picks one (a random point of their team, a few
+  pixels off), each to a point nobody else got while there are enough. A move, not a respawn: ChangeTeam kills
+  everybody in survival, and every script would see a team change. }
+procedure RcMoveAll();
+var
+  i, ID: Integer;
+  X, Y: Single;
+begin
+  RcPickReset();
+  for i := 1 to 32 do
+    if RcMovePend[i] then
+    begin
+      RcMovePend[i] := False;
+      if ActiveSlot[i] then
+        if PL[i].Alive then
+          if PL[i].Team = RcMoveTeam[i] then
+          begin
+            ID := RcPick(RcMoveTeam[i]);
+            if ID > 0 then
+            begin
+              X := SP[ID].X + Random(-4, 4);
+              Y := SP[ID].Y + Random(-4, 0);
+              MovePlayer(PL[i], X, Y);
+              PL[i].SetVelocity(0, 0);
+              RcStatMoved := RcStatMoved + 1;
+              { [SpawnProtection]: its distance counts from the layout's point }
+              if SfUntil[i] > 0 then
+                SfFresh[i] := True;
+            end;
+          end;
+    end;
+  RcLoaded := False;
+  RcChanging := False;
+end;
+
+{ /testrespawn, RC_TEST_WAIT ticks after the respawn: onto the point itself, standing still }
+procedure RcTestMoves(Tick: Integer);
+var
+  i, S: Integer;
+  Note: string;
+begin
+  for i := 1 to 32 do
+    if RcTestTo[i] > 0 then
+      if (Tick - RcTestTick[i] >= RC_TEST_WAIT) or (Tick < RcTestTick[i]) then
+      begin
+        S := RcTestTo[i];
+        RcTestTo[i] := 0;
+        RcTestAny := RcTestAny - 1;
+        if ActiveSlot[i] then
+        begin
+          if not RcIsPoint(S) then
+            Say(i, 'Spawn point #' + IntToStr(S) + ' is gone.', ColorBad)
+          else if not PL[i].Alive then
+          begin
+            if Game.Survival then
+              Say(i, 'You died before the move to spawn point #' + IntToStr(S) + '.', ColorBad)
+            else
+              Say(i, 'The respawn did not happen (a script refused the team change), so you were not moved.',
+                ColorBad);
+          end
+          else
+          begin
+            MovePlayer(PL[i], SP[S].X, SP[S].Y);
+            PL[i].SetVelocity(0, 0);
+            if Game.Survival then
+              Note := 'moved there (survival: no respawn, it would kill you)'
+            else
+              Note := 'respawned and moved there';
+            Say(i, 'Spawn point ' + RcPointText(S) + ': ' + Note + '.', ColorGood);
+          end;
+        end;
+      end;
+  if RcTestAny < 0 then
+    RcTestAny := 0;
+end;
+
+{ the point being edited follows the movement keys of its editor, who stands on it: a pixel every 5 ticks; the
+  reload key (read every tick, a short press too) ends it }
+procedure RcEditTick(Tick: Integer);
+var
+  S, p, X, Y: Integer;
+begin
+  S := RcEditId;
+  p := RcEditor;
+  if (p < 1) or (p > 32) then
+  begin
+    RcEndEdit('');
+    Exit;
+  end;
+  if not ActiveSlot[p] then
+  begin
+    RcEndEdit('');
+    Exit;
+  end;
+  if not RcIsPoint(S) then
+  begin
+    RcEndEdit('Spawn point #' + IntToStr(S) + ' is gone: editing stopped.');
+    Exit;
+  end;
+  if PL[p].Team > 4 then
+  begin
+    RcEndEdit('You left the game: editing of spawn point #' + IntToStr(S) + ' stopped. ' + RcSaveHint());
+    Exit;
+  end;
+  if not PL[p].Alive then
+  begin
+    RcEndEdit('You died: editing of spawn point #' + IntToStr(S) + ' stopped. ' + RcSaveHint());
+    Exit;
+  end;
+  if PL[p].KeyReload then
+  begin
+    RcEndEdit('Spawn point #' + IntToStr(S) + ' is now at X: ' + IntToStr(SP[S].X) + ', Y: ' + IntToStr(SP[S].Y) + '. ' +
+      RcSaveHint());
+    Exit;
+  end;
+  if Tick mod 5 <> 0 then
+    Exit;
+  X := SP[S].X;
+  Y := SP[S].Y;
+  if PL[p].KeyUp then
+    Y := Y - 1;
+  if PL[p].KeyCrouch then
+    Y := Y + 1;
+  if PL[p].KeyLeft then
+    X := X - 1;
+  if PL[p].KeyRight then
+    X := X + 1;
+  if X <> SP[S].X then
+    SP[S].X := X;
+  if Y <> SP[S].Y then
+    SP[S].Y := Y;
+  MovePlayer(PL[p], X, Y);
+  PL[p].SetVelocity(0, 0);
+end;
+
+{ ---- the takeover of the old Respawns-Control ---- }
+
+{ ImportOldScript = 1, a moment after the start: its layouts imported (a map that has a layout here keeps it), then
+  its folder out of the scripts - moved to data/imported/<folder>-<date> (OldScriptAction = move) or deleted - in
+  the moment the scripts are compiled again: the library's thread moves it right before it sends /recompile through
+  the server's admin port (the server runs it in its main loop, outside every script; the password goes to that
+  thread only), or, with no admin password, the admins are asked for a /recompile and RcOnRecompile moves it as
+  theirs comes in. Until then the old script works with its files and this module waits. }
+procedure RcConvert();
+var
+  n, Port: Integer;
+  Old, Info, Host, Pass: string;
+begin
+  RcConvDue := 0;
+  { switched off since it was planned }
+  if not (RcEnabled and RcImport) then
+    Exit;
+  Old := RcOldDir;
+  if Old = '' then
+    Exit;
+  n := BE_SpImport(PChar(Old + 'data' + Copy(Old, Length(Old), 1)));
+  Info := BE_SpImportInfo();
+  if n < 0 then
+  begin
+    RcTell('Respawns-Control (' + Old + ') could not be taken over: ' + Info + '. It keeps working; [Spawns] waits.',
+      ColorBad);
+    Exit;
+  end;
+  Pass := Game.AdminPassword;
+  if RcAutoRec then
+    if Pass <> '' then
+    begin
+      Host := Game.ServerIP;
+      if (Host = '') or (Host = '0.0.0.0') then
+        Host := '127.0.0.1';
+      Port := Game.ServerPort;
+      BE_SpRecompile(PChar(Host), Port, PChar(Pass), PChar(Old), PChar(RcScriptsDir), BoolInt(RcDelete));
+      Pass := '';
+      RcRecState := 1;
+      RcRecUntil := After(Game.TickCount, 600);
+      RcTell('Respawns-Control taken over: ' + Info + ' - ' + DataDir + 'spawns.bdb keeps them now; its folder leaves the ' +
+        'scripts and they are compiled again through the admin port.', ColorGood);
+      Exit;
+    end;
+  RcRetireOnCmd := True;
+  RcIdleWhy := 'Respawns-Control is taken over: a /recompile ends it (its folder leaves the scripts at that moment)';
+  RcTell('Respawns-Control taken over: ' + Info + ' - ' + DataDir + 'spawns.bdb keeps them now. Type /recompile to end it: ' +
+    'its folder leaves the scripts at that moment (until then it keeps working).', ColorGood);
+end;
+
+{ an admin's /recompile (all scripts) while the takeover waits for one: the old folder leaves the scripts now, before
+  the server looks for them again (the scripts hear a command before the server carries it out). /recompile <name>
+  keeps the old script loaded, so the folder stays for it. Nothing is written here: an event. }
+procedure RcOnRecompile(Command: string);
+var
+  C: string;
+begin
+  C := LowerCase(Trim(Command));
+  if (C <> '/recompile') and (C <> 'recompile') then
+    Exit;
+  RcRetireOnCmd := False;
+  if RcOldDir <> '' then
+    if BE_SpRetire(PChar(RcOldDir), PChar(RcScriptsDir), BoolInt(RcDelete)) = 1 then
+      RcOldDir := '';
+end;
+
+{ the recompile asked through the admin port: it unloads this script too (done then), or the admins are asked }
+procedure RcRecWatch(Tick: Integer);
+var
+  S: Integer;
+  T: string;
+begin
+  S := BE_SpRecompileState();
+  T := '';
+  if S = -1 then
+    T := 'the server''s admin port could not be reached'
+  else if S = -2 then
+    T := 'the admin port did not take the password'
+  else if S = -3 then
+    T := 'the folder ' + RcOldDir + ' could not be ' + iif(RcDelete, 'deleted', 'moved')
+  else if Tick >= RcRecUntil then
+    T := 'the server did not compile the scripts again within 10 seconds';
+  if T = '' then
+    Exit;
+  RcRecState := 0;
+  if (S = -1) or (S = -2) then
+  begin
+    { nothing moved: the folder goes with an admin's /recompile }
+    RcRetireOnCmd := True;
+    RcIdleWhy := 'Respawns-Control is taken over: a /recompile ends it (its folder leaves the scripts at that moment)';
+    RcTell(T + ': type /recompile to end the takeover of Respawns-Control (its folder leaves the scripts at that ' +
+      'moment).', ColorBad);
+  end
+  else if S = -3 then
+    RcTell(T + ': take it out of the scripts folder and /recompile; until then Respawns-Control keeps working.',
+      ColorBad)
+  else
+    RcTell(T + ': type /recompile (or restart the server) to end the takeover of Respawns-Control.', ColorBad);
+end;
+
+{ ---- the module's tick, start, stop, leave ---- }
+
+procedure RcTick(Tick: Integer);
+begin
+  if RcConvDue > 0 then
+    if Tick >= RcConvDue then
+    begin
+      { not in the middle of a map change: the old script still does that one }
+      if MapChanging then
+        RcConvDue := After(Tick, 60)
+      else
+        RcConvert();
+    end;
+  if RcRecState > 0 then
+    if Tick mod 30 = 0 then
+      RcRecWatch(Tick);
+  if not RcActive then
+    Exit;
+  { an announced map change that never came (a pause, a script that cancelled it) must not leave the damage off }
+  if Tick < RcChangeTick then
+    RcChangeTick := Tick;
+  if RcLoaded then
+  begin
+    if Tick - RcChangeTick >= RcMoveDelay then
+      RcMoveAll();
+  end
+  else if RcChanging then
+    if Tick - RcChangeTick > RcTimeout then
+    begin
+      RcChanging := False;
+      Log('[Spawns] the announced map change did not come: players take damage again');
+    end;
+  if RcTestAny > 0 then
+    RcTestMoves(Tick);
+  if RcEditId > 0 then
+    RcEditTick(Tick);
+  if RcShowN > 0 then
+    RcMarksTick(Tick);
+end;
+
+{ the start of the script, or a /reloadsettings that switched the module on: the table bound, the takeover of the
+  old script planned }
+procedure RcStart();
+var
+  Info: string;
+begin
+  if RcActive then
+  begin
+    RcBind();
+    Info := BE_SpInfo();
+    Log('[Spawns] on: ' + Info);
+    RcLoadBad := Pos('neither ', Info) > 0;
+  end
+  else if RcEnabled then
+    Log('[Spawns] idle: ' + RcIdleWhy);
+  if RcEnabled then
+    if RcImport then
+      if RcOldDir <> '' then
+        if RcConvDue = 0 then
+          RcConvDue := After(Game.TickCount, RC_TAKEOVER_TICKS);
+end;
+
+{ the module idle after a /reloadsettings: nothing of it stays - the damage block, the moves, the edit, the marks }
+procedure RcStop();
+var
+  i: Integer;
+begin
+  RcChanging := False;
+  RcLoaded := False;
+  RcEditId := 0;
+  RcEditor := 0;
+  RcTestAny := 0;
+  for i := 1 to 32 do
+  begin
+    RcMovePend[i] := False;
+    RcTestTo[i] := 0;
+    if RcShow[i] then
+    begin
+      RcShow[i] := False;
+      if ActiveSlot[i] then
+        RcMarksOff(i, True);
+    end;
+  end;
+  RcShowN := 0;
+  Log('[Spawns] idle: ' + RcIdleWhy);
+end;
+
+procedure RcLeave(ID: Integer);
+begin
+  if RcShow[ID] then
+  begin
+    RcShow[ID] := False;
+    RcShowN := RcShowN - 1;
+    if RcShowN < 0 then
+      RcShowN := 0;
+    RcMarksOff(ID, False);
+  end;
+  if RcEditor = ID then
+  begin
+    RcEditId := 0;
+    RcEditor := 0;
+  end;
+  if RcTestTo[ID] > 0 then
+  begin
+    RcTestTo[ID] := 0;
+    RcTestAny := RcTestAny - 1;
+    if RcTestAny < 0 then
+      RcTestAny := 0;
+  end;
+  RcTestLast[ID] := 0;
+  RcMovePend[ID] := False;
+end;
+
+{ the server's tick counter started again from 0 }
+procedure RcClockWrapped(Tick: Integer);
+var
+  i, k: Integer;
+begin
+  RcChangeTick := Tick;
+  if RcConvDue > 0 then
+    RcConvDue := Tick;
+  if RcRecState > 0 then
+    RcRecUntil := After(Tick, 600);
+  for i := 1 to 32 do
+  begin
+    RcTestTick[i] := Tick;
+    for k := 0 to RC_MARKS - 1 do
+      RcMkUntil[i][k] := 0;
+  end;
+end;
+
+{ ---- the commands ---- }
+
+{ the commands that work where the admin stands need him on a team and alive }
+function RcCanStand(ID: Integer): Boolean;
+begin
+  Result := False;
+  if PL[ID].Team > 4 then
+  begin
+    Say(ID, 'Join a team first: this command works where you stand.', ColorBad);
+    Exit;
+  end;
+  if not PL[ID].Alive then
+  begin
+    Say(ID, 'You are dead: this command works where you stand.', ColorBad);
+    Exit;
+  end;
+  Result := True;
+end;
+
+procedure RcCmdShow(ID: Integer);
+begin
+  RcShow[ID] := not RcShow[ID];
+  if RcShow[ID] then
+  begin
+    RcShowN := RcShowN + 1;
+    RcMarksOff(ID, False);
+    RcViewX[ID] := PL[ID].X;
+    RcViewY[ID] := PL[ID].Y;
+    Say(ID, 'Spawn points shown: + and the point number over the ' + IntToStr(RcMarkN) + ' nearest (grey no team, ' +
+      'red Alpha, blue Bravo, yellow Charlie, green Delta).', ColorGood);
+  end
+  else
+  begin
+    RcShowN := RcShowN - 1;
+    if RcShowN < 0 then
+      RcShowN := 0;
+    RcMarksOff(ID, True);
+    Say(ID, 'Spawn points hidden.', ColorGood);
+  end;
+end;
+
+procedure RcCmdCreate(ID: Integer; Args: string);
+var
+  Style, X, Y: Integer;
+  W: string;
+  NP: TNewSpawnPoint;
+  Added: TActiveSpawnPoint;
+begin
+  Style := 0;
+  W := Trim(Args);
+  if W <> '' then
+  begin
+    Style := StrToIntDef(FirstWord(W), -1);
+    if (Style < 0) or (Style > 4) then
+    begin
+      Say(ID, 'Use: /' + CmdWordNow + ' [0-4] (0 no team, 1 Alpha, 2 Bravo, 3 Charlie, 4 Delta).', ColorBad);
+      Exit;
+    end;
+  end;
+  if not RcCanStand(ID) then
+    Exit;
+  X := Round(PL[ID].X);
+  Y := Round(PL[ID].Y - 5);
+  Added := nil;
+  NP := TNewSpawnPoint.Create;
+  try
+    NP.Active := True;
+    NP.X := X;
+    NP.Y := Y;
+    NP.Style := Style;
+    Added := Map.AddSpawnPoint(NP);
+  finally
+    NP.Free;
+  end;
+  if Added = nil then
+  begin
+    Say(ID, 'Could not add the spawn point: all ' + IntToStr(MAX_SPAWN_ID) + ' spawn point slots of the map are taken.',
+      ColorBad);
+    Exit;
+  end;
+  MnMapScan();
+  Say(ID, 'Added player spawn point ' + RcPointText(Added.ID) + '. ' + RcSaveHint(), ColorGood);
+end;
+
+procedure RcCmdRemove(ID: Integer);
+var
+  S: Integer;
+begin
+  if not RcCanStand(ID) then
+    Exit;
+  S := RcNearest(PL[ID].X, PL[ID].Y, RcNearPx);
+  if S = 0 then
+  begin
+    Say(ID, 'No player spawn point within ' + IntToStr(Round(RcNearPx)) + ' pixels.', ColorBad);
+    Exit;
+  end;
+  Say(ID, 'Removed player spawn point ' + RcPointText(S) + '. ' + RcSaveHint(), ColorGood);
+  SP[S].Active := False;
+  if S = RcEditId then
+    RcEndEdit('Spawn point #' + IntToStr(S) + ' was removed: editing stopped.')
+  else
+    MnMapScan();
+end;
+
+procedure RcCmdClear(ID: Integer);
+var
+  i, n: Integer;
+begin
+  n := 0;
+  for i := 1 to MAX_SPAWN_ID do
+    if RcIsPoint(i) then
+    begin
+      SP[i].Active := False;
+      n := n + 1;
+    end;
+  if RcEditId > 0 then
+    RcEndEdit('Spawn point #' + IntToStr(RcEditId) + ' was removed: editing stopped.')
+  else
+    MnMapScan();
+  Say(ID, 'Removed all ' + IntToStr(n) + ' player spawn points of ' + Game.CurrentMap + ' (its saved layout stays ' +
+    'until /' + RcSaveWord + ').', ColorGood);
+end;
+
+procedure RcCmdEdit(ID: Integer);
+var
+  S: Integer;
+begin
+  if RcEditId > 0 then
+  begin
+    if RcEditor = ID then
+      RcEndEdit('Stopped editing spawn point ' + RcPointText(RcEditId) + '. ' + RcSaveHint())
+    else
+      Say(ID, PL[RcEditor].Name + ' is editing spawn point #' + IntToStr(RcEditId) + ' now.', ColorBad);
+    Exit;
+  end;
+  if not RcCanStand(ID) then
+    Exit;
+  S := RcNearest(PL[ID].X, PL[ID].Y, RcNearPx);
+  if S = 0 then
+  begin
+    Say(ID, 'No player spawn point within ' + IntToStr(Round(RcNearPx)) + ' pixels.', ColorBad);
+    Exit;
+  end;
+  RcEditId := S;
+  RcEditor := ID;
+  Say(ID, 'Editing spawn point ' + RcPointText(S) + '.', ColorGood);
+  Say(ID, 'Up (jump), down (crouch), left and right move it a pixel a step; reload or /' + CmdWordNow +
+    ' again ends it.', ColorGood);
+end;
+
+{ /testrespawn [id|next]: a respawn (ChangeTeam to the same team, the only respawn ScriptCore has) and a moment
+  later a move onto the point; survival kills whoever respawns during a round, so there it is the move alone }
+procedure RcCmdTest(ID: Integer; Args: string);
+var
+  S: Integer;
+  A: string;
+begin
+  if PL[ID].Team > 4 then
+  begin
+    Say(ID, 'Join a team first: /' + CmdWordNow + ' respawns you.', ColorBad);
+    Exit;
+  end;
+  if RcEditor = ID then
+  begin
+    Say(ID, 'You are editing spawn point #' + IntToStr(RcEditId) + ': end that first.', ColorBad);
+    Exit;
+  end;
+  if RcChanging or MapChanging then
+  begin
+    Say(ID, 'The map is changing: try again in a moment.', ColorBad);
+    Exit;
+  end;
+  if Game.Survival then
+    if not PL[ID].Alive then
+    begin
+      Say(ID, 'Survival kills a player who respawns during a round, so here /' + CmdWordNow + ' only moves a ' +
+        'living player.', ColorBad);
+      Exit;
+    end;
+  A := LowerCase(Trim(Args));
+  if A = '' then
+    S := RcNearest(PL[ID].X, PL[ID].Y, 0)
+  else if A = 'next' then
+    S := RcNext(RcTestLast[ID])
+  else
+  begin
+    S := StrToIntDef(A, -1);
+    if (S < 1) or (S > MAX_SPAWN_ID) then
+    begin
+      Say(ID, 'Use: /' + CmdWordNow + ' [id|next] (id 1-' + IntToStr(MAX_SPAWN_ID) + ').', ColorBad);
+      Exit;
+    end;
+    if not RcIsPoint(S) then
+    begin
+      Say(ID, 'Spawn point #' + IntToStr(S) + ' is not an active player spawn point.', ColorBad);
+      Exit;
+    end;
+  end;
+  if S = 0 then
+  begin
+    Say(ID, 'There is no active player spawn point on this map.', ColorBad);
+    Exit;
+  end;
+  RcTestLast[ID] := S;
+  if RcTestTo[ID] = 0 then
+    RcTestAny := RcTestAny + 1;
+  RcTestTo[ID] := S;
+  RcTestTick[ID] := Game.TickCount;
+  if not Game.Survival then
+    PL[ID].ChangeTeam(PL[ID].Team, TJoinSilent);
+end;
+
+procedure RcCmdCount(ID: Integer);
+var
+  s, Total, n: Integer;
+  T: string;
+begin
+  Total := RcCount(-1);
+  n := BE_SpSelect(PChar(Game.CurrentMap));
+  if n > 0 then
+    T := 'its layout has ' + IntToStr(n) + ' points'
+  else
+    T := 'it has no layout (its own points)';
+  if Total = 0 then
+  begin
+    Say(ID, 'No player spawn points on ' + Game.CurrentMap + '; ' + T + '.', ColorBad);
+    Exit;
+  end;
+  Say(ID, 'Active player spawn points on ' + Game.CurrentMap + ': ' + IntToStr(Total) + '; ' + T + '.', ColorGood);
+  T := '';
+  for s := 0 to 4 do
+  begin
+    if T <> '' then
+      T := T + ', ';
+    T := T + RcStyleName(s) + ' ' + IntToStr(RcCount(s));
+  end;
+  Say(ID, T, ColorGood);
+end;
+
+{ the map's active player points become its layout (written by the library a moment later) }
+procedure RcCmdSave(ID: Integer);
+var
+  i, n: Integer;
+  M: string;
+begin
+  M := Game.CurrentMap;
+  BE_SpBegin(PChar(M));
+  n := 0;
+  for i := 1 to MAX_SPAWN_ID do
+    if RcIsPoint(i) then
+      if BE_SpAdd(SP[i].Style, SP[i].X, SP[i].Y) = 1 then
+        n := n + 1;
+  if n = 0 then
+  begin
+    Say(ID, 'No player spawn points to save.', ColorBad);
+    Exit;
+  end;
+  BE_SpCommit();
+  Say(ID, 'Saved the layout of ' + M + ': ' + IntToStr(n) + ' player spawn points (' + DataDir + 'spawns.bdb).', ColorGood);
+  if RcEditId > 0 then
+    RcEndEdit('The layout was saved: editing of spawn point #' + IntToStr(RcEditId) + ' stopped.');
+end;
+
+{ every point against the map's walls (the library reads them, [MapGeometry]) }
+procedure RcCmdCheck(ID: Integer);
+var
+  n, k, PID, Kind, Other, Shown: Integer;
+  V: Single;
+  T: string;
+begin
+  if not RcTabOk then
+    RcBind();
+  n := BE_SpCheck(RcFloorPx, RcMinGap);
+  if n < 0 then
+  begin
+    Say(ID, 'The check needs the map''s walls ([MapGeometry] Enabled = 1) and the spawn table in the library.',
+      ColorBad);
+    Exit;
+  end;
+  if n = 0 then
+  begin
+    Say(ID, 'All ' + IntToStr(RcCount(-1)) + ' player spawn points of ' + Game.CurrentMap + ' look fine: none in a ' +
+      'wall, a floor within ' + IntToStr(Round(RcFloorPx)) + ' px under each, none closer than ' +
+      IntToStr(Round(RcMinGap)) + ' px to another of its team.', ColorGood);
+    Exit;
+  end;
+  Say(ID, Game.CurrentMap + ': ' + IntToStr(n) + ' finding(s):', ColorBad);
+  Shown := 0;
+  for k := 0 to n - 1 do
+    if Shown < 15 then
+      if BE_SpCheckGet(k, PID, Kind, Other, V) = 1 then
+      begin
+        case Kind of
+          1: T := 'in a wall';
+          2: T := 'no floor within ' + IntToStr(Round(V)) + ' px under it';
+          3: T := IntToStr(Round(V)) + ' px from #' + IntToStr(Other) + ' of its team';
+        else
+          T := '?';
+        end;
+        Say(ID, '  ' + RcPointText(PID) + ': ' + T, ColorBad);
+        Shown := Shown + 1;
+      end;
+  if n > Shown then
+    Say(ID, '  ... and ' + IntToStr(n - Shown) + ' more.', ColorBad);
+end;
+
+procedure RcCmdList(ID: Integer; Args: string);
+var
+  i, n, Shown: Integer;
+  F, Name, Line: string;
+begin
+  F := LowerCase(Trim(Args));
+  n := BE_SpMaps();
+  if n = 0 then
+  begin
+    Say(ID, 'No spawn layouts yet (/' + RcSaveWord + ' saves the points of the map).', ColorBad);
+    Exit;
+  end;
+  Say(ID, 'Spawn layouts of ' + IntToStr(n) + ' maps (points):', ColorGood);
+  Line := '';
+  Shown := 0;
+  for i := 0 to n - 1 do
+  begin
+    Name := BE_SpMapName(i);
+    if (F = '') or (Pos(F, LowerCase(Name)) > 0) then
+    begin
+      if Line <> '' then
+        Line := Line + ', ';
+      Line := Line + Name + ' (' + IntToStr(BE_SpMapPoints(i)) + ')';
+      Shown := Shown + 1;
+      if Length(Line) > 70 then
+      begin
+        Say(ID, Line, ColorGood);
+        Line := '';
+      end;
+    end;
+  end;
+  if Line <> '' then
+    Say(ID, Line, ColorGood);
+  if Shown = 0 then
+    Say(ID, 'None of them has "' + F + '" in its name.', ColorBad);
+end;
+
+procedure RcCmdDelete(ID: Integer; Args: string);
+var
+  M: string;
+begin
+  M := Trim(Args);
+  if M = '' then
+    M := Game.CurrentMap;
+  if BE_SpDelete(PChar(M)) = 1 then
+    Say(ID, 'The spawn layout of ' + M + ' was deleted: from its next load the map has its own points again.',
+      ColorGood)
+  else
+    Say(ID, M + ' has no spawn layout (/' + RcListWord + ' lists them).', ColorBad);
+end;
+
+procedure RcCmdExport(ID: Integer);
+var
+  n: Integer;
+  D: string;
+begin
+  D := DataDir + 'exported/';
+  n := BE_SpExport(PChar(D));
+  if n = 0 then
+    Say(ID, 'No spawn layouts to export.', ColorBad)
+  else
+    Say(ID, IntToStr(n) + ' spawn layouts written to ' + D + ' (a file a map, the old script''s four lines a point).',
+      ColorGood);
+end;
+
+procedure RcCommand(ID, Cmd: Integer; Args: string);
+begin
+  if not RcActive then
+  begin
+    Say(ID, '[Spawns] is idle: ' + RcIdleWhy, ColorBad);
+    Exit;
+  end;
+  { the commands that work where the admin stands, or for him alone }
+  if (Cmd = C_RCSHOW) or (Cmd = C_RCCREATE) or (Cmd = C_RCREMOVE) or (Cmd = C_RCEDIT) or (Cmd = C_RCTEST) then
+    if (ID < 1) or (ID > 32) then
+    begin
+      Say(ID, '/' + CmdWordNow + ' works for an admin in the game only.', ColorBad);
+      Exit;
+    end;
+  case Cmd of
+    C_RCSHOW: RcCmdShow(ID);
+    C_RCCREATE: RcCmdCreate(ID, Args);
+    C_RCREMOVE: RcCmdRemove(ID);
+    C_RCCLEAR: RcCmdClear(ID);
+    C_RCEDIT: RcCmdEdit(ID);
+    C_RCTEST: RcCmdTest(ID, Args);
+    C_RCCOUNT: RcCmdCount(ID);
+    C_RCSAVE: RcCmdSave(ID);
+    C_RCCHECK: RcCmdCheck(ID);
+    C_RCLIST: RcCmdList(ID, Args);
+    C_RCDELETE: RcCmdDelete(ID, Args);
+    C_RCEXPORT: RcCmdExport(ID);
+  end;
+end;
+
 { /reloadsettings: what was active before; after it a module gone idle ends what it holds }
 procedure ModulesKeep();
 begin
@@ -38302,6 +41054,10 @@ begin
   WasBd := BdActive;
   WasDw := DwActive;
   WasBn := BnActive;
+  WasPz := PzEnabled;
+  WasRc := RcActive;
+  { [Spawns]: the marks' layers may change }
+  RcMarksAllOff();
 end;
 
 procedure ModulesOff();
@@ -38332,6 +41088,25 @@ begin
   end;
   if WasIns and (not InsActive) then
     InsAllOff();
+  { [Pause] switched off while the game stands paused by it: PzTickRun no longer runs, so nothing else would end it }
+  if WasPz then
+    if not PzEnabled then
+      if PzOurs then
+        if Game.Paused then
+        begin
+          Game.Paused := False;
+          PzSince := 0;
+          PzCountEnd := 0;
+          PzBy := 0;
+          PzOurs := False;
+          SayAll('The pause is over: [Pause] was switched off.', PzColor);
+        end;
+  if WasRc and (not RcActive) then
+    RcStop()
+  else if RcActive and (not WasRc) then
+    RcStart()
+  else if RcEnabled and RcImport and (RcOldDir <> '') and (RcConvDue = 0) then
+    RcStart();
 end;
 
 procedure RunCommand(ID, Cmd: Integer; Args: string; Console: Boolean);
@@ -38538,7 +41313,7 @@ begin
           if i <> ID then
             if PL[i].Active then
               if PL[i].Alive then
-                if not (AdKillSkipAdmins and PL[i].IsAdmin) then
+                if not (AdKillSkipAdmins and AdminOf(i)) then
                 begin
                   ServerKill[i] := Game.TickCount;
                   PL[i].Damage(i, 4000);
@@ -38551,7 +41326,7 @@ begin
         for i := 1 to Top do
           if i <> ID then
             if PL[i].Active then
-              if not (AdKickSkipAdmins and PL[i].IsAdmin) then
+              if not (AdKickSkipAdmins and AdminOf(i)) then
                 PL[i].Kick(TKickSilent);
       end;
     C_EXPLODEALL: CmdExplode(ID, 'all ' + Args, FX_PLAIN);
@@ -38568,6 +41343,13 @@ begin
         for i := 1 to TopSlot do
           OverlayHide(i);
         LoadAll();
+        if SetsReadFailed then
+        begin
+          { settings.ini could not be read: LoadAll changed nothing }
+          Say(ID, 'settings.ini cannot be read now (another program has it open?) - nothing was changed, try again in ' +
+            'a moment.', ColorBad);
+          Exit;
+        end;
         FnApply();
         { a HUD line whose layer changed: the old text goes (it would stay for its whole time) }
         HlLayersMoved();
@@ -38625,8 +41407,20 @@ begin
         { like Basic 2.0.2: the maps list file is read again }
         if File.Exists(MapsFile) then
           Game.LoadList(MapsFile);
+        { 4.2 (BE1-03): a shorter interval of [Tips], [Welcome], [ServerPing] counts from now, not from the old,
+          longer term (a longer one waits for the old term, as before) }
+        T := Game.TickCount;
+        if DueTip > After(T, TiTicks) then
+          DueTip := After(T, TiTicks);
+        if WeTicks > 0 then
+          if DueWelcome > After(T, WeTicks) then
+            DueWelcome := After(T, WeTicks);
+        if DuePing > After(T, SpTicks) then
+          DuePing := After(T, SpTicks);
         Say(ID, 'Settings loaded successfully!', ColorGood);
       end;
+    C_RCSHOW, C_RCCREATE, C_RCREMOVE, C_RCCLEAR, C_RCEDIT, C_RCTEST, C_RCCOUNT, C_RCSAVE, C_RCCHECK, C_RCLIST,
+    C_RCDELETE, C_RCEXPORT: RcCommand(ID, Cmd, Args);
     C_STATUS: CmdStatus(ID, Args);
     C_PROF: CmdProf(ID, Args);
     C_BENCH: CmdBench(ID, Args);
@@ -38690,7 +41484,7 @@ end;
 
 { /be_test <slot> <text>: runs a chat line or a command of this script as if that player had typed
   it; the answers are written to the server console too (a testing aid for admins) }
-procedure RunTest(ID: Integer; Args: string);
+procedure RunTest(ID: Integer; Args: string; Console: Boolean);
 var
   Slot, Cmd: Integer;
   Text, S: string;
@@ -38707,6 +41501,15 @@ begin
     Say(ID, 'There is no such player on the server.', ColorBad);
     Exit;
   end;
+  { from the game only a bot or oneself: to act as another human (his wallet, his Steam id, his admin rights) is for the
+    server console }
+  if not Console then
+    if PL[Slot].Human and (Slot <> ID) then
+    begin
+      Say(ID, 'From the game /be_test works for bots and for yourself; as another player only from the server console.',
+        ColorBad);
+      Exit;
+    end;
   TestEcho := True;
   try
     if Text[1] = '/' then
@@ -38716,6 +41519,8 @@ begin
         Say(ID, 'Not a command of this script: ' + Text, ColorBad)
       else if not CanUse(Slot, Cmd, False) then
         Say(ID, 'That player may not use it.', ColorBad)
+      else if not CanUse(ID, Cmd, Console) then
+        Say(ID, 'You may not use it yourself.', ColorBad)
       else if Cmd <> C_TEST then
       begin
         S := Trim(Text);
@@ -38754,7 +41559,7 @@ begin
     Delete(S, 1, 1);
   CmdWordNow := LowerCase(FirstWord(S));
   if Cmd = C_TEST then
-    RunTest(ID, AfterFirstWord(S))
+    RunTest(ID, AfterFirstWord(S), Console)
   else
     RunCommand(ID, Cmd, AfterFirstWord(S), Console);
 end;
@@ -38767,6 +41572,9 @@ begin
     Exit;
   k := (PendHead + PendCount) mod PEND_SIZE;
   PendSlot[k] := Slot;
+  PendGen[k] := 0;
+  if (Slot >= 1) and (Slot <= 32) then
+    PendGen[k] := SlotGen[Slot];
   PendKind[k] := Kind;
   PendText[k] := Text;
   PendCount := PendCount + 1;
@@ -38774,7 +41582,7 @@ end;
 
 procedure RunPending();
 var
-  n, Slot, Kind: Integer;
+  n, Slot, Kind, Gen: Integer;
   Text: string;
 begin
   n := 0;
@@ -38784,6 +41592,7 @@ begin
       Break;
     Slot := PendSlot[PendHead];
     Kind := PendKind[PendHead];
+    Gen := PendGen[PendHead];
     Text := PendText[PendHead];
     PendHead := (PendHead + 1) mod PEND_SIZE;
     PendCount := PendCount - 1;
@@ -38792,10 +41601,14 @@ begin
       RunSlash(0, Text, True)
     else if PL[Slot].Active then
     begin
-      if Kind = SRC_CHAT then
-        RunChat(Slot, Text)
-      else
-        RunSlash(Slot, Text, False);
+      { the player who typed it may be gone, and another one in his slot }
+      if Gen = SlotGen[Slot] then
+      begin
+        if Kind = SRC_CHAT then
+          RunChat(Slot, Text)
+        else
+          RunSlash(Slot, Text, False);
+      end;
     end;
   end;
 end;
@@ -38975,7 +41788,7 @@ begin
         begin
           AfIdle[i] := 0;
           if AfIgnoreAdmins then
-            if P.IsAdmin then
+            if AdminOf(i) then
               Continue;
           SayAll(ReplaceAll(AfText, '{player}', P.Name), ColorBad);
           P.ChangeTeam(TEAM_SPECTATOR, TJoinSilent);
@@ -38991,6 +41804,19 @@ var
   P: TActivePlayer;
   S: string;
 begin
+  { 4.2 (BE1-01): settings.ini could not be read at the start: tried again every 5 seconds, 12 times }
+  if SetsRetryLeft > 0 then
+    if Tick >= SetsRetryAt then
+    begin
+      SetsRetryLeft := SetsRetryLeft - 1;
+      SetsRetryAt := After(Tick, 300);
+      RunCommand(0, C_RELOAD, '', True);
+      if not SetsReadFailed then
+      begin
+        SetsRetryLeft := 0;
+        Log('settings.ini read now');
+      end;
+    end;
   { a map change that was announced and never came (a pause during the countdown) }
   if MapChanging then
     if Tick - MapChangeTick > MAPCHANGE_TIMEOUT then
@@ -39069,7 +41895,8 @@ begin
           if ActiveSlot[i] then
             if HumanOf[i] then
               if TeamOf[i] = TEAM_SPECTATOR then
-                if not (SiIgnoreAdmins and PL[i].IsAdmin) then
+                if not LgdBlocked[i] then
+                if not (SiIgnoreAdmins and AdminOf(i)) then
                 begin
                   SpecLeft[i] := SiSeconds;
                   Say(i, 'Remember, you cannot idle as spectator forever: you will be kicked in ' +
@@ -39086,7 +41913,10 @@ begin
             SpecLeft[i] := 0
           else if P.Team <> TEAM_SPECTATOR then
             SpecLeft[i] := 0
-          else if SiIgnoreAdmins and P.IsAdmin then
+          else if SiIgnoreAdmins and AdminOf(i) then
+            SpecLeft[i] := 0
+          else if LgdBlocked[i] then
+            { [LagGuard] keeps him in the spectators: he is not idling, and the lag guard never kicks }
             SpecLeft[i] := 0
           else
           begin
@@ -39172,6 +42002,7 @@ procedure ClockWrapped(Tick: Integer);
 var
   i, j: Integer;
 begin
+  RcClockWrapped(Tick);
   DueRegen := Tick;
   DueScan := Tick;
   DueSecond := Tick;
@@ -39295,7 +42126,17 @@ begin
       ShSpawnTick[i] := ShSpawnTick[i] + N;
     if ShIncomeAt[i] > 0 then
       ShIncomeAt[i] := ShIncomeAt[i] + N;
+    { 4.2 (BE6-11): [Resupply] (crouching time, wait) and [LagGuard]'s next warning ran through the pause too }
+    if RySince[i] > 0 then
+      RySince[i] := RySince[i] + N;
+    if RyNextOk[i] > 0 then
+      RyNextOk[i] := RyNextOk[i] + N;
+    if LgdNextWarn[i] > 0 then
+      LgdNextWarn[i] := LgdNextWarn[i] + N;
   end;
+  { [Teams] AutoBalance: how long the teams have been uneven }
+  if TeUnevenSince > 0 then
+    TeUnevenSince := TeUnevenSince + N;
   for k := 0 to 15 do
     if ShStatEnd[k] > 0 then
       ShStatEnd[k] := ShStatEnd[k] + N;
@@ -39485,6 +42326,29 @@ begin
         BE_ProfEnd(34);
     except
       StageError('survival carry-over');
+    end;
+  { 4.1 [Spawns]: the first tick of this start - the scripts are compiled again; the admin connection of the
+    takeover's /recompile closes only now (its end, an event of the admin's own thread, crashed 2.8.2 in the middle
+    of a recompile) }
+  if not RcTicked then
+  begin
+    RcTicked := True;
+    if BeOk then
+      if BE_SpRecompileDone() = 1 then
+        Log('[Spawns] the scripts were compiled again without Respawns-Control (' + BE_SpRetired() + '): the ' +
+          'layouts work from the next map');
+  end;
+  { 4.1 [Spawns]: the moves after a map change and its timeout, /testrespawn, the edited point, the marks, the
+    takeover of the old script }
+  if RcActive or (RcConvDue > 0) or (RcRecState > 0) then
+    try
+      if ProfOn then
+        BE_ProfBegin(44);
+      RcTick(Tick);
+      if ProfOn then
+        BE_ProfEnd(44);
+    except
+      StageError('spawns');
     end;
   if SfCount > 0 then
     try
@@ -39905,6 +42769,31 @@ begin
     QueueText(Player.ID, SRC_CHAT, Text);
 end;
 
+{ [AntiSpam]: an admin's /gmute or /ungmute of the server (also /mute, /unmute when they are not words of this script):
+  who has the server's mute on him is remembered, so the end of this script's timed mute does not lift it }
+procedure SqNoteServerMute(Command: string);
+var
+  S, W: string;
+  T: Integer;
+  On: Boolean;
+begin
+  if not SqEnabled then
+    Exit;
+  S := Trim(Command);
+  if Copy(S, 1, 1) = '/' then
+    Delete(S, 1, 1);
+  W := LowerCase(FirstWord(S));
+  if (W = 'gmute') or ((W = 'mute') and (SlashCommandId(S) = 0)) then
+    On := True
+  else if (W = 'ungmute') or ((W = 'unmute') and (SlashCommandId(S) = 0)) then
+    On := False
+  else
+    Exit;
+  T := FindPlayer(AfterFirstWord(S));
+  if (T >= 1) and (T <= 32) then
+    SqAdminMute[T] := On;
+end;
+
 { a command typed by a player: run on the next tick. True keeps the server from running it itself
   (Soldat's own /info when [Info] HideSoldatInfo = 1). }
 function OnCommandEv(Player: TActivePlayer; Command: string): Boolean;
@@ -39912,10 +42801,24 @@ var
   ID, Cmd: Integer;
 begin
   Result := False;
+  ID := Player.ID;
+  { [Admin] SharedIp = kick: he is removed in a moment, and the address may still make him an admin for it }
+  if AdSharedMode = SHARE_KICK then
+    if BanAt[ID] > 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+  { [Spawns]: an admin's /recompile ends the takeover of Respawns-Control }
+  if RcRetireOnCmd then
+    if AdminOf(ID) then
+      RcOnRecompile(Command);
+  if SqEnabled then
+    if AdminOf(ID) then
+      SqNoteServerMute(Command);
   if LgEnabled then
     if LgCommands then
-      LogLine(Player.ID, Player.Name + ' command: ' + LogCommand(Command));
-  ID := Player.ID;
+      LogLine(ID, Player.Name + ' command: ' + LogCommand(Command));
   { [AntiSpam] CountCommands: a command counts as a line }
   if SqActive then
     if SqCommands then
@@ -39923,15 +42826,20 @@ begin
   Cmd := SlashCommandId(Command);
   if Cmd = 0 then
     Exit;
-  if (SeenTick[ID] = Game.TickCount) and (SeenText[ID] = Command) then
-    Exit;
-  SeenTick[ID] := Game.TickCount;
-  SeenText[ID] := Command;
-  QueueText(ID, SRC_COMMAND, Command);
+  { what the script answers must not be run by the server as well - also the second copy of the same command in one
+    tick, which is not queued again }
   if Cmd = C_INFO then
     Result := InHide;
   if AdSuppress(Cmd, Command, False) then
     Result := True;
+  if (SeenTick[ID] = Game.TickCount) and (SeenText[ID] = Command) then
+    Exit;
+  SeenTick[ID] := Game.TickCount;
+  SeenText[ID] := Command;
+  { the queue is full: the script cannot answer, so the server's own command is better than none }
+  if PendCount >= PEND_SIZE then
+    Result := False;
+  QueueText(ID, SRC_COMMAND, Command);
 end;
 
 { Player = nil: the server console or a TCP admin. An admin in the game sends the same command
@@ -39941,8 +42849,12 @@ var
   ID, Cmd: Integer;
 begin
   Result := False;
+  { [Spawns]: a /recompile ends the takeover of Respawns-Control }
+  if RcRetireOnCmd then
+    RcOnRecompile(Command);
   if BeOk then
     LoadWepSeen(Command);
+  SqNoteServerMute(Command);
   if LgEnabled then
     if LgAdmins then
       if Player = nil then
@@ -39952,15 +42864,21 @@ begin
     Exit;
   if Player = nil then
   begin
-    QueueText(0, SRC_CONSOLE, Command);
     Result := AdSuppress(Cmd, Command, True);
+    if PendCount >= PEND_SIZE then
+      Result := False;
+    QueueText(0, SRC_CONSOLE, Command);
     Exit;
   end;
   ID := Player.ID;
+  { an admin in the game: the same suppression as in OnCommand, whichever of the two events the server runs first }
+  Result := AdSuppress(Cmd, Command, False);
   if (SeenTick[ID] = Game.TickCount) and (SeenText[ID] = Command) then
     Exit;
   SeenTick[ID] := Game.TickCount;
   SeenText[ID] := Command;
+  if PendCount >= PEND_SIZE then
+    Result := False;
   QueueText(ID, SRC_COMMAND, Command);
 end;
 
@@ -40166,7 +43084,26 @@ begin
 end;
 
 function OnDamageEv(Shooter, Victim: TActivePlayer; Damage: Single; BulletId: Byte): Single;
+var
+  Keep: Boolean;
 begin
+  { [Spawns]: nobody takes damage while the map changes, until the players stand on the layout - the server's own
+    blow at a player's joining a team in survival (4000 on himself, 1000 through a vest) and the kills of this
+    script (also 4000) go through: blocked, the death would be undone but the server still takes the death off
+    the board }
+  if RcChanging then
+    if Damage > 0 then
+    begin
+      Keep := False;
+      if Shooter.ID = Victim.ID then
+        if (Damage > SERVER_HIT_DAMAGE) or (Damage = 1000) then
+          Keep := True;
+      if not Keep then
+      begin
+        Result := 0;
+        Exit;
+      end;
+    end;
   if ProfOn then
     BE_ProfBegin(27);
   Result := Damage;
@@ -40197,8 +43134,8 @@ begin
         if InsArmAt[Victim.ID] > 0 then
           if BeOk then
             if (BulletId >= 1) and (BulletId <= 254) then
-              InsHitPart[Victim.ID] := BE_BodyHitPart(Victim.ID, BL[BulletId].Style, BL[BulletId].X, BL[BulletId].Y,
-                BL[BulletId].VelX, BL[BulletId].VelY);
+              InsHitPart[Victim.ID] := BE_BodyHitPart(Victim.ID, BulletId, BL[BulletId].Style, BL[BulletId].X,
+                BL[BulletId].Y, BL[BulletId].VelX, BL[BulletId].VelY);
   except
     StageError('damage');
   end;
@@ -40244,6 +43181,11 @@ begin
   Tick := Game.TickCount;
   { the survival round's end (the server's hit on the survivors), the same test for every module }
   RE := Game.Survival and (K = V) and (CyRoundHit[V] = Tick) and (not MapChanging);
+  { BE6-03: the server's hit of the round's end (4000 on a survivor) comes when the round is over - his enemies are all
+    dead; the same hit from an exploding polygon in the middle of a round is an ordinary death }
+  if RE then
+    if ShEnemiesAlive(V) > 0 then
+      RE := False;
   { [Bleeding], [Downed], [Bounty], the survival carry-over }
   LfOnKill(K, V, Tick);
   { [Shop]: the killer's money, a death's losses, the end of a survival round }
@@ -40575,7 +43517,13 @@ begin
     ShWeaponSeen(Player.ID, Primary.WType, Secondary.WType);
   { [Classes]: a weapon of the first 3 s of a life (a lagging player's menu): checked in the next ticks }
   if ClsActive then
+  begin
+    { BE5-07: the event comes before the change - hands empty after, a weapon in them now: he threw it away }
+    if Primary.WType = WEP_NONE then
+      if Player.Primary.WType <> WEP_NONE then
+        ClsThrew[Player.ID] := True;
     ClsWeaponSeen(Player.ID);
+  end;
   if AmmoEnabled then
   begin
     { the game drops the weapon in the hands (thrown away, a death, a team change, leaving the game):
@@ -40684,7 +43632,12 @@ begin
   AcVoted[ID] := -1000000;
   AcSkip[ID] := -1000000;
   if BeOk then
+  begin
     BE_AcReset(ID);
+    { the 2.8.2 server respawns a new player before OnJoin (RespawnRun told the grace), and the reset wiped it:
+      another script (ZitroStats) may move him to the base of his team in the next tick }
+    BE_AcMoved(ID, Game.TickCount);
+  end;
   RsWait[ID] := 0;
   MdWants[ID] := False;
   LgWatched[ID] := False;
@@ -40766,6 +43719,8 @@ begin
   RkNextAt[ID] := 0;
   RkLawShot[ID] := -1000000;
   RkLaunchAt[ID] := -1000000;
+  SeatGen[ID] := SeatGen[ID] + 1;
+  RkTargetGone(ID);
   RkLockOn[ID] := 0;
   RkLockSent[ID] := 0;
   RkHudHeld[ID] := False;
@@ -40854,14 +43809,20 @@ var
 begin
   ID := Player.ID;
   ActiveSlot[ID] := True;
+  SlotGen[ID] := SlotGen[ID] + 1;
   if ID > TopSlot then
     TopSlot := ID;
   SetupPlayer(ID);
   if Player.Human then
   begin
+    { a slot whose player left without an OnLeave (another script kicked him) still holds his address: it stays
+      listed (DropStaleGrant takes it back when a player from it joins) }
+    GrantedIp[ID] := '';
+    ShareSeen[ID] := False;
     { a Steam id given at the join is confirmed already; otherwise OnSteamAuth brings it }
     GrantSteamAdmin(ID);
     DropStaleGrant(ID);
+    ShareJoin(ID);
     if WeEnabled then
       if WeOnJoin then
         Say(ID, ReplaceAll(WeText, '{player}', Player.Name), WeColor);
@@ -40906,7 +43867,10 @@ begin
     BE_TkForget(ID);
   end;
   FfClear(ID);
-  { [ExtraRocket]: his lock ends (its target would hear the warning on), his rockets in flight go }
+  { [ExtraRocket]: his lock ends (its target would hear the warning on), his rockets in flight go; the rockets
+    and locks of the others that aim at his slot lose their target }
+  SeatGen[ID] := SeatGen[ID] + 1;
+  RkTargetGone(ID);
   RkLockOn[ID] := 0;
   RkSeeking[ID] := False;
   for k := 0 to RK_MAX - 1 do
@@ -40986,6 +43950,7 @@ begin
       Game.BanLists.AddIPBan(Player.IP, BanWhy[ID], BanMin[ID] * 3600);
       if Player.HWID <> '' then
         Game.BanLists.AddHWBan(Player.HWID, BanWhy[ID], BanMin[ID] * 3600);
+      BansToFile();
     end;
   end;
   if EdOn[ID] then
@@ -41071,6 +44036,11 @@ begin
   except
     StageError('leave');
   end;
+  try
+    RcLeave(ID);
+  except
+    StageError('leave');
+  end;
   PrefKey[ID] := '';
   TeamOf[ID] := -1;
   try
@@ -41082,8 +44052,15 @@ begin
   end;
   SteamId[ID] := '';
   ActiveSlot[ID] := False;
+  ShareSeen[ID] := False;
   RecountTop();
   OverlayRecount();
+  { a Steam admin whose address this player shared gets the server's rights back }
+  try
+    RegrantShared();
+  except
+    StageError('leave');
+  end;
 end;
 
 { Steam confirmed a player after his join: his admin rights, the radar and his saved choices follow
@@ -41102,6 +44079,7 @@ begin
   FfAdopt(ID);
   HudMark(ID, True);
   GrantSteamAdmin(ID);
+  ShareJoin(ID);
   { [PrivateMessages]: his blocks by his Steam id; [Notes]: an admin now - the unread notes }
   PmRestore(ID);
   NtHintAt[ID] := Game.TickCount + 120;
@@ -41162,12 +44140,19 @@ begin
       Want := TeamForMode(Team.ID);
       if Want <> Team.ID then
       begin
-        Log(Player.Name + ' joined team ' + IntToStr(Team.ID) + ', which this game mode does not have: moved to team ' +
-          IntToStr(Want) + '.');
-        Say(ID, 'This game mode has no such team: you were moved.', ColorBad);
-        { the game runs this event again for the new team inside the call: the rest is done there }
+        { the game runs this event again for the new team inside the call: the rest is done there - unless another
+          script refused the move (ZitroStats' balance may answer -1 to a player who plays in a team): then he
+          stays where he is, and the rest is done here for the team he is in }
         Player.Team := Want;
-        Exit;
+        if Player.Team = Want then
+        begin
+          Log(Player.Name + ' joined team ' + IntToStr(Team.ID) + ', which this game mode does not have: moved to team ' +
+            IntToStr(Want) + '.');
+          Say(ID, 'This game mode has no such team: you were moved.', ColorBad);
+          Exit;
+        end;
+        Log(Player.Name + ' joined team ' + IntToStr(Team.ID) + ', which this game mode does not have: the move to team ' +
+          IntToStr(Want) + ' was refused by another script, he stays in team ' + IntToStr(Player.Team) + '.');
       end;
     end;
   { [LagGuard]: a player it moved to the spectators comes back only when his connection is good (the game's own
@@ -41223,7 +44208,8 @@ begin
     if SiEnabled then
       if Player.Human then
         if Game.NumPlayers >= SiMinPlayers then
-          if not (SiIgnoreAdmins and Player.IsAdmin) then
+          if not LgdBlocked[ID] then
+          if not (SiIgnoreAdmins and AdminOf(Player.ID)) then
           begin
             SpecLeft[ID] := SiSeconds;
             Say(ID, 'Remember, you cannot idle as spectator forever!', ColorGood);
@@ -41237,6 +44223,8 @@ end;
 
 { [Mines]: a capture brings mines; [Points]: the captured flag (Team = the flag's own team) may pay a grab again }
 procedure OnFlagScoreEv(Player: TActivePlayer; Flag: TActiveFlag; Team: Byte);
+var
+  NoPay: Boolean;
 begin
   try
     if (Team >= 1) and (Team <= 2) then
@@ -41244,12 +44232,24 @@ begin
       BpFlagPaid[Team] := False;
       BpFlagAway[Team] := False;
     end;
-    if ShActive then
-      ShCapture(Player.ID, Game.TickCount);
-    if MnEnabled then
-      MnCapture(Player.ID);
-    if BpActive then
-      BpEvent(Player.ID, PE_FLAGSCORE);
+    { X-08: a capture that no longer counts (ZitroStats takes it back): the map change was announced in an earlier tick, or
+      in survival no enemy is alive - the round was won already; no money, mines or points for it }
+    NoPay := False;
+    if MapChanging then
+      if MapChangeTick < Game.TickCount then
+        NoPay := True;
+    if Game.Survival then
+      if ShEnemiesAlive(Player.ID) = 0 then
+        NoPay := True;
+    if not NoPay then
+    begin
+      if ShActive then
+        ShCapture(Player.ID, Game.TickCount);
+      if MnEnabled then
+        MnCapture(Player.ID);
+      if BpActive then
+        BpEvent(Player.ID, PE_FLAGSCORE);
+    end;
   except
     StageError('capture');
   end;
@@ -41319,6 +44319,13 @@ begin
   except
     StageError('map change');
   end;
+  { [Spawns]: no damage until the players stand on the next map's layout }
+  if RcActive then
+    try
+      RcBeforeMap();
+    except
+      StageError('spawns');
+    end;
 end;
 
 procedure OnAfterMapEv(NewMap: string);
@@ -41363,6 +44370,22 @@ begin
   FnClear();
   RkClearAll();
   RkConfigure();
+  { [Spawns]: the takeover of Respawns-Control waits for a /recompile }
+  if RcRetireOnCmd then
+    RcTell('type /recompile to end the takeover of Respawns-Control (its layouts are in ' + DataDir + 'spawns.bdb).', ColorBad);
+  { 4.2 (BE6-08): the layouts file and its copy were both unreadable: said at every map change (the console had it at the start) }
+  if RcActive then
+    if RcLoadBad then
+      RcTell('the layouts file ' + DataDir + 'spawns.bdb and its copy could not be read at the start: the maps play on their ' +
+        'own points. Both were put aside as spawns.bdb.unread-* (not deleted): copy the better one back as spawns.bdb and ' +
+        'restart the server, or build a new set (/saveallspawns on each map).', ColorBad);
+  { [Spawns]: the map's layout in place before the modules read the spawn points ([Mines], [Shop] ...) }
+  if RcActive then
+    try
+      RcAfterMap(NewMap);
+    except
+      StageError('spawns');
+    end;
   FfMapStart();
   MnMapStart();
   LfMapStart();
@@ -41371,6 +44394,13 @@ begin
     PzUsed[i] := 0;
   if PzKeys <> nil then
     PzKeys.Clear;
+  { the warnings of a player who stays go on; one who leaves and comes back keeps them for this map only }
+  if WnKeys <> nil then
+    WnKeys.Clear;
+  for i := 1 to 32 do
+    if ActiveSlot[i] then
+      if WnCount[i] > 0 then
+        WnRemember(i);
   ShMapStart();
   BpMapStart();
   ClsMapStart();
@@ -41460,8 +44490,11 @@ end;
 procedure Startup();
 var
   i: Integer;
-  Dir: string;
+  Dir, Note: string;
 begin
+  { 4.2 (BE6-02): first of all - CleanUp restores Max_Grenades only for a start that got as far as FnApply, and a
+    global of the script starts as 0, not as "unset" }
+  FnSavedMax := -1;
   Started := False;
   Errors := 0;
   { TeamGame and the other per-tick caches read the game from the first call: the settings below ask them }
@@ -41471,7 +44504,9 @@ begin
   if Dir <> '' then
     if (Copy(Dir, Length(Dir), 1) <> '/') and (Copy(Dir, Length(Dir), 1) <> '\') then
       Dir := Dir + '/';
-  DataDir := Dir + 'data/';
+  { relative to the server's folder, like nickreg/ of the other scripts; the old place only for the takeover }
+  OldDataDir := Dir + 'data/';
+  DataDir := 'data/basic-extended/';
   ScriptDir := Dir;
   for i := 1 to 32 do
     PL[i] := Players[i];
@@ -41511,10 +44546,13 @@ begin
     OutQ[i] := File.CreateStringList();
   { the library: the players' store (it takes over an older data/players.txt once) and the logger }
   BeOk := False;
-  i := BE_Init(PChar(DataDir), BE_API);
+  i := BE_Init(PChar(DataDir + '|' + OldDataDir), BE_API);
   if i = BE_API then
   begin
     BeOk := True;
+    Note := BE_DataNote();
+    if Note <> '' then
+      Log(Note);
     if BE_BridgeReady() = 1 then
       Log('bullet memory bridge active: ' + BE_BridgeInfo())
     else
@@ -41540,11 +44578,43 @@ begin
       GrantList.Delete(i);
 
   Script.OnUnhandledException := @OnErrorEv;
-  FnSavedMax := -1;
-  LoadAll();
-  FnApply();
-  MnMapScan();
-  LfMapStart();
+  { 4.2 (BE6-02): an exception from here on must not leave the script loaded with no event handlers (it would answer
+    nothing and its finalization would restore nothing). The settings are the one step nothing works without: when
+    they fail, nothing has been changed yet and the script does not start, as with a library of another release. The
+    other steps are tried one by one, so that the handlers below are always set. }
+  try
+    LoadAll();
+  except
+    StageError('start: settings');
+    Log('the settings could not be loaded: the script does NOT start (see the line above). /recompile tries again.');
+    WriteLn('[Basic-Extended] NOT STARTED: the settings could not be loaded (' + ExceptionToString(ExceptionType, ExceptionParam) + ')');
+    if BeOk then
+    begin
+      BeOk := False;
+      BE_Shutdown();
+    end;
+    Exit;
+  end;
+  try
+    FnApply();
+  except
+    StageError('start: flash grenades');
+  end;
+  try
+    MnMapScan();
+  except
+    StageError('start: mines');
+  end;
+  try
+    LfMapStart();
+  except
+    StageError('start: life');
+  end;
+  try
+    RcStart();
+  except
+    StageError('start: spawns');
+  end;
   Realistic := Game.Realistic;
   if Realistic then
     MaxHealth := REALISTIC_HEALTH
@@ -41570,16 +44640,24 @@ begin
   DuePing := After(Game.TickCount, SpTicks);
 
   { [Shop]: the wallets of this map the last stop of the script kept (a /recompile) }
-  ShWalletsBack();
+  try
+    ShWalletsBack();
+  except
+    StageError('start: wallets');
+  end;
   { the script may be loaded in the middle of a map }
   for i := 1 to 32 do
   begin
     SeenTick[i] := -1;
     GrantedIp[i] := '';
+    ShareSeen[i] := False;
     if PL[i].Active then
     begin
-      SetupPlayer(i);
-      GrantSteamAdmin(i);
+      try
+        SetupPlayer(i);
+      except
+        StageError('start: player');
+      end;
     end
     else
     begin
@@ -41588,31 +44666,57 @@ begin
       TeamOf[i] := -1;
     end;
   end;
+  { the Steam ids of all are known now: the rights follow, a player on the address of a Steam admin is seen }
+  for i := 1 to 32 do
+    if PL[i].Active then
+      GrantSteamAdmin(i);
   for i := 1 to 32 do
     if PL[i].Active then
       if PL[i].Human then
-        DropStaleGrant(i);
+      begin
+        try
+          DropStaleGrant(i);
+          ShareJoin(i);
+        except
+          StageError('start: grants');
+        end;
+      end;
   { the HUD lines an earlier start of the script left on their screens are not known: each one is sent again or
     taken away by the first draw }
   for i := 1 to 32 do
     if PL[i].Active then
       if PL[i].Human then
         HlReset(i, HS_UNKNOWN);
-  for i := 0 to GrantList.Count - 1 do
-    Log('remote.txt holds ' + GrantList[i] + ', made admin for ' + AdSteamFile + ' earlier; it is taken out when ' +
-      'that player leaves, or when somebody else joins from that address');
-  if KitsAny then
-  begin
-    KitSpawnsOff();
-    KitSweep();
+  { the IPs the last run put into remote.txt and did not take back (the server stopped, crashed) }
+  try
+    StaleGrantsAtStart();
+  except
+    StageError('start: grants');
   end;
-  if MapsShuffle then
-    ShuffleMapsList();
+  try
+    if KitsAny then
+    begin
+      KitSpawnsOff();
+      KitSweep();
+    end;
+  except
+    StageError('start: kits');
+  end;
+  try
+    if MapsShuffle then
+      ShuffleMapsList();
+  except
+    StageError('start: maps list');
+  end;
   { [Notes], [BanJournal]: their files are read now, not in the tick an admin comes }
-  if NtEnabled then
-    NtLoad();
-  if UbEnabled then
-    UbLoad();
+  try
+    if NtEnabled then
+      NtLoad();
+    if UbEnabled then
+      UbLoad();
+  except
+    StageError('start: notes');
+  end;
 
   Game.OnJoin := @OnJoinGameEv;
   Game.OnLeave := @OnLeaveGameEv;
@@ -41657,16 +44761,26 @@ var
   i, k: Integer;
 begin
   if not Started then
+  begin
+    { 4.2 (BE6-02): a start that stopped after FnApply changed Max_Grenades: it is given back (-1 = never changed) }
+    try
+      if FnSavedMax >= 0 then
+      begin
+        Game.MaxGrenades := FnSavedMax;
+        FnSavedMax := -1;
+      end;
+    except
+    end;
     Exit;
+  end;
   Started := False;
   try
     FnRestore();
     { [Shop], [Classes]: the stationary guns and the kits of the classes would stay for good (their clocks stop) }
     for k := 0 to 15 do
       if ShStatObj[k] > 0 then
-        if OB[ShStatObj[k]].Active then
-          if OB[ShStatObj[k]].Style = 27 then
-            OB[ShStatObj[k]].Kill;
+        if ObjStillAt(ShStatObj[k], 27, ShStatPX[k], ShStatPY[k]) then
+          OB[ShStatObj[k]].Kill;
     for k := ClsObjN - 1 downto 0 do
       ClsObjRemove(k, True);
     for i := 1 to 32 do
@@ -41694,6 +44808,8 @@ begin
         OverlayHide(i);
         RevokeGrant(i);
       end;
+    { the server stops without an OnLeave: what the players it made admin left in remote.txt goes out of the file }
+    GrantsOutOfFile();
   except
   end;
   { [Shop]: the accounts, this map's wallets; [AntiSpam]: the mutes }

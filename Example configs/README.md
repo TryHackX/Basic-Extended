@@ -1,6 +1,6 @@
 # Example configs
 
-Ready `settings.ini` files for Basic-Extended 4.0, one folder per kind of server. Each one is the whole default
+Ready `settings.ini` files for Basic-Extended 4.2, one folder per kind of server. Each one is the whole default
 file (every key keeps its comment) with a few values changed for that server; every changed value has a
 `; SET <folder>: <why>` line right above it, so a search for `; SET` lists what the set does.
 
@@ -40,7 +40,9 @@ In all of them (but `clean`, where they are off):
 The class balance, the bots' skills (`[Classes] BotSkills`), what the Recon's UAV and sensor show
 (`[Classes] SkillSpots`), the damage limit of a life (`[Shop]` / `[Points] DamageLimit`), the memory reads
 (`[General] MemoryReads`) and no earnings without an opponent (`[General] Opponents = any`: a bot counts) are the
-defaults in every set.
+defaults in every set. So is `[Spawns]` (4.1, Respawns-Control built in): on, with the old script taken over at the
+first start - the layouts themselves live in `data/basic-extended/spawns.bdb`, not in `settings.ini`, so changing the set keeps
+them.
 
 ## Use
 
@@ -48,7 +50,8 @@ defaults in every set.
 2. Set the server's game mode as the table says (`soldat.ini` or the admin commands).
 3. Put the Steam ids of the radar's full users in `[Radar] SteamIds` and the Steam admins in `[Admin] Steam-1`,
    `Steam-2` ... (players without Steam are admins through the server's own admin list); your server's address and
-   style for `/info` in `[Info] Address` and `GameStyle`. The rules, the messages and the command lists are the
+   style for `/info` in `[Info] Address` and `GameStyle`; your own contact in `[Info] Line5` and `[CheatHint] Line2`
+   (the sets carry `<your e-mail>` and `<your Discord name>` there). The rules, the messages and the command lists are the
    default ones - every list is a set of numbered keys in its section (`Line-N`, `Message-N`, `Slot-N`, `Steam-N`,
    `Watch-N`).
 4. `/reloadsettings` (or restart the server). Unknown keys and values out of range are reported in the server

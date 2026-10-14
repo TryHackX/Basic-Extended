@@ -56,7 +56,6 @@ begin
   E.Y := Y;
   E.VX := VX;
   E.VY := VY;
-  E.Script := False;
   TkQueueShot(E);
 end;
 
