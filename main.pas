@@ -663,6 +663,26 @@ external {$IFDEF WIN32} 'BE_AmmoCanLoot@scripts/Basic-Extended/basicext_dll.dll 
 function BE_AmmoLoot(ID, W: Integer; X, Y: Single; Repack: Integer): Integer;
 external {$IFDEF WIN32} 'BE_AmmoLoot@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoLoot@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+{ 4.2.3 (API 29) [Looting] Items: the gear a dead soldier carries stays with his body (the counts of bandage in percent, kits,
+  grenades, flash grenades, mines, claymores; the number of kinds on it, 0 = no body record). BE_AmmoItemRoom: how much more
+  of each kind a soldier can carry (the script works it out; also what BE_AmmoLootMarks looks at). BE_AmmoItemCan: a body
+  within the loot radius holds something he has room for. BE_AmmoItemLoot: takes it, each kind up to his room (the owner of
+  the body, 0 = nothing taken); BE_AmmoItemTaken: how much of kind Item (LIT_*) the last loot took }
+function BE_AmmoItemBody(ID, Tick: Integer; X, Y: Single; Band, Kit, Nade, Flash, Mine, Clay: Integer): Integer;
+external {$IFDEF WIN32} 'BE_AmmoItemBody@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoItemBody@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AmmoItemRoom(ID, Band, Kit, Nade, Flash, Mine, Clay: Integer);
+external {$IFDEF WIN32} 'BE_AmmoItemRoom@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoItemRoom@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_AmmoItemCan(ID: Integer; X, Y: Single): Integer;
+external {$IFDEF WIN32} 'BE_AmmoItemCan@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoItemCan@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_AmmoItemLoot(ID: Integer; X, Y: Single): Integer;
+external {$IFDEF WIN32} 'BE_AmmoItemLoot@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoItemLoot@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_AmmoItemTaken(Item: Integer): Integer;
+external {$IFDEF WIN32} 'BE_AmmoItemTaken@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoItemTaken@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 procedure BE_AmmoGroundClear();
 external {$IFDEF WIN32} 'BE_AmmoGroundClear@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoGroundClear@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
@@ -899,9 +919,9 @@ external {$IFDEF WIN32} 'BE_SpInfo@scripts/Basic-Extended/basicext_dll.dll cdecl
 implementation
 
 const
-  VERSION = '4.2.2';
+  VERSION = '4.2.3';
   { the library this main.pas was written for (source_dll/be_main.pas BE_API_VERSION) }
-  BE_API = 28;
+  BE_API = 29;
   TAG = '[Basic-Extended] ';
   TEAM_SPECTATOR = 5;
   MAX_BULLET_ID = 254;
@@ -1278,6 +1298,15 @@ const
   { [Mines]: the kinds, the library's events and keys (be_mine) }
   MN_LAND = 1;
   MN_CLAY = 2;
+  { 4.2.3 [Looting] Items: the kinds of gear a body carries (the library's LI_*); a bandage of less than LIT_MIN_BAND percent
+    is a rag and is not on a body }
+  LIT_BAND = 0;
+  LIT_KIT = 1;
+  LIT_NADE = 2;
+  LIT_FLASH = 3;
+  LIT_MINE = 4;
+  LIT_CLAY = 5;
+  LIT_MIN_BAND = 10;
   MNE_ARMED = 1;
   MNE_TRIGGER = 2;
   MNE_EXPIRE = 3;
@@ -1999,6 +2028,12 @@ var
   LootMarkText: string;
   LootMarkColor: Longint;
   LootMarkFirst, LootMarkN, LootMarkRefresh: Integer;
+  { 4.2.3 [Looting] Items: the kinds of gear a body carries and a looter takes (bits of 1 shl LIT_*; 0 = none), and the most of
+    a kind a looter holds when the settings name one (0 = the limit of the module the item belongs to) }
+  LootItems, LootMaxBand, LootMaxKits, LootMaxNade, LootMaxFlash: Integer;
+  { per soldier: the ticks he has stood still at a body with gear to take, and where }
+  LgTicks: array[1..32] of Integer;
+  LgX, LgY: array[1..32] of Single;
   { 4.2 [Looting] KeepWeapons (0 off, 1 survival rounds, 2 always), KeepWeaponsMax, KeepWeaponsMethod (0 auto, 1 bridge, 2
     recreate); KpHold: the survival round has ended (nothing is kept until the next one starts); KpArmed: the keeper is on
     now; the tick of the last pass; the weapons made again; the state the library was in when it was last told }
@@ -2353,6 +2388,8 @@ var
   AmDropX, AmDropY: array[1..32] of Single;
   { a dead soldier whose spare magazines lie with his body (DeadMagazines): the body's place is followed }
   AmBody: array[1..32] of Boolean;
+  { 4.2.3 [Looting] Items: a dead soldier whose gear lies with his body (the library moves it with the body when told) }
+  AmGear: array[1..32] of Boolean;
   { the ammunition's own text (HudAppend = 2): the player's choice (on/off, place, size), the blinking NO
     AMMO (after the weapon was taken, until AmNoAmmoUntil) }
   AmPOn, AmPX, AmPY, AmNoAmmoUntil: array[1..32] of Integer;
@@ -2521,7 +2558,7 @@ var
   FfStatHits, FfStatKills, FfStatSprays, FfStatPunished: Integer;
   { [Mines]: landmines and claymores (the owner's old Mines script grown up); the library looks after them
     (be_mine) }
-  MnEnabled, MnActive, MnLand, MnClay, MnBots, MnStreak, MnMineKills, MnKeepMap, MnExpireBlast: Boolean;
+  MnEnabled, MnActive, MnLand, MnClay, MnBots, MnStreak, MnMineKills, MnKeepMap, MnKeepDeath, MnExpireBlast: Boolean;
   MnHudOn, MnHideDue, MnShotCredit, MnDefuseTake, MnKeysSub, MnAny, MnSightFast: Boolean;
   { every enemy may see this kind (MineSeenBy / ClaymoreSeenBy = all); such a mine is on the map now }
   MnLandAll, MnClayAll, MnLosAny: Boolean;
@@ -2580,6 +2617,9 @@ var
   { per player: the blood (whole percent) and open wounds as the library told last, his worst wound's kind,
     bandage, kits; the shock (until, the place he is held at), the work shown; the HUD line }
   BdBlood, BdWounds, BdWorst, BdKits, BdBand: array[1..32] of Integer;
+  { 4.2.3: the bandage (percent) and the kits a life brings: what [Looting] Items takes a looter up to }
+  BdBandFull: Single;
+  BdKitsLife: Integer;
   { how many players have a wound (the AirBandage loop is not run for nobody) }
   BdWoundN: Integer;
   BdShockUntil: array[1..32] of Integer;
@@ -5637,6 +5677,13 @@ begin
   MnMaxM := CfgInt('Mines', 'MaxMines', 2, 0, 100);
   MnMaxC := CfgInt('Mines', 'MaxClaymores', 2, 0, 100);
   MnKeepMap := CfgBool('Mines', 'KeepOnMapChange', False);
+  { 4.2.3 KeepOnDeath: 1 = what he carries stays with him over his lives; 0 = a death empties it (onto his body, when
+    [Looting] Items names mines or claymores) }
+  MnKeepDeath := CfgBool('Mines', 'KeepOnDeath', True);
+  if MnEnabled and MnKeepDeath and LootEnabled and LootCorpse then
+    if (LootItems and ((1 shl LIT_MINE) or (1 shl LIT_CLAY))) <> 0 then
+      Log('settings.ini: [Looting] Items names mines or claymores, but [Mines] KeepOnDeath = 1 keeps them with the player ' +
+        'over his lives, so no body carries them (KeepOnDeath = 0 lets a death leave them on the body)');
   { planting }
   MnKeysM := KeyMaskOf('Mines', 'MineKeys', 'flagthrow');
   MnKeysC := KeyMaskOf('Mines', 'ClaymoreKeys', 'prone+flagthrow');
@@ -6047,7 +6094,8 @@ begin
   BdPut(BDC_REGEN_DELAY, Round(CfgFloat('Bleeding', 'BloodRegenDelay', 10, 0, 3600) * 60) * 1.0);
   BdRegenBlock := CfgBool('Bleeding', 'RegenBlock', True);
   { bandaging and the kit }
-  BdPut(BDC_BANDAGE, CfgFloat('Bleeding', 'Bandage', 130, 0, 1000));
+  BdBandFull := CfgFloat('Bleeding', 'Bandage', 130, 0, 1000);
+  BdPut(BDC_BANDAGE, BdBandFull);
   BdPut(BDC_BAND_T1, Round(CfgFloat('Bleeding', 'GrazeBandageSeconds', 0.5, 0.1, 60) * 60) * 1.0);
   BdPut(BDC_BAND_T2, Round(CfgFloat('Bleeding', 'HeavyBandageSeconds', 1.2, 0.1, 60) * 60) * 1.0);
   BdPut(BDC_BAND_T3, Round(CfgFloat('Bleeding', 'ArterialBandageSeconds', 2.0, 0.1, 60) * 60) * 1.0);
@@ -6060,7 +6108,8 @@ begin
   BdPut(BDC_STILL, CfgFloat('Bleeding', 'StillSpeed', 1.0, 0, 20));
   BdAirOn := CfgBool('Bleeding', 'AirBandage', True);
   BdPut(BDC_AIR, BoolInt(BdAirOn) * 1.0);
-  BdPut(BDC_KITS, CfgInt('Bleeding', 'Kits', 1, 0, 100) * 1.0);
+  BdKitsLife := CfgInt('Bleeding', 'Kits', 1, 0, 100);
+  BdPut(BDC_KITS, BdKitsLife * 1.0);
   BdPut(BDC_KIT_TICKS, Round(CfgFloat('Bleeding', 'KitSeconds', 5, 0.1, 60) * 60) * 1.0);
   BdPut(BDC_KIT_BLOOD, CfgFloat('Bleeding', 'KitBlood', 25, 0, 100));
   BdKitHealth := CfgFloat('Bleeding', 'KitHealth', 30, 0, 100);
@@ -8671,7 +8720,7 @@ end;
 procedure LoadSettings();
 var
   i, k, n: Integer;
-  S, Sec: string;
+  S, Sec, Wd: string;
   Sections, Keys: TStringList;
   Found: Boolean;
   NewCfg: TIniFile;
@@ -9289,6 +9338,35 @@ begin
       CfgWarn('Looting', 'KeepWeaponsMethod', S, 'auto, bridge or recreate; auto used');
     KpMethod := 0;
   end;
+  { 4.2.3 Items: the gear a dead soldier's body carries and a looter takes }
+  LootItems := 0;
+  S := LowerCase(Trim(CfgStr('Looting', 'Items', 'bandage|kits|grenades|flashes'))) + '|';
+  while Pos('|', S) > 0 do
+  begin
+    Wd := Trim(Copy(S, 1, Pos('|', S) - 1));
+    S := Copy(S, Pos('|', S) + 1, Length(S));
+    k := -1;
+    if (Wd = 'bandage') or (Wd = 'bandages') then
+      k := LIT_BAND
+    else if (Wd = 'kit') or (Wd = 'kits') then
+      k := LIT_KIT
+    else if (Wd = 'grenade') or (Wd = 'grenades') or (Wd = 'nade') or (Wd = 'nades') then
+      k := LIT_NADE
+    else if (Wd = 'flash') or (Wd = 'flashes') then
+      k := LIT_FLASH
+    else if (Wd = 'mine') or (Wd = 'mines') then
+      k := LIT_MINE
+    else if (Wd = 'claymore') or (Wd = 'claymores') then
+      k := LIT_CLAY;
+    if k >= 0 then
+      LootItems := LootItems or (1 shl k)
+    else if (Wd <> '') and (Wd <> 'none') then
+      CfgWarn('Looting', 'Items', Wd, 'bandage, kits, grenades, flashes, mines, claymores or none; ignored');
+  end;
+  LootMaxBand := CfgInt('Looting', 'MaxBandage', 0, 0, 1000);
+  LootMaxKits := CfgInt('Looting', 'MaxKits', 0, 0, 100);
+  LootMaxNade := CfgInt('Looting', 'MaxGrenades', 0, 0, 20);
+  LootMaxFlash := CfgInt('Looting', 'MaxFlashes', 0, 0, 20);
 
   AmmoMax[0] := CfgInt('Ammo', 'USSOCOM', 48, 0, 100000);
   AmmoMax[1] := CfgInt('Ammo', 'DesertEagles', 28, 0, 100000);
@@ -9356,6 +9434,8 @@ begin
         AmRepacking[i] := False;
         AmNoAmmoUntil[i] := 0;
         AmBody[i] := False;
+        AmGear[i] := False;
+        LgTicks[i] := 0;
       end;
   end;
   AmmoWasOn := AmmoEnabled;
@@ -12174,6 +12254,8 @@ begin
   AmLastSW[ID] := -1;
   AmLootTicks[ID] := 0;
   AmBody[ID] := False;
+  AmGear[ID] := False;
+  LgTicks[ID] := 0;
   AmDrawnW[ID] := -2;
   AmDefer[ID] := 0;
   AmSpawnT[ID] := Game.TickCount;
@@ -19379,6 +19461,121 @@ begin
         StatusText(P, 'Repacking', 40, P.X, P.Y);
 end;
 
+{ G19: the grenades a life of his class starts with ([FlashNades] Nades unless his class's loadout names a number) (it stood in
+  [Classes]; the loot below needs it earlier) }
+function ClsNadeCap(ID: Integer): Integer;
+var
+  c: Integer;
+begin
+  Result := FnNades;
+  if ClsActive then
+  begin
+    c := ClsOf[ID];
+    if (c >= 1) and (c <= ClsCount) then
+      if ClsLoad[c][LO_NADES] >= 0 then
+        Result := ClsLoad[c][LO_NADES];
+  end;
+end;
+
+{ 4.2.3 [Looting] Items: how many more of gear kind k (LIT_*) soldier i can take now - up to the limit of the module the item
+  belongs to: the bandage up to [Bleeding] Bandage (what a life brings), kits up to the larger of [Bleeding] Kits and [Shop]
+  MaxKits, grenades and flash grenades up to what a life of his class brings ([FlashNades] Nades and Flashes - only with
+  FlashNades on: the game's own grenade count cannot be set to a number), mines and claymores up to [Mines] MaxMines and
+  MaxClaymores (only with [Mines] KeepOnDeath = 0: with 1 a body never carries them); a number in [Looting] (MaxBandage,
+  MaxKits, MaxGrenades, MaxFlashes) replaces the first four. 0 = no room, or the kind is not looted (Items) or its module is
+  off }
+function LootRoomOf(i, k: Integer): Integer;
+var
+  C, c2: Integer;
+begin
+  Result := 0;
+  if (LootItems and (1 shl k)) = 0 then
+    Exit;
+  if k = LIT_BAND then
+  begin
+    if BdActive then
+    begin
+      C := LootMaxBand;
+      if C <= 0 then
+        C := Round(BdBandFull);
+      Result := C - BdBand[i];
+    end;
+  end
+  else if k = LIT_KIT then
+  begin
+    if BdActive then
+    begin
+      C := LootMaxKits;
+      if C <= 0 then
+      begin
+        C := BdKitsLife;
+        if ShMaxKits > C then
+          C := ShMaxKits;
+      end;
+      Result := C - BdKits[i];
+    end;
+  end
+  else if k = LIT_NADE then
+  begin
+    if FnEnabled then
+    begin
+      C := LootMaxNade;
+      if C <= 0 then
+        C := ClsNadeCap(i);
+      Result := C - FnNadeLeft[i];
+    end;
+  end
+  else if k = LIT_FLASH then
+  begin
+    if FnEnabled then
+    begin
+      C := LootMaxFlash;
+      if C <= 0 then
+      begin
+        C := FnFlashes;
+        if ClsActive then
+        begin
+          c2 := ClsOf[i];
+          if (c2 >= 1) and (c2 <= ClsCount) then
+            if ClsLoad[c2][LO_FLASHES] >= 0 then
+              C := ClsLoad[c2][LO_FLASHES];
+        end;
+      end;
+      Result := C - FnFlashLeft[i];
+    end;
+  end
+  else if k = LIT_MINE then
+  begin
+    if MnActive and MnLand and (not MnKeepDeath) then
+      Result := MnMaxM - MnHave[i];
+  end
+  else if k = LIT_CLAY then
+  begin
+    if MnActive and MnClay and (not MnKeepDeath) then
+      Result := MnMaxC - MnHaveC[i];
+  end;
+  if Result < 0 then
+    Result := 0;
+end;
+
+{ ... told to the library (before BE_AmmoLootMarks, BE_AmmoItemCan, BE_AmmoItemLoot); True = he has room for something }
+function LootRoomSend(i: Integer): Boolean;
+var
+  B, K, N, F, M, C: Integer;
+begin
+  Result := False;
+  if (LootItems = 0) or not BeOk then
+    Exit;
+  B := LootRoomOf(i, LIT_BAND);
+  K := LootRoomOf(i, LIT_KIT);
+  N := LootRoomOf(i, LIT_NADE);
+  F := LootRoomOf(i, LIT_FLASH);
+  M := LootRoomOf(i, LIT_MINE);
+  C := LootRoomOf(i, LIT_CLAY);
+  BE_AmmoItemRoom(i, B, K, N, F, M, C);
+  Result := (B + K + N + F + M + C) > 0;
+end;
+
 { [Looting]: crouching or lying still over a dead soldier's weapon of the kind in the hands takes a
   spare magazine (or rounds), and with a full pouch tops up the own magazines. Looked at every 10
   ticks. }
@@ -19452,7 +19649,7 @@ var
   n, k, s, W, Rec, D: Integer;
   P: TActivePlayer;
   EX, EY, PX, PY, TW: Single;
-  Ok, Send: Boolean;
+  Ok, Send, GearOk: Boolean;
   RecK, SlotK, XK, YK: array[0..15] of Integer;
   Hit: array[0..15] of Boolean;
 begin
@@ -19468,7 +19665,11 @@ begin
       if P.Alive then
       begin
         W := AmLastW[i];
-        if (W >= 0) and (W <= 16) and (W <> WEP_KNIFE) and (W <> 12) then
+        if not ((W >= 0) and (W <= 16) and (W <> WEP_KNIFE) and (W <> 12)) then
+          W := -1;
+        { 4.2.3 Items: a body that holds only gear he has room for is a loot point too (also with a knife in his hands) }
+        GearOk := LootRoomSend(i);
+        if (W >= 0) or GearOk then
         begin
           EX := P.X;
           EY := P.Y - 15;
@@ -19726,7 +19927,7 @@ begin
         if not P.Alive then
         begin
           { DeadMagazines: the spare magazines lie with the body, which the game still moves }
-          if AmBody[i] then
+          if AmBody[i] or AmGear[i] then
             if (Tick + i) mod 15 = 0 then
               BE_AmmoBodyMove(i, P.X, P.Y);
           Exit;
@@ -19948,7 +20149,7 @@ begin
   i := 15 - Tick mod 15;
   while i <= TopSlot do
   begin
-    if AmBody[i] then
+    if AmBody[i] or AmGear[i] then
       if ActiveSlot[i] then
         if not PL[i].Alive then
           BE_AmmoBodyMove(i, PL[i].X, PL[i].Y);
@@ -23955,6 +24156,22 @@ begin
   HudMark(ID, False);
 end;
 
+{ his death with [Mines] KeepOnDeath = 0: what he carried is gone (his body took it before, when [Looting] Items names mines
+  or claymores; the [Shop]'s LoseOnDeath took the mines only it sells before that); his planted ones stay in the ground, his
+  kills towards the next ones are KillStreak's }
+procedure MnDeathLoss(ID: Integer);
+begin
+  if not MnActive then
+    Exit;
+  if MnKeepDeath then
+    Exit;
+  if MnHave[ID] + MnHaveC[ID] <= 0 then
+    Exit;
+  MnHave[ID] := 0;
+  MnHaveC[ID] := 0;
+  HudMark(ID, False);
+end;
+
 { a new map: the old map's mines are gone; KeepOnMapChange = 0: what everybody carried and his kills too }
 procedure MnMapStart();
 var
@@ -24864,6 +25081,8 @@ begin
     S := S + ' ' + IntToStr(MnHaveC[ID]) + ' of ' + IntToStr(MnMaxC) + ' ' + MnNameC + 's';
   end;
   S := S + '; in the ground ' + IntToStr(BE_MineCount(ID, 0)) + '.';
+  if not MnKeepDeath then
+    S := S + ' A death takes what you carry.';
   Say(ID, S, MnColor);
   S := '';
   if MnLand then
@@ -37165,21 +37384,6 @@ begin
 end;
 
 { his own magazines and grenades back }
-{ G19: the grenades a life of his class starts with ([FlashNades] Nades unless his class's loadout names a number) }
-function ClsNadeCap(ID: Integer): Integer;
-var
-  c: Integer;
-begin
-  Result := FnNades;
-  if ClsActive then
-  begin
-    c := ClsOf[ID];
-    if (c >= 1) and (c <= ClsCount) then
-      if ClsLoad[c][LO_NADES] >= 0 then
-        Result := ClsLoad[c][LO_NADES];
-  end;
-end;
-
 function ClsResupplySelf(ID: Integer): Boolean;
 var
   P: TActivePlayer;
@@ -38692,6 +38896,191 @@ begin
             if DX * DX + DY * DY <= R2 then
               Result := True;
           end;
+end;
+
+{ ---------------- 4.2.3 [Looting] Items: the gear of a dead soldier's body ---------------- }
+
+{ "+2 grenades" added to the words S ("one" for 1, "many" for the rest) }
+procedure LootWord(var S: string; N: Integer; One, Many: string);
+begin
+  if N <= 0 then
+    Exit;
+  if S <> '' then
+    S := S + ', ';
+  if N = 1 then
+    S := S + '+1 ' + One
+  else
+    S := S + '+' + IntToStr(N) + ' ' + Many;
+end;
+
+{ his death: the gear he carried stays with his body - only the kinds of Items, only what he really had (the shop's losses of
+  a death were taken before: a landmine bought and lost is not on his body); True = his body has some. The library keeps it
+  where the body is (the script tells the place now and then), and lets it go when he lives again, the map changes or its
+  90 s are up. Mines and claymores only with [Mines] KeepOnDeath = 0 (a death empties his stock, MnDeathLoss, right after
+  this: what nobody takes from the body is gone); with 1 they are the owner's all his lives and never on a body }
+function LootGearLeave(V: Integer; X, Y: Single; Tick: Integer): Boolean;
+var
+  B, K, N, F, M, C: Integer;
+begin
+  Result := False;
+  B := 0;
+  K := 0;
+  N := 0;
+  F := 0;
+  M := 0;
+  C := 0;
+  if BdActive then
+    if (LootItems and ((1 shl LIT_BAND) or (1 shl LIT_KIT))) <> 0 then
+    begin
+      BdSync(V);
+      if (LootItems and (1 shl LIT_BAND)) <> 0 then
+        if BdBand[V] >= LIT_MIN_BAND then
+          B := BdBand[V];
+      if (LootItems and (1 shl LIT_KIT)) <> 0 then
+        K := BdKits[V];
+    end;
+  if FnEnabled then
+  begin
+    if (LootItems and (1 shl LIT_NADE)) <> 0 then
+      N := FnNadeLeft[V];
+    if (LootItems and (1 shl LIT_FLASH)) <> 0 then
+      F := FnFlashLeft[V];
+  end;
+  if MnActive and (not MnKeepDeath) then
+  begin
+    if MnLand and ((LootItems and (1 shl LIT_MINE)) <> 0) then
+      M := MnHave[V];
+    if MnClay and ((LootItems and (1 shl LIT_CLAY)) <> 0) then
+      C := MnHaveC[V];
+  end;
+  if B + K + N + F + M + C > 0 then
+    Result := BE_AmmoItemBody(V, Tick, X, Y, B, K, N, F, M, C) > 0;
+end;
+
+{ crouching or lying still at a body with gear he has room for takes it after LootSeconds, like the magazines (looked at every
+  10 ticks); each kind up to his own limit, the rest stays on the body }
+procedure LootGearCheck(i: Integer; P: TActivePlayer);
+var
+  X, Y: Single;
+  Owner, B, K, N, F, M, C: Integer;
+  S: string;
+begin
+  if not (P.KeyCrouch or P.IsProne) then
+  begin
+    LgTicks[i] := 0;
+    Exit;
+  end;
+  if (Abs(P.VelX) >= 0.6) or (Abs(P.VelY) >= 0.6) then
+  begin
+    LgTicks[i] := 0;
+    Exit;
+  end;
+  if DwDown[i] then
+  begin
+    LgTicks[i] := 0;
+    Exit;
+  end;
+  if not LootRoomSend(i) then
+  begin
+    LgTicks[i] := 0;
+    Exit;
+  end;
+  X := P.X;
+  Y := P.Y;
+  if BE_AmmoItemCan(i, X, Y) <> 1 then
+  begin
+    LgTicks[i] := 0;
+    Exit;
+  end;
+  if (LgTicks[i] > 0) and (Abs(X - LgX[i]) < 15) and (Abs(Y - LgY[i]) < 15) then
+    LgTicks[i] := LgTicks[i] + 10
+  else
+  begin
+    LgTicks[i] := 10;
+    LgX[i] := X;
+    LgY[i] := Y;
+  end;
+  if LgTicks[i] < LootTimeTicks then
+  begin
+    { the magazines' looting shows the same text }
+    if HumanOf[i] then
+      if AmLootTicks[i] = 0 then
+        StatusText(P, 'Looting', 25, X, Y);
+    Exit;
+  end;
+  LgTicks[i] := 0;
+  Owner := BE_AmmoItemLoot(i, X, Y);
+  if Owner <= 0 then
+    Exit;
+  B := BE_AmmoItemTaken(LIT_BAND);
+  K := BE_AmmoItemTaken(LIT_KIT);
+  N := BE_AmmoItemTaken(LIT_NADE);
+  F := BE_AmmoItemTaken(LIT_FLASH);
+  M := BE_AmmoItemTaken(LIT_MINE);
+  C := BE_AmmoItemTaken(LIT_CLAY);
+  S := '';
+  if B > 0 then
+  begin
+    BE_BodySupplies(i, B, 0, 1);
+    S := '+' + IntToStr(B) + '% bandage';
+  end;
+  if K > 0 then
+  begin
+    BE_BodySupplies(i, 0, K, 1);
+    LootWord(S, K, 'first-aid kit', 'first-aid kits');
+  end;
+  if (B > 0) or (K > 0) then
+    BdSync(i);
+  if (N > 0) or (F > 0) then
+  begin
+    FnNadeLeft[i] := FnNadeLeft[i] + N;
+    FnFlashLeft[i] := FnFlashLeft[i] + F;
+    FnAutoType(i);
+    FnRefillAt[i] := 0;
+    FnNeed[i] := True;
+    LootWord(S, N, 'grenade', 'grenades');
+    LootWord(S, F, 'flash grenade', 'flash grenades');
+  end;
+  { mines and claymores ([Mines] KeepOnDeath = 0): his dead owner's death emptied his stock, the body held them }
+  if M > 0 then
+  begin
+    M := MnGive(i, MN_LAND, M, 'a body', True);
+    LootWord(S, M, MnNameM, MnNameM + 's');
+  end;
+  if C > 0 then
+  begin
+    C := MnGive(i, MN_CLAY, C, 'a body', True);
+    LootWord(S, C, MnNameC, MnNameC + 's');
+  end;
+  if S <> '' then
+  begin
+    Say(i, 'Looted ' + S + '.', ColorGood);
+    HudMark(i, False);
+  end;
+end;
+
+{ the looting of gear: each slot every 10 ticks, like the magazines' }
+procedure LootGearTick(Tick: Integer);
+var
+  i: Integer;
+  P: TActivePlayer;
+begin
+  if not LootCorpse then
+    Exit;
+  i := 10 - Tick mod 10;
+  while i <= TopSlot do
+  begin
+    if ActiveSlot[i] then
+      if HumanOf[i] or AmmoBots then
+      begin
+        P := PL[i];
+        if P.Alive then
+          LootGearCheck(i, P)
+        else
+          LgTicks[i] := 0;
+      end;
+    i := i + 10;
+  end;
 end;
 
 { what he gets: his magazines, grenades, bandage, vest - the words of what he got ('' = nothing missing) }
@@ -43071,6 +43460,15 @@ begin
     except
       StageError('ammo');
     end;
+  { 4.2.3 [Looting] Items: the gear of the bodies }
+  if AmmoEnabled then
+    if not PausedNow then
+      if LootEnabled and (LootItems <> 0) then
+        try
+          LootGearTick(Tick);
+        except
+          StageError('loot items');
+        end;
   { 4.2 [Looting] KeepWeapons }
   if BeOk then
     if KpMode > 0 then
@@ -43830,7 +44228,17 @@ begin
     AmCorpseY[V] := Victim.Y;
     AmSetLastW(V, -1);
     AmLastSW[V] := -1;
+    { 4.2.3 [Looting] Items: the gear he carried stays with his body (a survival round's end is no death) }
+    AmGear[V] := False;
+    if not RE then
+      if LootEnabled and LootCorpse and (LootItems <> 0) and BeOk then
+        AmGear[V] := LootGearLeave(V, Victim.X, Victim.Y, Tick);
   end;
+  { 4.2.3 [Mines] KeepOnDeath = 0: what he carried is gone now (after the body took its share); a survival round's end is no
+    death - a survivor keeps his stock into the next round }
+  if MnEnabled then
+    if not RE then
+      MnDeathLoss(V);
   if DmgEnabled then
     if K <> V then
       if Killer.Human or DebugBots then
@@ -44415,6 +44823,13 @@ begin
     AmDropY[ID] := Player.Y;
   end;
   AmmoLeftBehind(ID);
+  { 4.2.3 [Looting] Items: a dead soldier who leaves takes his body (and its gear) with him }
+  if AmGear[ID] then
+  begin
+    AmGear[ID] := False;
+    if BeOk then
+      BE_AmmoRespawn(ID, Game.TickCount);
+  end;
   if BeOk then
     if AcOn then
     begin

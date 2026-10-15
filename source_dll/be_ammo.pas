@@ -31,7 +31,13 @@ unit be_ammo;
   weapon's object belongs to (the hook in CreateThing reports the object the game made for the
   soldier), and which record's object vanished when a weapon came into empty hands; with none, the
   weapon is a fresh one (the menu, a weapon of the map). With DeadMagazines = body a dead soldier's
-  weapon keeps only its magazine and his spare magazines stay with his body, looted there. }
+  weapon keeps only its magazine and his spare magazines stay with his body, looted there.
+
+  4.2.3 [Looting] Items: a dead soldier's body also keeps the gear he carried (bandage, first-aid kits, grenades, flash
+  grenades, mines, claymores: the script tells the counts at his death, AmmoItemBody) as a record of its own. A looter
+  standing at the body takes each kind up to the room the script says he has (AmmoItemRoom, AmmoItemLoot); what he cannot
+  carry stays for the next one; a record with nothing left goes. It moves with the body (AmmoBodyMove), goes when its owner
+  lives again (AmmoRespawn) or the map changes (AmmoGroundClear), and is forgotten like the body's magazines after 90 s. }
 
 {$mode objfpc}{$H+}
 {$Q-}{$IFNDEF BE_CHECKS}{$R-}{$ENDIF}
@@ -60,6 +66,14 @@ const
   AMR_STOPPED = 5;
   { AmmoSetText }
   AMT_NO_SPARE = 0;
+  { 4.2.3 [Looting] Items: the kinds of gear a body carries (AmmoItemBody, AmmoItemRoom, AmmoItemTaken) }
+  LI_BAND = 0;
+  LI_KIT = 1;
+  LI_NADE = 2;
+  LI_FLASH = 3;
+  LI_MINE = 4;
+  LI_CLAY = 5;
+  LI_COUNT = 6;
 
 procedure AmmoConfig(Enabled, MagMode, EmptyDrop, PickupFullSet, TrackGround, SawIdleTicks, SawAttackTicks,
   SawAttackDrain: LongInt; LootRadius: Single);
@@ -143,6 +157,20 @@ function AmmoCanLoot(ID, W: LongInt; X, Y: Single): LongInt;
 function AmmoLootMarks(ID, W: LongInt; X, Y, EX, EY, MaxDist: Single; Max: LongInt): LongInt;
 procedure AmmoLootMarkOp(k: LongInt; out Rec: LongInt; out MX, MY: Single; out Dist: LongInt);
 function AmmoLoot(ID, W: LongInt; X, Y: Single; Repack: LongInt): LongInt;
+{ 4.2.3 [Looting] Items: soldier ID died at (X, Y) carrying Band (the bandage, percent), Kit first-aid kits, Nade grenades,
+  Flash flash grenades, Mine mines and Clay claymores: his body keeps them (a record of its own; what is 0 or less is not
+  there). The number of kinds on it; 0 = none, and no record (the ammunition off, TrackGroundWeapons off, nothing carried).
+  An older record of his goes }
+function AmmoItemBody(ID, Tick: LongInt; X, Y: Single; Band, Kit, Nade, Flash, Mine, Clay: LongInt): LongInt;
+{ how much more of each kind soldier ID can carry now (the script works it out from the limits of the modules; 0 = none).
+  It stays until told again, so the script tells it just before AmmoLootMarks, AmmoItemCan and AmmoItemLoot }
+procedure AmmoItemRoom(ID, Band, Kit, Nade, Flash, Mine, Clay: LongInt);
+{ 1 = a body within the loot radius of (X, Y) holds something ID has room for }
+function AmmoItemCan(ID: LongInt; X, Y: Single): LongInt;
+{ takes from the nearest such body what ID has room for, each kind up to its room; the owner of the body (1..32), 0 =
+  nothing taken. AmmoItemTaken then says how much of each kind (LI_*) }
+function AmmoItemLoot(ID: LongInt; X, Y: Single): LongInt;
+function AmmoItemTaken(Item: LongInt): LongInt;
 procedure AmmoGroundClear;
 procedure AmmoPickFrom(ID, Tick, Index: LongInt);
 function AmmoGroundNext(W, From: LongInt): LongInt;
@@ -289,6 +317,9 @@ type
     { Corpse: a dead soldier's (his spare magazines are in it); Body: the spare magazines at his body,
       not a weapon }
     Active, Corpse, Body: Boolean;
+    { 4.2.3: Gear - the gear a dead soldier's body carries (Body is set too, W is W_NONE; It = the count of each LI_* kind) }
+    Gear: Boolean;
+    It: array[0..LI_COUNT - 1] of LongInt;
     W, Clip, Reserve, MagN: LongInt;
     Mags: array[0..MAX_MAGS - 1] of LongInt;
     X, Y: Single;
@@ -300,6 +331,9 @@ type
 var
   Pl: array[1..BE_PLAYERS] of TAmPlayer;
   Ground: array[0..MAX_GROUND - 1] of TGround;
+  { 4.2.3 [Looting] Items: what each soldier has room for (AmmoItemRoom), and what the last AmmoItemLoot took }
+  ItRoom: array[1..BE_PLAYERS, 0..LI_COUNT - 1] of LongInt;
+  ItTaken: array[0..LI_COUNT - 1] of LongInt;
   ResMax: array[0..AM_W - 1] of LongInt;
   CfgOn: Boolean = False;
   CfgMag: Boolean = True;
@@ -725,6 +759,9 @@ begin
   Ground[g].Active := True;
   Ground[g].Corpse := Corpse;
   Ground[g].Body := Body;
+  Ground[g].Gear := False;
+  for k := 0 to LI_COUNT - 1 do
+    Ground[g].It[k] := 0;
   Ground[g].W := W;
   Ground[g].Clip := Clip;
   Ground[g].X := X;
@@ -2654,53 +2691,108 @@ begin
     Result := 1;
 end;
 
+{ 4.2.3 [Looting] Items: soldier ID has room for something (AmmoItemRoom) }
+function GearRoomAny(ID: LongInt): Boolean;
+var
+  k: LongInt;
+begin
+  Result := False;
+  if ValidID(ID) then
+    for k := 0 to LI_COUNT - 1 do
+      if ItRoom[ID][k] > 0 then
+        Result := True;
+end;
+
+{ ... and the gear of record g holds something of it }
+function GearTakes(ID, g: LongInt): Boolean;
+var
+  k: LongInt;
+begin
+  Result := False;
+  for k := 0 to LI_COUNT - 1 do
+    if (Ground[g].It[k] > 0) and (ItRoom[ID][k] > 0) then
+      Result := True;
+end;
+
 var
   MkRec, MkDist: array[0..MARK_MAX - 1] of LongInt;
   MkX, MkY: array[0..MARK_MAX - 1] of Single;
   MkN: LongInt = 0;
 
+{ W = the weapon in his hands (a kind that is not counted, or none: only the gear of the bodies is looked at) }
 function AmmoLootMarks(ID, W: LongInt; X, Y, EX, EY, MaxDist: Single; Max: LongInt): LongInt;
 var
   Cand: array[0..MAX_GROUND - 1] of LongInt;
   Dst: array[0..MAX_GROUND - 1] of Single;
-  n, g, i, j, t, Rays: LongInt;
+  Own: array[1..BE_PLAYERS] of Boolean;
+  n, g, j, t, Rays: LongInt;
   D: Single;
+  WOk, IOk: Boolean;
+
+  { the nearest first (insertion) }
+  procedure AddCand(Rec: LongInt; Dist2: Single);
+  var
+    i: LongInt;
+  begin
+    i := n;
+    while (i > 0) and (Dst[i - 1] > Dist2) do
+    begin
+      Dst[i] := Dst[i - 1];
+      Cand[i] := Cand[i - 1];
+      Dec(i);
+    end;
+    Dst[i] := Dist2;
+    Cand[i] := Rec;
+    Inc(n);
+  end;
+
 begin
   MkN := 0;
   Result := 0;
   FillChar(Cand, SizeOf(Cand), 0);
   FillChar(Dst, SizeOf(Dst), 0);
-  if not CfgOn or not ValidID(ID) or not Counted(W) or (W = W_SAW) then
+  FillChar(Own, SizeOf(Own), 0);
+  WOk := Counted(W) and (W <> W_SAW);
+  IOk := GearRoomAny(ID);
+  if not CfgOn or not ValidID(ID) or not (WOk or IOk) then
     Exit;
   if Max > MARK_MAX then
     Max := MARK_MAX;
   if Max < 1 then
     Exit;
   n := 0;
-  for g := 0 to MAX_GROUND - 1 do
-    if Ground[g].Active and Ground[g].Corpse and (Ground[g].W = W) then
-    begin
-      if GroundOld(g, AmTick) then
-        Continue;
-      if (Ground[g].MagN <= 0) and (Ground[g].Reserve <= 0) then
-        Continue;
-      D := Sqr(Ground[g].X - X) + Sqr(Ground[g].Y - Y);
-      if D > Sqr(MaxDist) then
-        Continue;
-      if not CanTake(ID, W, g) then
-        Continue;
-      { the nearest first (insertion) }
-      i := n;
-      while (i > 0) and (Dst[i - 1] > D) do
+  if WOk then
+    for g := 0 to MAX_GROUND - 1 do
+      if Ground[g].Active and Ground[g].Corpse and (Ground[g].W = W) then
       begin
-        Dst[i] := Dst[i - 1];
-        Cand[i] := Cand[i - 1];
-        Dec(i);
+        if GroundOld(g, AmTick) then
+          Continue;
+        if (Ground[g].MagN <= 0) and (Ground[g].Reserve <= 0) then
+          Continue;
+        D := Sqr(Ground[g].X - X) + Sqr(Ground[g].Y - Y);
+        if D > Sqr(MaxDist) then
+          Continue;
+        if not CanTake(ID, W, g) then
+          Continue;
+        AddCand(g, D);
+        { the body's magazines are marked: its gear lies at the same place and needs no second marker }
+        if Ground[g].Body and ValidID(Ground[g].Owner) then
+          Own[Ground[g].Owner] := True;
       end;
-      Dst[i] := D;
-      Cand[i] := g;
-      Inc(n);
-    end;
+  { 4.2.3 the gear of the bodies }
+  if IOk then
+    for g := 0 to MAX_GROUND - 1 do
+      if Ground[g].Active and Ground[g].Gear then
+      begin
+        if GroundOld(g, AmTick) or (Ground[g].Owner = ID) or Own[Ground[g].Owner] then
+          Continue;
+        D := Sqr(Ground[g].X - X) + Sqr(Ground[g].Y - Y);
+        if D > Sqr(MaxDist) then
+          Continue;
+        if not GearTakes(ID, g) then
+          Continue;
+        AddCand(g, D);
+      end;
   Rays := 0;
   for j := 0 to n - 1 do
   begin
@@ -2857,6 +2949,152 @@ begin
   if (Ground[g].MagN <= 0) and (Ground[g].Reserve <= 0) then
     Ground[g].Active := False;
   Dirty(ID);
+end;
+
+{ 4.2.3 [Looting] Items }
+function AmmoItemBody(ID, Tick: LongInt; X, Y: Single; Band, Kit, Nade, Flash, Mine, Clay: LongInt): LongInt;
+var
+  g, k, n: LongInt;
+  V: array[0..LI_COUNT - 1] of LongInt;
+begin
+  Result := 0;
+  if not CfgOn or not CfgGround or not ValidID(ID) then
+    Exit;
+  V[LI_BAND] := Band;
+  V[LI_KIT] := Kit;
+  V[LI_NADE] := Nade;
+  V[LI_FLASH] := Flash;
+  V[LI_MINE] := Mine;
+  V[LI_CLAY] := Clay;
+  { an older record of his goes }
+  for g := 0 to MAX_GROUND - 1 do
+    if Ground[g].Active and Ground[g].Gear and (Ground[g].Owner = ID) then
+      Ground[g].Active := False;
+  n := 0;
+  for k := 0 to LI_COUNT - 1 do
+  begin
+    if V[k] < 0 then
+      V[k] := 0;
+    if V[k] > 0 then
+      Inc(n);
+  end;
+  if n = 0 then
+    Exit;
+  g := GroundSlot;
+  Ground[g].Active := True;
+  Ground[g].Corpse := False;
+  Ground[g].Body := True;
+  Ground[g].Gear := True;
+  Ground[g].W := W_NONE;
+  Ground[g].Clip := 0;
+  Ground[g].X := X;
+  Ground[g].Y := Y;
+  Ground[g].Tick := Tick;
+  Ground[g].Owner := ID;
+  Ground[g].Slot := 0;
+  Ground[g].MissingSince := 0;
+  Ground[g].Reserve := 0;
+  Ground[g].MagN := 0;
+  for k := 0 to MAX_MAGS - 1 do
+    Ground[g].Mags[k] := 0;
+  for k := 0 to LI_COUNT - 1 do
+    Ground[g].It[k] := V[k];
+  Result := n;
+end;
+
+procedure AmmoItemRoom(ID, Band, Kit, Nade, Flash, Mine, Clay: LongInt);
+var
+  k: LongInt;
+begin
+  if not ValidID(ID) then
+    Exit;
+  ItRoom[ID][LI_BAND] := Band;
+  ItRoom[ID][LI_KIT] := Kit;
+  ItRoom[ID][LI_NADE] := Nade;
+  ItRoom[ID][LI_FLASH] := Flash;
+  ItRoom[ID][LI_MINE] := Mine;
+  ItRoom[ID][LI_CLAY] := Clay;
+  for k := 0 to LI_COUNT - 1 do
+    if ItRoom[ID][k] < 0 then
+      ItRoom[ID][k] := 0;
+end;
+
+{ the nearest body within the loot radius whose gear ID has room for (a body whose time is up is forgotten); -1 = none }
+function GearNear(ID: LongInt; X, Y: Single): LongInt;
+var
+  i: LongInt;
+  D, Best: Single;
+begin
+  Result := -1;
+  Best := CfgLootRadius * CfgLootRadius;
+  for i := 0 to MAX_GROUND - 1 do
+    if Ground[i].Active and Ground[i].Gear then
+    begin
+      if GroundOld(i, AmTick) then
+      begin
+        Ground[i].Active := False;
+        Continue;
+      end;
+      if Ground[i].Owner = ID then
+        Continue;
+      if not GearTakes(ID, i) then
+        Continue;
+      D := Sqr(Ground[i].X - X) + Sqr(Ground[i].Y - Y);
+      if D <= Best then
+      begin
+        Best := D;
+        Result := i;
+      end;
+    end;
+end;
+
+function AmmoItemCan(ID: LongInt; X, Y: Single): LongInt;
+begin
+  Result := 0;
+  if not CfgOn or not ValidID(ID) then
+    Exit;
+  if GearNear(ID, X, Y) >= 0 then
+    Result := 1;
+end;
+
+function AmmoItemLoot(ID: LongInt; X, Y: Single): LongInt;
+var
+  g, k, t: LongInt;
+  Left: Boolean;
+begin
+  Result := 0;
+  for k := 0 to LI_COUNT - 1 do
+    ItTaken[k] := 0;
+  if not CfgOn or not ValidID(ID) then
+    Exit;
+  g := GearNear(ID, X, Y);
+  if g < 0 then
+    Exit;
+  Left := False;
+  for k := 0 to LI_COUNT - 1 do
+  begin
+    t := Ground[g].It[k];
+    if t > ItRoom[ID][k] then
+      t := ItRoom[ID][k];
+    if t < 0 then
+      t := 0;
+    ItTaken[k] := t;
+    Ground[g].It[k] := Ground[g].It[k] - t;
+    ItRoom[ID][k] := ItRoom[ID][k] - t;
+    if Ground[g].It[k] > 0 then
+      Left := True;
+  end;
+  { nothing left on the body: no loot point any more }
+  if not Left then
+    Ground[g].Active := False;
+  Result := Ground[g].Owner;
+end;
+
+function AmmoItemTaken(Item: LongInt): LongInt;
+begin
+  Result := 0;
+  if (Item >= 0) and (Item < LI_COUNT) then
+    Result := ItTaken[Item];
 end;
 
 procedure AmmoGroundClear;
@@ -3106,20 +3344,23 @@ end;
 
 function AmmoStatus: AnsiString;
 var
-  i, n, b: LongInt;
+  i, n, b, gr: LongInt;
 begin
   n := 0;
   b := 0;
+  gr := 0;
   for i := 0 to MAX_GROUND - 1 do
     if Ground[i].Active then
-      if Ground[i].Body then
+      if Ground[i].Gear then
+        Inc(gr)
+      else if Ground[i].Body then
         Inc(b)
       else
         Inc(n);
   Result := 'ammo: reloads ' + IntToStr(StReloads) + ', rounds loaded ' + IntToStr(StTaken) + ', magazines set ' +
     IntToStr(StSets) + ', weapons taken ' + IntToStr(StDrops) + ', shots seen ' + IntToStr(StShots) + ', repacks ' +
     IntToStr(StRepacks) + ', reloads seen only by a shot ' + IntToStr(StProven) + ', sets that waited for a weapon ' +
-    'change ' + IntToStr(StWaits) + ', on the ground ' + IntToStr(n) + ', with bodies ' + IntToStr(b);
+    'change ' + IntToStr(StWaits) + ', on the ground ' + IntToStr(n) + ', with bodies ' + IntToStr(b) + ', bodies with gear ' + IntToStr(gr);
 end;
 
 procedure InitLastW;

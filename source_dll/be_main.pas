@@ -38,7 +38,7 @@ uses
 
 
 const
-  BE_API_VERSION = 28;
+  BE_API_VERSION = 29;
   GET_MODULE_HANDLE_EX_FLAG_PIN = 1;
   GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = 4;
 {$IFNDEF WINDOWS}
@@ -2015,6 +2015,55 @@ begin
   Result := 0;
   try
     Result := AmmoLoot(ID, W, X, Y, Repack);
+  except
+    Result := 0;
+  end;
+end;
+
+{ 4.2.3 [Looting] Items }
+function BE_AmmoItemBody(ID, Tick: LongInt; X, Y: Single; Band, Kit, Nade, Flash, Mine, Clay: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AmmoItemBody(ID, Tick, X, Y, Band, Kit, Nade, Flash, Mine, Clay);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_AmmoItemRoom(ID, Band, Kit, Nade, Flash, Mine, Clay: LongInt); cdecl;
+begin
+  try
+    AmmoItemRoom(ID, Band, Kit, Nade, Flash, Mine, Clay);
+  except
+  end;
+end;
+
+function BE_AmmoItemCan(ID: LongInt; X, Y: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AmmoItemCan(ID, X, Y);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_AmmoItemLoot(ID: LongInt; X, Y: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AmmoItemLoot(ID, X, Y);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_AmmoItemTaken(Item: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AmmoItemTaken(Item);
   except
     Result := 0;
   end;
@@ -4244,6 +4293,11 @@ exports
   BE_AmmoUsesMags,
   BE_AmmoCanLoot,
   BE_AmmoLoot,
+  BE_AmmoItemBody,
+  BE_AmmoItemRoom,
+  BE_AmmoItemCan,
+  BE_AmmoItemLoot,
+  BE_AmmoItemTaken,
   BE_AmmoGroundClear,
   BE_AmmoFormatHud,
   BE_AmmoOptions,

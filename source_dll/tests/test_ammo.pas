@@ -1576,6 +1576,134 @@ begin
   Check(AmmoShown(29, T, 1, Weapon[1].Ammo) = Weapon[1].Ammo - 1, 'the Desert Eagles'' two bullets are one shot (' +
     IntToStr(AmmoShown(29, T, 1, Weapon[1].Ammo)) + ')');
 
+  { 58. 4.2.3 [Looting] Items: a dead soldier's body keeps the gear he carried; a looter takes each kind up to the room he has,
+    the rest stays for the next one, a body with nothing left is no loot point; the module off, TrackGroundWeapons off, the
+    owner living again, a new map, the time of a body and a body that moves }
+  MapClear;
+  AmmoConfig(1, 1, 1, 0, 1, 4, 2, 4, 45);
+  AmmoSetBodyMode(0);
+  AmmoLimit(-1);
+  AmmoGroundClear;
+  Tick1(12, AK, Cap, COLT, CA, H);
+  Check(AmmoItemBody(11, T, 1000, 200, 130, 1, 2, 1, 0, 0) = 4, 'items: a body keeps four kinds of gear');
+  Check(AmmoItemBody(10, T, 1000, 200, 0, -3, 0, 0, 0, 0) = 0, 'items: nothing (or less) carried: no record');
+  Check(AmmoItemCan(12, 1000, 200) = 0, 'items: no room told: nothing to take');
+  Check(AmmoItemLoot(12, 1000, 200) = 0, 'items: and nothing is taken');
+  Check(AmmoLootMarks(12, 255, 1000, 200, 1000, 185, 600, 4) = 0, 'items: no room: no marker either');
+  AmmoItemRoom(12, 100, 2, 1, 0, 3, 3);
+  Check(AmmoItemCan(12, 1000, 200) = 1, 'items: room for a bandage: he can');
+  Check(AmmoItemCan(12, 1030, 200) = 1, 'items: 30 px away: within the loot radius');
+  Check(AmmoItemCan(12, 1100, 200) = 0, 'items: 100 px away: out of reach');
+  AmmoItemRoom(11, 100, 2, 1, 0, 3, 3);
+  Check(AmmoItemCan(11, 1000, 200) = 0, 'items: a body is not for its own soldier');
+  { a looter with a knife in his hands (nothing to loot of the weapons) still sees the body }
+  R := AmmoLootMarks(12, 11, 1000, 200, 1000, 185, 600, 4);
+  Check(R = 1, 'items: marked for the one who has room (knife in hand) (' + IntToStr(R) + ')');
+  AmmoLootMarkOp(0, G, MX, MY, D);
+  Check((D = 0) and (Round(MX) = 1000) and (Round(MY) = 200) and (G >= 0), 'items: the marker lies at the body');
+  Check(AmmoLootMarks(12, SAW, 1000, 200, 1000, 185, 600, 4) = 1, 'items: also with the chainsaw');
+  Check(AmmoLootMarks(12, 255, 1000, 200, 1000, 185, 600, 4) = 1, 'items: and with no weapon');
+  { up to his room: the bandage 100 of 130, a kit of the one, a grenade of two, no flash (room 0) }
+  R := AmmoItemLoot(12, 1000, 200);
+  Check(R = 11, 'items: the owner of the body is told (' + IntToStr(R) + ')');
+  Check((AmmoItemTaken(LI_BAND) = 100) and (AmmoItemTaken(LI_KIT) = 1) and (AmmoItemTaken(LI_NADE) = 1) and
+    (AmmoItemTaken(LI_FLASH) = 0) and (AmmoItemTaken(LI_MINE) = 0) and (AmmoItemTaken(LI_CLAY) = 0),
+    'items: taken up to the room: ' + IntToStr(AmmoItemTaken(LI_BAND)) + ' ' + IntToStr(AmmoItemTaken(LI_KIT)) + ' ' +
+    IntToStr(AmmoItemTaken(LI_NADE)) + ' ' + IntToStr(AmmoItemTaken(LI_FLASH)));
+  Check(AmmoItemTaken(99) = 0, 'items: no such kind');
+  Check(AmmoItemCan(12, 1000, 200) = 0, 'items: his room is used up (the rest of the body is not for him)');
+  Check(AmmoLootMarks(12, 255, 1000, 200, 1000, 185, 600, 4) = 0, 'items: and the body is no marker for him');
+  { the rest stays on the body: 30 of the bandage, a grenade, a flash }
+  AmmoItemRoom(13, 200, 5, 5, 5, 5, 5);
+  Check(AmmoLootMarks(13, 255, 1000, 200, 1000, 185, 600, 4) = 1, 'items: the rest is a loot point for the next one');
+  Check(AmmoItemLoot(13, 1000, 200) = 11, 'items: the next one takes it');
+  Check((AmmoItemTaken(LI_BAND) = 30) and (AmmoItemTaken(LI_KIT) = 0) and (AmmoItemTaken(LI_NADE) = 1) and
+    (AmmoItemTaken(LI_FLASH) = 1), 'items: the remainder: 30, 0, 1, 1 (' + IntToStr(AmmoItemTaken(LI_BAND)) + ' ' +
+    IntToStr(AmmoItemTaken(LI_KIT)) + ' ' + IntToStr(AmmoItemTaken(LI_NADE)) + ' ' + IntToStr(AmmoItemTaken(LI_FLASH)) + ')');
+  Check(AmmoItemCan(13, 1000, 200) = 0, 'items: the body is emptied: no loot point');
+  Check(AmmoLootMarks(13, 255, 1000, 200, 1000, 185, 600, 4) = 0, 'items: no marker');
+  Check(AmmoItemLoot(13, 1000, 200) = 0, 'items: nothing to take any more');
+  Check(AmmoItemTaken(LI_BAND) = 0, 'items: and nothing taken');
+  { mines and claymores: a body of two, the looter has room for one mine and no claymore, then for both }
+  Check(AmmoItemBody(14, T, 1200, 200, 0, 0, 0, 0, 2, 1) = 2, 'items: a body with two mines and a claymore');
+  AmmoItemRoom(13, 0, 0, 0, 0, 1, 0);
+  Check(AmmoItemLoot(13, 1200, 200) = 14, 'items: one mine');
+  Check((AmmoItemTaken(LI_MINE) = 1) and (AmmoItemTaken(LI_CLAY) = 0), 'items: a mine, no claymore');
+  Check(AmmoItemCan(13, 1200, 200) = 0, 'items: his room is used up');
+  AmmoItemRoom(13, 0, 0, 0, 0, 5, 5);
+  Check(AmmoItemLoot(13, 1200, 200) = 14, 'items: the rest of the mines');
+  Check((AmmoItemTaken(LI_MINE) = 1) and (AmmoItemTaken(LI_CLAY) = 1), 'items: a mine and the claymore');
+  Check(AmmoItemCan(13, 1200, 200) = 0, 'items: the body is empty');
+  { two bodies: the nearer one first }
+  AmmoItemBody(11, T, 1000, 200, 0, 1, 0, 0, 0, 0);
+  AmmoItemBody(14, T, 1030, 200, 0, 1, 0, 0, 0, 0);
+  AmmoItemRoom(13, 0, 1, 0, 0, 0, 0);
+  Check(AmmoItemLoot(13, 1020, 200) = 14, 'items: the nearer body first');
+  Check(AmmoItemLoot(13, 1020, 200) = 0, 'items: his room is used up');
+  AmmoItemRoom(13, 0, 1, 0, 0, 0, 0);
+  Check(AmmoItemLoot(13, 1020, 200) = 11, 'items: then the other');
+  { a new record of the same soldier replaces the old one }
+  AmmoItemBody(11, T, 1000, 200, 0, 1, 0, 0, 0, 0);
+  AmmoItemBody(11, T, 1000, 200, 0, 0, 1, 0, 0, 0);
+  AmmoItemRoom(13, 0, 5, 5, 0, 0, 0);
+  AmmoItemLoot(13, 1000, 200);
+  Check((AmmoItemTaken(LI_KIT) = 0) and (AmmoItemTaken(LI_NADE) = 1), 'items: a second record of his replaced the first');
+  { the same body holds magazines too (DeadMagazines = body): one marker for the body, not two }
+  AmmoSetBodyMode(1);
+  AmmoRespawn(15, T);
+  Tick1(15, AK, Cap, COLT, CA, H);
+  Hold(15, AK, Cap, H, 20);
+  AmmoRespawn(16, T);
+  Tick1(16, AK, Cap, COLT, CA, H);
+  Hold(16, AK, Cap, H, 20);
+  Check(AmmoDeath(15, T, 1300, 200) = AK, 'items: a soldier dies with his AK, the magazines stay with his body');
+  Check(AmmoItemBody(15, T, 1300, 200, 130, 1, 0, 0, 0, 0) = 2, 'items: his gear too');
+  AmmoItemRoom(16, 100, 2, 0, 0, 0, 0);
+  R := AmmoLootMarks(16, AK, 1300, 200, 1300, 185, 100, 4);
+  Check(R = 1, 'items: magazines and gear at one body: one marker (' + IntToStr(R) + ')');
+  { the magazines taken, the gear still marks the body }
+  while AmmoLoot(16, AK, 1300, 200, 0) > 0 do ;
+  R := AmmoLootMarks(16, AK, 1300, 200, 1300, 185, 100, 4);
+  Check(R = 1, 'items: the magazines gone, the gear still marks the body (' + IntToStr(R) + ')');
+  AmmoLootMarkOp(0, G, MX, MY, D);
+  Check(AmmoItemCan(16, MX, MY) = 1, 'items: what is marked can be looted');
+  { the body slides (the game moves it): its gear with it }
+  AmmoBodyMove(15, 1500, 260);
+  Check(AmmoItemCan(16, 1300, 200) = 0, 'items: the body moved away from the old place');
+  Check(AmmoItemCan(16, 1500, 260) = 1, 'items: and the gear is where the body is');
+  AmmoLootMarkOp(0, G, MX, MY, D);
+  AmmoLootMarks(16, 255, 1400, 260, 1400, 245, 600, 4);
+  AmmoLootMarkOp(0, G, MX, MY, D);
+  Check((Round(MX) = 1500) and (Round(MY) = 260), 'items: the marker follows the body');
+  { the owner lives again: the body is gone }
+  AmmoRespawn(15, T);
+  Check(AmmoItemCan(16, 1500, 260) = 0, 'items: the owner lives again: the body and its gear are gone');
+  { a new map }
+  AmmoItemBody(11, T, 1000, 200, 100, 1, 1, 1, 0, 0);
+  AmmoItemRoom(13, 100, 5, 5, 5, 5, 5);
+  Check(AmmoItemCan(13, 1000, 200) = 1, 'items: a body again');
+  AmmoGroundClear;
+  Check(AmmoItemCan(13, 1000, 200) = 0, 'items: a new map: no body');
+  { the time of a body (90 s) }
+  AmmoItemBody(11, T, 1000, 200, 100, 1, 1, 1, 0, 0);
+  Check(AmmoItemCan(13, 1000, 200) = 1, 'items: a body');
+  T := T + 6000;
+  Tick1(12, AK, Cap, COLT, CA, H);
+  Check(AmmoItemCan(13, 1000, 200) = 0, 'items: forgotten after 90 s');
+  Check(AmmoLootMarks(13, 255, 1000, 200, 1000, 185, 600, 4) = 0, 'items: and no marker');
+  { the module off (nothing is kept, nothing taken), TrackGroundWeapons off (no records) }
+  AmmoConfig(0, 1, 1, 0, 1, 4, 2, 4, 45);
+  Check(AmmoItemBody(11, T, 1000, 200, 100, 1, 1, 1, 0, 0) = 0, 'items: [Ammo] off: no body');
+  Check(AmmoItemCan(13, 1000, 200) = 0, 'items: [Ammo] off: nothing to take');
+  Check(AmmoItemLoot(13, 1000, 200) = 0, 'items: [Ammo] off: nothing taken');
+  AmmoConfig(1, 1, 1, 0, 0, 4, 2, 4, 45);
+  Check(AmmoItemBody(11, T, 1000, 200, 100, 1, 1, 1, 0, 0) = 0, 'items: TrackGroundWeapons off: no body');
+  AmmoConfig(1, 1, 1, 0, 1, 4, 2, 4, 45);
+  Check(AmmoItemBody(11, T, 1000, 200, 100, 1, 1, 1, 0, 0) = 4, 'items: and on again');
+  Check(Pos('bodies with gear 1', AmmoStatus) > 0, 'items: /be_status counts the bodies with gear: ' + AmmoStatus);
+  AmmoGroundClear;
+  AmmoSetBodyMode(0);
+
   WriteLn(Checks, ' checks, ', Fails, ' failed');
   WriteLn(AmmoStatus);
   if Fails > 0 then
