@@ -152,8 +152,8 @@ begin
     'from the properties (not calibrated yet); ping compensation the server''s GetSpriteCollisionPoint was not found',
     'initial bridge info: ' + StrPas(BridgeInfo()));
 
-  Check(Init(PChar(Dir), 99) = -25, 'another API version is refused');
-  Check(Init(PChar(Dir), 25) = 25, 'started');
+  Check(Init(PChar(Dir), 99) = -28, 'another API version is refused');
+  Check(Init(PChar(Dir), 28) = 28, 'started');
   Check(Count('S777') = 6, 'players.txt taken over');
   Check(FileExists(Dir + 'players.txt.imported'), 'players.txt moved aside');
   FillChar(Vals, SizeOf(Vals), 0);
@@ -210,7 +210,7 @@ begin
   Check((L.Count = 2) and (L[1] = 'second line'), 'the log lines are in their file');
   L.Free;
 
-  Check(Init(PChar(Dir), 25) = 25, 'started again');
+  Check(Init(PChar(Dir), 28) = 28, 'started again');
   FillChar(Vals, SizeOf(Vals), 0);
   Check((Load('S888', @Vals[0]) = 3) and (Vals[2] = 42), 'the value came back from players.bdb');
   Check(Count('S777') = 6, 'and the taken-over one');
@@ -246,7 +246,7 @@ begin
   L.Add('new b');
   L.SaveToFile(NewD + 'b.txt');
   L.Free;
-  Check(Init(PChar(NewD + '|' + OldD), 25) = 25, 'started with the data folder of an earlier release');
+  Check(Init(PChar(NewD + '|' + OldD), 28) = 28, 'started with the data folder of an earlier release');
   Check(FileExists(NewD + 'a.txt') and (not FileExists(OldD + 'a.txt')), 'a file moved');
   Check(FileExists(NewD + 'imported' + PathDelim + 'x' + PathDelim + 'f.txt') and (not DirectoryExists(OldD + 'imported')),
     'a folder moved with its files');
@@ -260,7 +260,7 @@ begin
   Check((Pos('2 entries moved', StrPas(DataNote())) > 0) and (Pos('1 left', StrPas(DataNote())) > 0),
     'the note says so: ' + StrPas(DataNote()));
   Shutdown();
-  Check(Init(PChar(NewD + '|' + OldD), 25) = 25, 'started again');
+  Check(Init(PChar(NewD + '|' + OldD), 28) = 28, 'started again');
   Check(Pos('2 entries', StrPas(DataNote())) = 0, 'nothing more to take over: ' + StrPas(DataNote()));
   Shutdown();
   UnloadLibrary(H);

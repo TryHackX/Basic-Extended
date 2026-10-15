@@ -112,6 +112,34 @@ begin
   Put(3, 2, 260, 0, True);
   Intent := TkHit(1, 2, 2, 400, Reason);
   Check((Reason = TR_SPLASH_ENEMY) and (Intent = 10), 'a grenade blast with an enemy near the mate: 10%');
+  { BE2-02: the enemy on the far side of the blast - 150 px from its centre, but more from the mate who stood at the
+    edge of it - is near the blast too (the frag grenade hurts up to 85 px from its centre, the M79 and the LAW up
+    to 64): soldiers 20 (the thrower), 21 (his mate) and 22 (the enemy) far from all the others }
+  Put(20, 1, 0, 5000, True);
+  Put(21, 1, 200, 5000, True);
+  Put(22, 2, 380, 5000, True);
+  Intent := TkHit(20, 21, 2, 401, Reason);
+  Check((Reason = TR_SPLASH_ENEMY) and (Intent = 10), 'a grenade blast, the enemy beyond it (180 px from the mate): 10%');
+  Intent := TkHit(20, 21, 4, 401, Reason);
+  Check((Reason = TR_SPLASH_ENEMY) and (Intent = 10), 'an M79 blast, the enemy 180 px away (reach 64): 10%');
+  Put(22, 2, 430, 5000, True);
+  Intent := TkHit(20, 21, 4, 401, Reason);
+  Check((Reason = TR_SPLASH_ALONE) and (Intent = 60), 'an M79 blast, the enemy 230 px away (past 150 + 64): 60%');
+  Intent := TkHit(20, 21, 2, 401, Reason);
+  Check((Reason = TR_SPLASH_ENEMY) and (Intent = 10), 'a grenade blast, the enemy 230 px away (within 150 + 85): 10%');
+  Put(22, 2, 450, 5000, True);
+  Intent := TkHit(20, 21, 2, 401, Reason);
+  Check((Reason = TR_SPLASH_ALONE) and (Intent = 60), 'a grenade blast, the enemy 250 px away (past 150 + 85): 60%');
+  { a LAW that no shot of his sent at the mate: the same reach }
+  Put(22, 2, 380, 5000, True);
+  Intent := TkHit(20, 21, 12, 401, Reason);
+  Check((Reason = TR_STRAY) and (Intent = 20), 'a LAW blast, the enemy beyond it: an accident, 20%');
+  Put(22, 2, 430, 5000, True);
+  Intent := TkHit(20, 21, 12, 401, Reason);
+  Check((Reason = TR_SPLASH_ALONE) and (Intent = 60), 'a LAW blast, no enemy near it: 60%');
+  Put(20, 1, 0, 5000, False);
+  Put(21, 1, 200, 5000, False);
+  Put(22, 2, 380, 5000, False);
 
   { 5. a knife or fists }
   Intent := TkHit(1, 2, 11, 400, Reason);

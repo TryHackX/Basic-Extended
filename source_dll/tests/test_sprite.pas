@@ -154,6 +154,14 @@ begin
   Check(SpriteRead(3, Alive, W, A, Fire, Reload) and Reload and not Fire, '2.8.2: the reload key at +15');
   Check(SpriteCheck(3, 1, 2, 20, 0, 12, 0, 50, 60, 512) = 1, '2.8.2: the check with his reload key');
   Recs[3, CTL + 15] := 0;
+  { 4.2: the change-weapon key at +13 and the throw-weapon key at +14 (a weapon change in flight for the ammunition) }
+  Check(not SpriteSwitchKeys(3), '2.8.2: no change or throw key');
+  Recs[3, CTL + 13] := 1;
+  Check(SpriteSwitchKeys(3) and (SpriteCheck(3, 1, 2, 20, 0, 12, 0, 50, 60, 128) = 1), '2.8.2: the change key at +13');
+  Recs[3, CTL + 13] := 0;
+  Recs[3, CTL + 14] := 1;
+  Check(SpriteSwitchKeys(3) and (SpriteCheck(3, 1, 2, 20, 0, 12, 0, 50, 60, 256) = 1), '2.8.2: the throw key at +14');
+  Recs[3, CTL + 14] := 0;
   Recs[1, CTL + 2] := 1;
   Check(SpriteCheck(1, 1, 3, 30, 0, 12, 2, 700, -250, 4) = 1, '2.8.2: the up key');
   Recs[1, CTL + 2] := 0;

@@ -34,6 +34,8 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 "%FPC%" -B -Pi386 -Twin32 -Mobjfpc -Sh -O1 -gl -Cr -Co -Ci -dBE_CHECKS -Fu. -FUbuild\test -FEbuild\test tests\test_spawn.pas
 if errorlevel 1 exit /b 1
+"%FPC%" -B -Pi386 -Twin32 -Mobjfpc -Sh -O1 -gl -Cr -Co -Ci -dBE_CHECKS -Fu. -FUbuild\test -FEbuild\test tests\test_things.pas
+if errorlevel 1 exit /b 1
 
 build\test\test_store.exe build\test
 if errorlevel 1 exit /b 1
@@ -43,7 +45,8 @@ build\test\test_engine.exe build\test
 if errorlevel 1 exit /b 1
 build\test\test_bridge.exe
 if errorlevel 1 exit /b 1
-build\test\test_ammo.exe
+rem the ammunition on a map of the server too (the loot markers' line of sight; without the map that part is left out)
+build\test\test_ammo.exe ..\..\..\maps\ctf_Ash.pms
 if errorlevel 1 exit /b 1
 build\test\test_tk.exe
 if errorlevel 1 exit /b 1
@@ -54,6 +57,9 @@ if errorlevel 1 exit /b 1
 build\test\test_names.exe
 if errorlevel 1 exit /b 1
 build\test\test_sprite.exe
+if errorlevel 1 exit /b 1
+rem [Looting] KeepWeapons: the signatures against the bytes of both servers' code, the check of the table, the refresh, the cap
+build\test\test_things.exe
 if errorlevel 1 exit /b 1
 rem [Spawns]: the old Respawns-Control's layouts and a map of the server are used when this folder is in its
 rem scripts folder (each one is left out when it is not there); the /recompile talks to a stand-in on 127.0.0.1

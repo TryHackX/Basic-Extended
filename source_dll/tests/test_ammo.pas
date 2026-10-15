@@ -10,7 +10,7 @@ program test_ammo;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, be_world, be_ballistic, be_ammo;
+  SysUtils, be_world, be_ballistic, be_map, be_ammo;
 
 var
   Fails: LongInt = 0;
@@ -40,6 +40,24 @@ begin
     LastAct := R;
     LastVal := V;
     if R = AMA_SET then
+      Inc(Sets)
+    else
+      Inc(Drops);
+  end;
+end;
+
+{ one tick of the server's count; the library's answer }
+function TickR(ID, W, A, SW, SA, Flags: LongInt): LongInt;
+var
+  V: LongInt;
+begin
+  Inc(T);
+  Result := AmmoObserve(ID, T, W, A, SW, SA, Flags, 100, 200, V);
+  if (Result = AMA_SET) or (Result = AMA_DROP) then
+  begin
+    LastAct := Result;
+    LastVal := V;
+    if Result = AMA_SET then
       Inc(Sets)
     else
       Inc(Drops);
@@ -78,6 +96,13 @@ begin
   Result := AmmoFormatHud(ID, W, Clip);
 end;
 
+{ the script builds the ammunition line of the weapon the game shows (main.pas AmmoHudWant) }
+function Draw(ID, W, A: LongInt): AnsiString;
+begin
+  Result := AmmoFormatHud(ID, W, AmmoShown(ID, T, W, A));
+  AmmoDrawn(ID, W);
+end;
+
 const
   H = AMF_HUMAN;
   AK = 3;
@@ -87,7 +112,10 @@ const
   SAW = 12;
 
 var
-  A, Cap, G, R, S0: LongInt;
+  A, Cap, G, R, S0, CA, k, n, D: LongInt;
+  MX, MY, AX, AY, DX, DY: Single;
+  Found: Boolean;
+  Rays, Stamp: LongInt;
 begin
   WeaponsDefault(False);
   Cap := Weapon[AK].Ammo;
@@ -1110,6 +1138,443 @@ begin
   Check(AmmoMagCount(29, AK) = 3, 'three spare magazines now: ' + Hud(29, AK, Cap));
   Check(AmmoCanLoot(29, AK, 1300, 200) = 0, 'nothing left there');
   AmmoSetBodyMode(0);
+
+  { 51. 4.2: the first Q after a respawn - the secondary comes into the hands with its full set at once (its pouch was
+    made only a tick later, and the line drawn in the swap's own tick said "empty" until the first shot); also with
+    the spare magazines of ExtraMagazines and a class }
+  AmmoLimit(1);
+  AmmoPlayerExtra(5, 1);
+  ResetCounts;
+  AmmoRespawn(5, T);
+  Tick1(5, AK, Cap, COLT, 12, H);
+  Hold(5, AK, Cap, H, 20);
+  Check(AmmoMagCount(5, COLT) = 0, 'the secondary is not touched while it is away');
+  Tick1(5, COLT, 12, AK, Cap, H);
+  G := AmmoMagCount(5, COLT);
+  Check(G >= 2, 'the secondary has its set in the swap tick (' + IntToStr(G) + ')');
+  Check(Pos('empty', Hud(5, COLT, 12)) = 0, 'the line is not empty after the first Q: ' + Hud(5, COLT, 12));
+  Hold(5, COLT, 12, H, 20);
+  Check(AmmoMagCount(5, COLT) = G, 'the set stays as it was (' + IntToStr(AmmoMagCount(5, COLT)) + ')');
+  Tick1(5, AK, Cap, COLT, 12, H);
+  Hold(5, AK, Cap, H, 20);
+  Tick1(5, COLT, 12, AK, Cap, H);
+  Check(AmmoMagCount(5, COLT) = G, 'the second Q changes nothing (' + IntToStr(AmmoMagCount(5, COLT)) + ')');
+  Check(Sets + Drops = 0, 'the swaps change nothing');
+  AmmoPlayerExtra(5, 0);
+  AmmoLimit(-1);
+
+  { 52. 4.2: the ammunition line drawn before the library had the weapon (a respawn, a weapon given a tick later): no "empty" for
+    a pouch that was never made, and one more mark when the library has the weapon - never again while nothing changes }
+  AmmoLimit(-1);
+  CA := Weapon[COLT].Ammo;
+  ResetCounts;
+  AmmoRespawn(8, T);
+  Check(AmmoHandW(8) = 255, 'a new life follows no weapon');
+  Check(AmmoDrawn(8, AK) = 0, 'the line drawn for the AK before the library has it');
+  Check(Hud(8, AK, Cap) = ' | Ammo: ' + IntToStr(Cap), 'an unmade pouch is no empty one: ' + Hud(8, AK, Cap));
+  Check(Pos('empty', Hud(8, COLT, CA)) = 0, 'nor the secondary: ' + Hud(8, COLT, CA));
+  R := TickR(8, AK, Cap, COLT, CA, H);
+  Check(R = AMA_HUD, 'the change of weapon marks the line');
+  Check(AmmoHandW(8) = AK, 'the library follows the AK');
+  Check(Draw(8, AK, Cap) = ' | Ammo: ' + IntToStr(Cap) + ' [' + IntToStr(Cap) + ', ' + IntToStr(Cap) + ']',
+    'the line when the library has the weapon: ' + Hud(8, AK, Cap));
+  Check(AmmoDrawn(8, AK) = 1, 'drawn for the weapon the library follows');
+  G := 0;
+  for A := 1 to 40 do
+    if TickR(8, AK, Cap, -1, -1, H) = AMA_HUD then
+    begin
+      Inc(G);
+      WriteLn('  mark at +', A);
+    end;
+  Check(G = 0, 'nothing changes: no more marks (' + IntToStr(G) + ')');
+  { drawn before the library had the weapon, no change of weapon seen since (the script missed a mark): marked once }
+  AmmoRespawn(9, T);
+  AmmoDrawn(9, AK);
+  Check(TickR(9, AK, Cap, COLT, CA, H) = AMA_HUD, 'the change marks it');
+  AmmoShown(9, T, AK, Cap);
+  G := 0;
+  for A := 1 to 20 do
+    if TickR(9, AK, Cap, -1, -1, H) = AMA_HUD then
+      Inc(G);
+  Check(G = 1, 'a line drawn before the weapon was followed is marked once more (' + IntToStr(G) + ')');
+  Check(Draw(9, AK, Cap) <> '', 'the script draws it');
+  G := 0;
+  for A := 1 to 20 do
+    if TickR(9, AK, Cap, -1, -1, H) = AMA_HUD then
+      Inc(G);
+  Check(G = 0, 'and then it is quiet (' + IntToStr(G) + ')');
+  { the line shows the weapon he put away: marked once, until it is drawn for the weapon in his hands }
+  AmmoDrawn(9, COLT);
+  Check(TickR(9, AK, Cap, -1, -1, H) = AMA_HUD, 'a line drawn for another weapon is marked');
+  Check(TickR(9, AK, Cap, -1, -1, H) = AMA_NONE, 'once');
+  Check(AmmoDrawn(9, 255) = 1, 'no weapon: nothing of the library in the line');
+  Check(TickR(9, AK, Cap, -1, -1, H) = AMA_HUD, 'drawn when he had no weapon: marked when he has one');
+  { no line wanted for him (off, spectator): never marked }
+  AmmoDrawn(9, -3);
+  G := 0;
+  for A := 1 to 20 do
+    if TickR(9, AK, Cap, -1, -1, H) = AMA_HUD then
+      Inc(G);
+  Check(G = 0, 'a player without the line is never marked (' + IntToStr(G) + ')');
+  { he is down: nothing is looked at; the line drawn without a weapon is marked when he is up with it }
+  AmmoDrawn(9, 255);
+  AmmoPause(9, 1, T);
+  Check(TickR(9, 255, 0, -1, -1, H) = AMA_NONE, 'paused: nothing');
+  AmmoPause(9, 0, T);
+  Check(TickR(9, AK, Cap, -1, -1, H) = AMA_HUD, 'up again: the line is drawn again');
+
+  { 53. 4.2: a survivor's round start as the game gives it - the game's own weapon first, his weapon a few ticks later, both
+    not swaps - and two swaps with the secondary: his AK keeps its spare magazines all along and every line drawn is
+    his weapon's own }
+  AmmoPlayerExtra(10, 0);
+  ResetCounts;
+  AmmoRespawn(10, T);
+  Tick1(10, AK, Cap, COLT, CA, H);
+  Hold(10, AK, Cap, H, 20);
+  Tick1(10, AK, Cap - 1, COLT, CA, H);
+  Hold(10, AK, Cap - 1, H, 30);
+  Tick1(10, COLT, CA, AK, Cap - 1, H);
+  Hold(10, COLT, CA, H, 30);
+  AmmoCarrySave(10, T);
+  AmmoCarryConfirm(10);
+  AmmoRespawn(10, T);
+  Check(AmmoHandW(10) = 255, 'the new round: no weapon yet');
+  R := TickR(10, SPAS, Weapon[SPAS].Ammo, 255, 0, H);
+  Check(R = AMA_HUD, 'the game gives him a Spas first');
+  Check(Draw(10, SPAS, Weapon[SPAS].Ammo) <> '', 'a line for it');
+  Hold(10, SPAS, Weapon[SPAS].Ammo, H, 2);
+  R := TickR(10, AK, Cap, COLT, CA, H);
+  Check(R = AMA_HUD, 'his AK comes in');
+  S0 := AmmoMagCount(10, AK);
+  Check(S0 >= 2, 'the AK has its spare magazines (' + IntToStr(S0) + ')');
+  Check(Draw(10, AK, Cap) = ' | Ammo: ' + IntToStr(Cap) + ' [' + IntToStr(Cap) + ', ' + IntToStr(Cap - 1) + ']',
+    'the AK line: ' + Draw(10, AK, Cap));
+  Hold(10, AK, Cap, H, 40);
+  R := TickR(10, COLT, CA, AK, Cap, H);
+  Check(R = AMA_HUD, 'the first Q (' + IntToStr(R) + ', value ' + IntToStr(LastVal) + ')');
+  Check(Pos('empty', Draw(10, COLT, CA)) = 0, 'the secondary is not empty: ' + Draw(10, COLT, CA));
+  Hold(10, COLT, CA, H, 40);
+  R := TickR(10, AK, Cap, COLT, CA, H);
+  Check(R = AMA_HUD, 'and back');
+  Check(Draw(10, AK, Cap) = ' | Ammo: ' + IntToStr(Cap) + ' [' + IntToStr(Cap) + ', ' + IntToStr(Cap - 1) + ']',
+    'the AK line after the swaps: ' + Draw(10, AK, Cap));
+  Check(AmmoMagCount(10, AK) = S0, 'no magazine lost over the swaps');
+  Hold(10, AK, Cap, H, 40);
+  Check(Sets + Drops = 0, 'the swaps set nothing (' + IntToStr(Sets + Drops) + ')');
+
+  { 54. 4.2 [Looting] Markers: the loot points he could take something from with the weapon in his hands, in range, nearest
+    first, at most Max }
+  AmmoSetBodyMode(0);
+  AmmoLimit(-1);
+  AmmoGroundClear;
+  for k := 20 to 22 do
+  begin
+    AmmoRespawn(k, T);
+    Tick1(k, AK, Cap, COLT, CA, H);
+    Hold(k, AK, Cap, H, 20);
+  end;
+  AmmoRespawn(24, T);
+  Tick1(24, AK, Cap, COLT, CA, H);
+  Hold(24, AK, Cap, H, 20);
+  Check(AmmoDeath(20, T, 1100, 200) = AK, 'three soldiers die with their AK: one at 100 px');
+  Check(AmmoDeath(21, T, 1300, 200) = AK, 'one at 300 px');
+  Check(AmmoDeath(22, T, 1000, 700) = AK, 'one at 500 px (down)');
+  R := AmmoLootMarks(24, AK, 1000, 200, 1000, 185, 600, 4);
+  Check(R = 3, 'three loot points within 600 px (' + IntToStr(R) + ')');
+  AmmoLootMarkOp(0, G, MX, MY, D);
+  Check((D = 100) and (Round(MX) = 1100) and (Round(MY) = 200) and (G >= 0), 'the nearest first: ' + IntToStr(D));
+  AmmoLootMarkOp(2, G, MX, MY, D);
+  Check(D = 500, 'the farthest last: ' + IntToStr(D));
+  AmmoLootMarkOp(3, G, MX, MY, D);
+  Check((G = -1) and (D = 0), 'past the count: nothing');
+  Check(AmmoLootMarks(24, AK, 1000, 200, 1000, 185, 600, 2) = 2, 'at most Max');
+  Check(AmmoLootMarks(24, AK, 1000, 200, 1000, 185, 350, 4) = 2, 'MaxDist 350: two');
+  Check(AmmoLootMarks(24, AK, 1000, 200, 1000, 185, 50, 4) = 0, 'MaxDist 50: none');
+  Check(AmmoLootMarks(24, COLT, 1000, 200, 1000, 185, 600, 4) = 0, 'the weapon of another kind in his hands: the AKs are no use to him');
+  Check(AmmoLootMarks(24, SAW, 1000, 200, 1000, 185, 600, 4) = 0, 'the chainsaw loots nothing');
+  Check(AmmoLootMarks(24, 255, 1000, 200, 1000, 185, 600, 4) = 0, 'no weapon: nothing');
+  AmmoLootMarks(24, AK, 1000, 200, 1000, 185, 600, 4);
+  AmmoLootMarkOp(0, G, MX, MY, D);
+  Check(AmmoCanLoot(24, AK, MX, MY) = 1, 'what is marked can be looted');
+  { the pouch full of whole magazines: nothing to take, no marker }
+  AmmoAddMags(24, AK, 12);
+  Check(AmmoLootMarks(24, AK, 1000, 200, 1000, 185, 600, 4) = 0, 'a full pouch: no markers');
+  Check(AmmoCanLoot(24, AK, 1100, 200) = 0, 'and nothing to loot');
+  AmmoRespawn(24, T);
+  Tick1(24, AK, Cap, COLT, CA, H);
+  { the record is taken: no marker }
+  Check(AmmoLootMarks(24, AK, 1100, 200, 1100, 185, 20, 4) = 1, 'standing over the first one');
+  AmmoLootMarkOp(0, G, MX, MY, D);
+  S0 := G;
+  while AmmoLoot(24, AK, 1100, 200, 0) > 0 do ;
+  Check(AmmoLootMarks(24, AK, 1100, 200, 1100, 185, 20, 4) = 0, 'looted empty: the marker is gone');
+  { the loot lies where the record is: a weapon's object slides, a body is moved }
+  AmmoLootMarkOp(0, G, MX, MY, D);
+  Check(AmmoLootMarks(24, AK, 1000, 200, 1000, 185, 600, 4) = 2, 'two left');
+  AmmoLootMarkOp(1, G, MX, MY, D);
+  AmmoGroundMove(G, 1500, 260);
+  Check(AmmoLootMarks(24, AK, 1000, 200, 1000, 185, 600, 4) = 2, 'the weapon slid: still marked');
+  AmmoLootMarkOp(1, G, MX, MY, D);
+  Check((Round(MX) = 1500) and (Round(MY) = 260), 'at the new place');
+  { a record that was too long on the ground is not offered }
+  Check(AmmoLootMarks(24, AK, 5000, 200, 5000, 185, 100, 4) = 0, 'nothing near');
+  { with a map: a wall between his eyes and the loot hides it }
+  if MapLoad(ParamStr(1)) > 0 then
+  begin
+    AmmoGroundClear;
+    Found := False;
+    for k := 0 to 2 do
+      for n := 0 to 15 do
+        if not Found then
+        begin
+          if k = 0 then
+          begin
+            AX := 380;
+            AY := -100;
+          end
+          else if k = 1 then
+          begin
+            AX := -285;
+            AY := -290;
+          end
+          else
+          begin
+            AX := 0;
+            AY := -200;
+          end;
+          DX := Cos(n * Pi / 8);
+          DY := Sin(n * Pi / 8);
+          if (not MapPointSolid(AX, AY, 0, 0)) and (not MapRay(AX, AY, AX + DX * 40, AY + DY * 40, 0, 0)) and
+            (not MapPointSolid(AX + DX * 700, AY + DY * 700, 0, 0)) and MapRay(AX, AY, AX + DX * 700, AY + DY * 700, 0, 0) then
+            Found := True;
+        end;
+    Check(Found, 'a wall between two open points on the map');
+    if Found then
+    begin
+      { the point of the last try is the found one: A open, near open at 40 px, far behind a wall at 700 px }
+      AmmoRespawn(25, T);
+      Tick1(25, AK, Cap, COLT, CA, H);
+      Hold(25, AK, Cap, H, 20);
+      AmmoRespawn(26, T);
+      Tick1(26, AK, Cap, COLT, CA, H);
+      Hold(26, AK, Cap, H, 20);
+      AmmoDeath(25, T, AX + DX * 40, AY + DY * 40 + 4);
+      AmmoDeath(26, T, AX + DX * 700, AY + DY * 700 + 4);
+      R := AmmoLootMarks(24, AK, AX, AY, AX, AY, 1000, 4);
+      Check(R = 1, 'the loot behind the wall is not marked (' + IntToStr(R) + ')');
+      AmmoLootMarkOp(0, G, MX, MY, D);
+      Check(D < 60, 'the open one is');
+      { what a call costs with the worst case of 16 loot points around (each needs its ray) }
+      for k := 1 to 16 do
+      begin
+        AmmoRespawn(k, T);
+        Tick1(k, AK, Cap, COLT, CA, H);
+        Hold(k, AK, Cap, H, 4);
+        AmmoDeath(k, T, AX + DX * 3 * (k + 2), AY + DY * 3 * (k + 2) + 4);
+      end;
+      Rays := 0;
+      Stamp := GetTickCount64;
+      for n := 1 to 5000 do
+        Rays := Rays + AmmoLootMarks(24, AK, AX, AY, AX, AY, 1000, 6);
+      Stamp := GetTickCount64 - Stamp;
+      WriteLn('loot markers: ', Stamp * 1000 div 5000, ' microseconds a call (18 points, ', Rays div 5000, ' marked)');
+      MapClear;
+      R := AmmoLootMarks(24, AK, AX, AY, AX, AY, 1000, 4);
+      Check(R = 4, 'without a map nothing is hidden (' + IntToStr(R) + ')');
+    end;
+  end
+  else
+    WriteLn('(no map: the line of sight is not tried)');
+
+  { 4.2 KeepWeapons: a dead soldier's weapon with spare magazines is forgotten after the game's 90 s - unless the keeper
+    holds its object: then the record lasts as long as the object, and follows the weapon when it is made again (an
+    object of another slot) }
+  AmmoGroundClear;
+  AmmoGroundKeep(0);
+  AmmoRespawn(30, T);
+  Tick1(30, AK, Cap, COLT, 12, H);
+  Hold(30, AK, Cap, H, 20);
+  Check(AmmoDeath(30, T, 2000, 200) = AK, 'keep 1: a soldier dies with his AK');
+  Check(AmmoGroundAttach(30, AK, 45, 1, T) = 1, 'keep 1: the AK has its object');
+  AmmoRespawn(31, T);
+  Tick1(31, AK, Cap, COLT, 12, H);
+  Check(AmmoCanLoot(31, AK, 2000, 200) = 1, 'keep 1: lootable now');
+  T := T + 6000;
+  Tick1(31, AK, Cap, COLT, 12, H);
+  Check(AmmoCanLoot(31, AK, 2000, 200) = 0, 'keep 1: without the keeper the record is forgotten after 90 s');
+  AmmoGroundKeep(1);
+  AmmoRespawn(32, T);
+  Tick1(32, AK, Cap, COLT, 12, H);
+  Hold(32, AK, Cap, H, 20);
+  Check(AmmoDeath(32, T, 2100, 200) = AK, 'keep 2: another soldier dies with his AK');
+  Check(AmmoGroundAttach(32, AK, 46, 1, T) = 1, 'keep 2: the AK has its object');
+  Tick1(31, AK, Cap, COLT, 12, H);
+  T := T + 6000;
+  Tick1(31, AK, Cap, COLT, 12, H);
+  Check(AmmoCanLoot(31, AK, 2100, 200) = 1, 'keep 2: with the keeper the record whose object is known stays');
+  Check(AmmoGroundRebind(46, 47, 2150, 210) = 1, 'keep 2: the weapon is made again as object 47');
+  Check((AmmoGroundHasSlot(47) = 1) and (AmmoGroundHasSlot(46) = 0), 'keep 2: the record follows it');
+  Check(AmmoCanLoot(31, AK, 2150, 210) = 1, 'keep 2: and lies where it was made again');
+  Check(AmmoGroundRebind(46, 48, 0, 0) = 0, 'keep 2: an object nobody knows is left alone');
+  Check(AmmoGroundRebind(0, 48, 0, 0) = 0, 'keep 2: object 0 is nothing');
+  AmmoGroundKeep(0);
+  Tick1(31, AK, Cap, COLT, 12, H);
+  Check(AmmoCanLoot(31, AK, 2150, 210) = 0, 'keep 3: the keeper off again: the old record goes with its age');
+
+  { 55. 4.2: Q while an empty AK is kept at 0 (EmptyDrop = 0). His game swaps the weapons at once; the server hears of it
+    only with the game's next full report (every 7 ticks, or later when it is late or lost) and until then still
+    shows the AK in his hands. A set now would be Player.Primary.Ammo := 0 = a ForceWeapon of the server's arrangement
+    (the AK in the hands, the USSOCOM away): it would undo his swap. So nothing is set while the change key was seen a
+    moment ago; the empty AK went into the secondary place - nothing to set any more. }
+  AmmoConfig(1, 1, 0, 0, 1, 4, 2, 4, 45);
+  AmmoSetReserve(AK, 0);
+  ResetCounts;
+  AmmoRespawn(26, T);
+  Tick1(26, AK, Cap, COLT, 12, H);
+  Hold(26, AK, Cap, H, 20);
+  A := Fire(26, AK, Cap, 0, 10, H);
+  Hold(26, AK, 0, H, 40);
+  Check((Sets >= 1) and (Drops = 0), 'the empty AK is kept at 0 (' + IntToStr(Sets) + ')');
+  ResetCounts;
+  Hold(26, AK, 0, H or AMF_CHANGE, 5);
+  Hold(26, AK, 0, H, 6);
+  { the server's own reload of the AK it still has shows rounds: before 4.2 answered at once }
+  Hold(26, AK, Cap, H, 2);
+  Hold(26, AK, 0, H, 12);
+  Check(Sets + Drops = 0, 'no set while his swap may be on its way (' + IntToStr(Sets) + ' sets)');
+  Tick1(26, COLT, 12, AK, 0, H);
+  Hold(26, COLT, 12, H, 80);
+  Check(Sets + Drops = 0, 'the swap came: the set that waited is not sent (' + IntToStr(Sets) + ')');
+  { no swap came (the key did nothing): the set waits only so long }
+  Tick1(26, AK, 0, COLT, 12, H);
+  Hold(26, AK, 0, H, 40);
+  ResetCounts;
+  Hold(26, AK, 0, H or AMF_CHANGE, 3);
+  Hold(26, AK, Cap, H, 2);
+  Hold(26, AK, 0, H, 30);
+  Check(Sets = 0, 'the set waits after the key (' + IntToStr(Sets) + ')');
+  Hold(26, AK, 0, H, 30);
+  Check((Sets >= 1) and (LastVal = 0), 'and comes after the wait when the server still shows the AK (' + IntToStr(Sets) +
+    ')');
+  { a bullet of the USSOCOM while the server still shows the AK: his game has swapped (the key itself may never
+    reach the server - a short tap between two reports) }
+  Hold(26, AK, 0, H, 40);
+  ResetCounts;
+  AmmoShot(26, COLT, T + 1);
+  Tick1(26, AK, 0, -1, -1, H);
+  Hold(26, AK, Cap, H, 2);
+  Hold(26, AK, 0, H, 20);
+  Check(Sets = 0, 'a bullet of the other weapon: no set (' + IntToStr(Sets) + ')');
+  { a bot changes its weapons in the server itself: nothing waits }
+  ResetCounts;
+  AmmoRespawn(27, T);
+  Tick1(27, AK, Cap, COLT, 12, 0);
+  Hold(27, AK, Cap, 0, 20);
+  A := Fire(27, AK, Cap, 0, 10, AMF_CHANGE);
+  Hold(27, AK, 0, AMF_CHANGE, 9);
+  Check(Drops = 1, 'a bot''s empty weapon still goes at once');
+  AmmoConfig(1, 1, 1, 0, 1, 4, 2, 4, 45);
+  AmmoSetReserve(AK, 2 * Cap);
+
+  { 56. 4.2: the USSOCOM fired, Q, the AK's first bullet in the same tick as the report that brings the AK (a loaded
+    server takes all the packets that came in one go): the report's count was sent before that shot - it comes off;
+    the next report (with the shots) is taken at once }
+  ResetCounts;
+  AmmoRespawn(28, T);
+  Tick1(28, COLT, 12, AK, Cap, H);
+  Hold(28, COLT, 12, H, 20);
+  A := Fire(28, COLT, 12, 9, 24, H);
+  AmmoShot(28, AK, T + 1);
+  Tick1(28, AK, Cap, COLT, 9, H);
+  Check(AmmoShown(28, T, AK, Cap) = Cap - 1, 'the AK''s bullet of the change''s tick is shown (' +
+    IntToStr(AmmoShown(28, T, AK, Cap)) + ')');
+  Hold(28, AK, Cap, H, 4);
+  AmmoShot(28, AK, T + 1);
+  Tick1(28, AK, Cap, -1, -1, H);
+  Check(AmmoShown(28, T, AK, Cap) = Cap - 2, 'the next one too (' + IntToStr(AmmoShown(28, T, AK, Cap)) + ')');
+  Hold(28, AK, Cap - 2, H, 3);
+  Check(AmmoShown(28, T, AK, Cap - 2) = Cap - 2, 'the report with both shots is taken at once (' +
+    IntToStr(AmmoShown(28, T, AK, Cap - 2)) + ')');
+  Hold(28, AK, Cap - 2, H, 30);
+  Check((AmmoShown(28, T, AK, Cap - 2) = Cap - 2) and (Sets + Drops = 0), 'and stays (' +
+    IntToStr(AmmoShown(28, T, AK, Cap - 2)) + ')');
+  { the AK's bullet a tick before the report that brings it: that report was sent after the shot - nothing comes off }
+  Tick1(28, COLT, 9, AK, Cap - 2, H);
+  Hold(28, COLT, 9, H, 30);
+  AmmoShot(28, AK, T + 1);
+  Tick1(28, COLT, 9, -1, -1, H);
+  Tick1(28, AK, Cap - 3, COLT, 9, H);
+  Check(AmmoShown(28, T, AK, Cap - 3) = Cap - 3, 'a bullet before the report: in its count already (' +
+    IntToStr(AmmoShown(28, T, AK, Cap - 3)) + ')');
+  Hold(28, AK, Cap - 3, H, 30);
+  Check((AmmoShown(28, T, AK, Cap - 3) = Cap - 3) and (Sets + Drops = 0), 'and stays (' +
+    IntToStr(AmmoShown(28, T, AK, Cap - 3)) + ')');
+  { the AK's bullet in the tick after the change: the server's copy of his report (the change's count) does not take it
+    back }
+  Tick1(28, COLT, 9, AK, Cap - 3, H);
+  Hold(28, COLT, 9, H, 30);
+  Tick1(28, AK, Cap - 3, COLT, 9, H);
+  AmmoShot(28, AK, T + 1);
+  Tick1(28, AK, Cap - 3, -1, -1, H);
+  Hold(28, AK, Cap - 3, H, 3);
+  Check(AmmoShown(28, T, AK, Cap - 3) = Cap - 4, 'a bullet the tick after the change is shown (' +
+    IntToStr(AmmoShown(28, T, AK, Cap - 3)) + ')');
+  Hold(28, AK, Cap - 4, H, 30);
+  Check((AmmoShown(28, T, AK, Cap - 4) = Cap - 4) and (Sets + Drops = 0), 'and the reports agree (' +
+    IntToStr(AmmoShown(28, T, AK, Cap - 4)) + ')');
+
+  { 58. a set that waits (the change key held as the game's reload of the last, partial magazine is believed): it comes
+    once he is settled, less the shots he fired meanwhile from the full magazine his game loaded }
+  AmmoSetReserve(AK, Cap);
+  ResetCounts;
+  AmmoRespawn(25, T);
+  Tick1(25, AK, Cap, COLT, 12, H);
+  Hold(25, AK, Cap, H, 20);
+  A := Fire(25, AK, Cap, Cap - 10, 10, H);
+  Hold(25, AK, A, H, 12);
+  Hold(25, AK, 0, H or AMF_RELOAD, 2);
+  Hold(25, AK, 0, H, 100);
+  Hold(25, AK, Cap, H, 20);
+  A := Fire(25, AK, Cap, 0, 10, H);
+  Hold(25, AK, 0, H, 100);
+  Hold(25, AK, Cap, H or AMF_CHANGE, 9);
+  Check(Sets = 0, 'the partial magazine waits while the change key is held');
+  AmmoShot(25, AK, T + 1);
+  Hold(25, AK, Cap, H, 5);
+  AmmoShot(25, AK, T + 1);
+  Hold(25, AK, Cap - 2, H, 50);
+  Check((Sets = 1) and (LastVal = Cap - 12), 'and comes once he is settled, less his two shots (' + IntToStr(Sets) + ', ' +
+    IntToStr(LastVal) + ')');
+  AmmoSetReserve(AK, 2 * Cap);
+
+  { 57. 4.2: two bullets of the AK made in one tick (the server took the packets of two of his ticks in one go) are two
+    shots; the Spas-12's pellets and the second bullet of the Desert Eagles are one shot }
+  ResetCounts;
+  AmmoRespawn(29, T);
+  Tick1(29, AK, Cap, COLT, 12, H);
+  Hold(29, AK, Cap, H, 20);
+  AmmoShot(29, AK, T + 1);
+  AmmoShot(29, AK, T + 1);
+  Tick1(29, AK, Cap, -1, -1, H);
+  Check(AmmoShown(29, T, AK, Cap) = Cap - 2, 'two AK bullets in one tick are two shots (' +
+    IntToStr(AmmoShown(29, T, AK, Cap)) + ')');
+  Hold(29, AK, Cap - 2, H, 30);
+  AmmoSetReserve(SPAS, 3);
+  Tick1(29, SPAS, Weapon[SPAS].Ammo, AK, Cap - 2, H);
+  Hold(29, SPAS, Weapon[SPAS].Ammo, H, 30);
+  for k := 1 to 6 do
+    AmmoShot(29, SPAS, T + 1);
+  Tick1(29, SPAS, Weapon[SPAS].Ammo, -1, -1, H);
+  Check(AmmoShown(29, T, SPAS, Weapon[SPAS].Ammo) = Weapon[SPAS].Ammo - 1, 'the Spas-12''s pellets are one shot (' +
+    IntToStr(AmmoShown(29, T, SPAS, Weapon[SPAS].Ammo)) + ')');
+  AmmoRespawn(29, T);
+  Tick1(29, 1, Weapon[1].Ammo, COLT, 12, H);
+  Hold(29, 1, Weapon[1].Ammo, H, 20);
+  AmmoShot(29, 1, T + 1);
+  AmmoShot(29, 1, T + 1);
+  Tick1(29, 1, Weapon[1].Ammo, -1, -1, H);
+  Check(AmmoShown(29, T, 1, Weapon[1].Ammo) = Weapon[1].Ammo - 1, 'the Desert Eagles'' two bullets are one shot (' +
+    IntToStr(AmmoShown(29, T, 1, Weapon[1].Ammo)) + ')');
 
   WriteLn(Checks, ' checks, ', Fails, ' failed');
   WriteLn(AmmoStatus);

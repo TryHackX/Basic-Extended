@@ -51,6 +51,8 @@ function SpriteMemReady: Boolean;
 function SpriteCheck(ID, Alive, W, A, SW, SA, Gren, AimX, AimY, Keys: LongInt): LongInt;
 { the soldier as his record has it now (False: not readable - the script reads the properties) }
 function SpriteRead(ID: LongInt; out Alive: Boolean; out W, A: LongInt; out Fire, Reload: Boolean): Boolean;
+{ 4.2: his change-weapon key or throw-weapon key is held (as his last report has it); False also when not readable }
+function SpriteSwitchKeys(ID: LongInt): Boolean;
 procedure SpriteMemOff(const Reason: AnsiString);
 procedure SpriteMemReset;
 function SpriteMemInfo: AnsiString;
@@ -754,6 +756,20 @@ begin
     Fire := Rd8(Rec + PtrUInt(CtlOff + CtlKey[4])) <> 0;
     Reload := Rd8(Rec + PtrUInt(CtlOff + CtlKey[9])) <> 0;
     Result := True;
+  except
+    Result := False;
+  end;
+end;
+
+function SpriteSwitchKeys(ID: LongInt): Boolean;
+var
+  Rec: PtrUInt;
+begin
+  Result := False;
+  try
+    if not MemAddr(ID, Rec) then
+      Exit;
+    Result := (Rd8(Rec + PtrUInt(CtlOff + CtlKey[7])) <> 0) or (Rd8(Rec + PtrUInt(CtlOff + CtlKey[8])) <> 0);
   except
     Result := False;
   end;

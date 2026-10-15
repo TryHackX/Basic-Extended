@@ -47,6 +47,8 @@ const
   AMF_RELOAD = 2;
   AMF_SHOOT = 4;
   AMF_FREE = 8;
+  { 4.2: the change-weapon key or the throw key is held: his game may change his weapons before the server hears of it }
+  AMF_CHANGE = 16;
   { round 26: AmmoPass - the script looks at this soldier itself this tick (a weapon change, a record not readable) }
   AMA_FULL = 9;
   { AmmoRepackEvent }
@@ -104,6 +106,16 @@ procedure AmmoBodyMove(ID: LongInt; X, Y: Single);
 { a team change or leaving the game: the weapon stays on the ground with the spare magazines }
 function AmmoLeftBehind(ID, Tick: LongInt; X, Y: Single): LongInt;
 function AmmoObserve(ID, Tick, W, A, SW, SA, Flags: LongInt; X, Y: Single; out Value: LongInt): LongInt;
+{ 4.2: the weapon the library follows for him (255 = none): what the ammunition line may be built from }
+function AmmoHandW(ID: LongInt): LongInt;
+{ 4.2: 1 = the script may force his weapons now (ForceWeapon, Player.Primary.Ammo := ...: both send the server's whole
+  arrangement of his weapons); 0 = his game may have changed them without the server knowing yet (the change or throw
+  key a moment ago, a bullet of a weapon the server does not show in his hands) - a forcing now would undo that }
+function AmmoSettled(ID, Tick: LongInt): LongInt;
+{ 4.2: the script built his ammunition line for weapon W (-3 = no line is wanted for him; 255 = he has no weapon):
+  1 = the library follows that weapon and has its pouch, 0 = it does not yet. A line drawn for another weapon than the
+  one in his hands, or drawn before the library had the weapon, is marked again by AmmoObserve (AMA_HUD, once) }
+function AmmoDrawn(ID, W: LongInt): LongInt;
 procedure AmmoForced(ID, Tick, W, Value: LongInt);
 { Rounds taken out of weapon W in the hands go back into the pool at its next reload (a guided rocket
   fired from a loaded launcher: the tube reloads, the reserve stays) }
@@ -123,6 +135,13 @@ function AmmoRepack(ID, Tick: LongInt): LongInt;
 function AmmoRepacking(ID: LongInt): LongInt;
 function AmmoRepackEvent(ID: LongInt): LongInt;
 function AmmoCanLoot(ID, W: LongInt; X, Y: Single): LongInt;
+{ 4.2 [Looting] Markers: the loot points soldier ID could take something from with weapon W in his hands (what AmmoCanLoot
+  would say standing there), no farther than MaxDist from (X, Y), and in the line of sight of his eyes (EX, EY) on the map
+  (be_map; no map loaded: the line is not looked at) - the nearest first, at most Max (16). The count of them; AmmoLootMarkOp
+  reads number k (0..count - 1): the record's number (the same one while the loot lies there), the loot point (a weapon's
+  map object, or a body: where the game has it now - the record follows it), the distance }
+function AmmoLootMarks(ID, W: LongInt; X, Y, EX, EY, MaxDist: Single; Max: LongInt): LongInt;
+procedure AmmoLootMarkOp(k: LongInt; out Rec: LongInt; out MX, MY: Single; out Dist: LongInt);
 function AmmoLoot(ID, W: LongInt; X, Y: Single; Repack: LongInt): LongInt;
 procedure AmmoGroundClear;
 procedure AmmoPickFrom(ID, Tick, Index: LongInt);
@@ -136,6 +155,10 @@ function AmmoGroundHasSlot(Slot: LongInt): LongInt;
 function AmmoGroundAttach(ID, W, Slot, Corpse, Tick: LongInt): LongInt;
 procedure AmmoGroundMove(Index: LongInt; X, Y: Single);
 procedure AmmoGroundMissing(Index, Tick: LongInt);
+{ 4.2 [Looting] KeepWeapons: the weapons lie longer than the game's 20 s, so a record whose object is known does not
+  run out by its age (the object's presence is its life); the object of a record was made again as slot New }
+procedure AmmoGroundKeep(On: LongInt);
+function AmmoGroundRebind(Old, New: LongInt; X, Y: Single): LongInt;
 function AmmoStatus: AnsiString;
 { round 26: the weapon in his hands the script saw last (main.pas AmLastW: -1 a new life) }
 procedure AmmoLastW(ID, W: LongInt);
@@ -150,10 +173,11 @@ procedure AmmoPassOp(k: LongInt; out ID, Act, Value: LongInt);
 implementation
 
 uses
-  SysUtils, be_world, be_ballistic, be_sprite;
+  SysUtils, be_world, be_ballistic, be_sprite, be_map;
 
 const
   AM_W = 17;
+  W_EAGLES = 1;
   W_SPAS = 5;
   W_KNIFE = 11;
   W_SAW = 12;
@@ -175,6 +199,9 @@ const
   MISSING_TICKS = 20;
   { a record gets its object only this soon after the weapon was dropped }
   ATTACH_TICKS = 120;
+  { 4.2 [Looting] Markers: the most loot points one call returns, and the line-of-sight tests it makes at most }
+  MARK_MAX = 16;
+  MARK_RAYS = 24;
   { the reload key seen this recently: a count falling to 0 is a reload, not shots }
   RELOAD_KEY_TICKS = 30;
   HUD_TICKS = 6;
@@ -182,6 +209,15 @@ const
   { a weapon just taken away can come back for a moment: the client's reports sent before it got the
     change still carry it (up to twice the ping) }
   DROP_GUARD = 60;
+  { 4.2: his game swaps the weapons 24 ticks after the change key (frame 25 of the change), and the server hears of it
+    with the game's next full report (every 7 ticks - later when it is late, never when it is lost and nothing else
+    changes): after the change or throw key, or a bullet of a weapon the server does not show in his hands, nothing is
+    forced on him for this long }
+  SETTLE_TICKS = 45;
+  { the ammunition line drawn for him: nothing known (a new life, a mark already given) }
+  DRAW_NONE = -2;
+  { ... no line was wanted }
+  DRAW_OFF = -3;
 
 type
   TPouch = record
@@ -229,6 +265,18 @@ type
     { the weapon he put away with Q and the rounds it really has (its magazine cannot fill while it is away;
       -1 = none) }
     HW, HC: LongInt;
+    { 4.2: the weapon his ammunition line was built for (DRAW_NONE / DRAW_OFF / a weapon) and whether the library had it
+      then (its pouch made): a line drawn for the wrong weapon is marked again }
+    DrawW: LongInt;
+    DrawOk: Boolean;
+    { 4.2: the last sign that his game changed his weapons without the server knowing yet (the change or throw key, a
+      bullet of another weapon); a set or a drop waiting for him to be settled (AMA_NONE = none): its value, when it was
+      due and the weapon the server showed then }
+    ChgAt: LongInt;
+    PendAct, PendVal, PendT, PendW: LongInt;
+    { 4.2: bullets of weapon OtW the server made at tick OtT after it took that weapon from his report, the library
+      still following the old one (they come off the count of the change in the same tick) }
+    OtW, OtT, OtN: LongInt;
   end;
 
   TCarry = record
@@ -269,6 +317,7 @@ var
   CfgRpStep: LongInt = 60;
   TxtNoSpare: AnsiString = 'empty';
   CfgBody: Boolean = False;
+  CfgKeepGround: Boolean = False;
   CfgExtra: LongInt = -1;
   { the last tick the script reported (AmmoObserve): the age of the records on the ground }
   AmTick: LongInt = 0;
@@ -283,6 +332,7 @@ var
   StShots: LongInt = 0;
   StRepacks: LongInt = 0;
   StProven: LongInt = 0;
+  StWaits: LongInt = 0;
 
 function Counted(W: LongInt): Boolean;
 begin
@@ -718,6 +768,14 @@ begin
   GroundAddAs(ID, Tick, W, Clip, X, Y, Corpse, False);
 end;
 
+{ a record the game has forgotten by now; with KeepWeapons one whose object is known lasts as long as the object }
+function GroundOld(g, Tick: LongInt): Boolean;
+begin
+  Result := Tick - Ground[g].Tick > GROUND_TICKS;
+  if Result and CfgKeepGround and (Ground[g].Slot > 0) then
+    Result := False;
+end;
+
 { the nearest record of kind W with a dead soldier's spare magazines within Radius (a live one, not too
   old); -1 = none }
 function GroundNear(Tick, W: LongInt; X, Y, Radius: Single): LongInt;
@@ -731,7 +789,7 @@ begin
     if Ground[i].Active then
       if (Ground[i].W = W) and Ground[i].Corpse then
       begin
-        if Tick - Ground[i].Tick > GROUND_TICKS then
+        if GroundOld(i, Tick) then
         begin
           Ground[i].Active := False;
           Continue;
@@ -1321,6 +1379,9 @@ begin
     P^.SA := OldC;
     P^.HW := Old;
     P^.HC := OldC;
+    { 4.2: the secondary never in the hands in this life (the first Q after a respawn) has no pouch yet: it is made
+      now, not a tick later - the line drawn in this tick showed it empty and nothing drew it again }
+    Touch(ID, W);
   end
   else
   begin
@@ -1360,6 +1421,24 @@ begin
   P^.ShotN := 0;
   MinFrom(P^, A, Tick);
   ShowFrom(P^, A, Tick);
+  { 4.2: bullets of W the server made in this tick after it took W from his report (a loaded server takes the packets
+    that came in one go; his game sends that report before the new weapon can fire): the report's count is from before
+    them - they come off it (the count is the one of the tick before; a later report equal to it puts it right) }
+  if (P^.OtW = W) and (P^.OtT = Tick) and (P^.OtN > 0) then
+  begin
+    for K := 0 to P^.OtN - 1 do
+      P^.ShotT[K] := Tick;
+    P^.ShotN := P^.OtN;
+    StShots := StShots + P^.OtN;
+    P^.CTick := Tick - 1;
+    P^.MinNZTick := Tick - 1;
+    P^.DispT := Tick - 1;
+  end;
+  P^.OtW := -1;
+  P^.OtN := 0;
+  { the change the key (or a bullet) told of has come }
+  if (Flags and AMF_CHANGE) = 0 then
+    P^.ChgAt := -1000000;
   Dirty(ID);
   Value := 0;
   Result := AMA_HUD;
@@ -1506,7 +1585,13 @@ begin
   Pl[ID].RpEvent := AMR_NONE;
   ShowFrom(Pl[ID], 0, Tick);
   Pl[ID].LastShown := -1;
+  Pl[ID].DrawW := DRAW_NONE;
+  Pl[ID].DrawOk := False;
   Pl[ID].Paused := False;
+  Pl[ID].ChgAt := -1000000;
+  Pl[ID].PendAct := AMA_NONE;
+  Pl[ID].OtW := -1;
+  Pl[ID].OtN := 0;
   { the ammunition kept from the last round }
   for w := 0 to AM_W - 1 do
     Pl[ID].Carry[w] := False;
@@ -1732,8 +1817,49 @@ begin
   end;
 end;
 
-{ a bullet of the soldier's weapon was made (the hook in CreateBullet); several in one tick are one
-  shot (the Spas-12's pellets) }
+{ 4.2: one shot makes several bullets in one tick only with the Spas-12 (its pellets) and the Desert Eagles (two); any
+  other weapon's bullets in one tick are shots of his that the server took in one go (late packets, a loaded server) }
+function OneShot(W: LongInt): Boolean;
+begin
+  Result := (W = W_SPAS) or (W = W_EAGLES);
+end;
+
+{ 4.2: a bullet of a weapon that is not the one the library follows in his hands: his game changed weapons and the
+  script has not seen it yet. When the server shows that weapon already (its report came in before the bullet, in the
+  same tick), the shot comes off the report's count at the change (Change). When it does not (the report is still on
+  its way, late or lost - or the server cannot be asked), nothing may be forced on him for a while: a ForceWeapon of
+  the server's arrangement would undo his change. }
+procedure OtherShot(ID, W, Tick: LongInt);
+var
+  P: ^TAmPlayer;
+  SW, SA: LongInt;
+  Alive, F, R, Known, After: Boolean;
+begin
+  if (W < 0) or (W >= AM_W) then
+    Exit;
+  P := @Pl[ID];
+  Known := SpriteRead(ID, Alive, SW, SA, F, R);
+  After := True;
+  if Known then
+    After := SW = W;
+  if not (Known and After) then
+    P^.ChgAt := Tick;
+  if not After then
+    Exit;
+  if (P^.OtW <> W) or (P^.OtT <> Tick) then
+  begin
+    P^.OtW := W;
+    P^.OtT := Tick;
+    P^.OtN := 0;
+  end;
+  if (P^.OtN > 0) and OneShot(W) then
+    Exit;
+  if P^.OtN < SHOT_BUF then
+    Inc(P^.OtN);
+end;
+
+{ a bullet of the soldier's weapon was made (the hook in CreateBullet); the Spas-12's pellets and the Desert Eagles' two
+  bullets in one tick are one shot }
 procedure AmmoShot(ID, W, Tick: LongInt);
 var
   P: ^TAmPlayer;
@@ -1743,7 +1869,10 @@ begin
     Exit;
   P := @Pl[ID];
   if W <> P^.W then
+  begin
+    OtherShot(ID, W, Tick);
     Exit;
+  end;
   if P^.ShotW <> W then
   begin
     P^.ShotW := W;
@@ -1751,7 +1880,8 @@ begin
   end;
   if P^.ShotN > 0 then
     if P^.ShotT[P^.ShotN - 1] = Tick then
-      Exit;
+      if OneShot(W) then
+        Exit;
   if P^.ShotN >= SHOT_BUF then
   begin
     for k := 1 to SHOT_BUF - 1 do
@@ -1851,7 +1981,7 @@ begin
     Result := 0;
 end;
 
-function AmmoObserve(ID, Tick, W, A, SW, SA, Flags: LongInt; X, Y: Single; out Value: LongInt): LongInt;
+function ObserveCore(ID, Tick, W, A, SW, SA, Flags: LongInt; X, Y: Single; out Value: LongInt): LongInt;
 var
   P: ^TAmPlayer;
   k, V, VT, R: LongInt;
@@ -1867,6 +1997,8 @@ begin
     Exit;
   if (Flags and AMF_RELOAD) <> 0 then
     P^.ReloadKeyTick := Tick;
+  if (Flags and AMF_CHANGE) <> 0 then
+    P^.ChgAt := Tick;
   if W <> P^.W then
     if W = P^.DropW then
       if Tick - P^.DropTick < DROP_GUARD then
@@ -1895,6 +2027,9 @@ begin
         P^.HW := -1;
   if not Counted(W) then
     Exit;
+  { a pouch made now (not by the change of weapon): the line drawn before shows it without spare magazines }
+  if not P^.Pouch[W].Used then
+    Dirty(ID);
   Touch(ID, W);
   if P^.RpState > 0 then
     RepackTick(ID, Tick, W, Flags);
@@ -1964,9 +2099,14 @@ begin
       setting: the client fired from it. }
     if A = P^.HoldVal then
     begin
-      P^.CTick := Tick;
-      MinFrom(P^, A, Tick);
-      ShowFrom(P^, A, Tick);
+      { 4.2: not when shots were seen after the count's own tick (the count of a change: the server keeps his last
+        report until the next one comes) - the count is from before them, they stay off it }
+      if (P^.DispT > Tick) or (ShotsIn(P^, P^.DispT, Tick) = 0) then
+      begin
+        P^.CTick := Tick;
+        MinFrom(P^, A, Tick);
+        ShowFrom(P^, A, Tick);
+      end;
     end
     else if (A = 0) and (Tick - P^.ReloadKeyTick <= 3) and (W <> W_SPAS) then
       ShowFrom(P^, 0, Tick)
@@ -2032,6 +2172,136 @@ begin
       P^.HudAt := Tick + HUD_TICKS;
       Result := AMA_HUD;
     end;
+end;
+
+{ 4.2: the line of weapon W as the library can show it: it follows W and has its pouch (what is not counted - no weapon,
+  the knife - has nothing of the library in its line) }
+function LineAgrees(ID, W: LongInt): Boolean;
+begin
+  Result := True;
+  if not CfgOn or not Counted(W) then
+    Exit;
+  Result := (Pl[ID].W = W) and Pl[ID].Pouch[W].Used;
+end;
+
+{ 4.2: the ammunition line was built for another weapon than the one in his hands (the server's W of this tick), or before
+  the library had the weapon, and the library has it now: the script draws it again - once (the next drawing says what
+  it was built for) }
+function DrawStale(ID, W: LongInt): Boolean;
+begin
+  Result := False;
+  if (Pl[ID].DrawW = DRAW_NONE) or (Pl[ID].DrawW = DRAW_OFF) then
+    Exit;
+  if Pl[ID].DrawW <> W then
+    Result := True
+  else if not Pl[ID].DrawOk then
+    Result := LineAgrees(ID, W);
+  if Result then
+    Pl[ID].DrawW := DRAW_NONE;
+end;
+
+{ 4.2: his game may have changed his weapons without the server knowing yet (a human: a bot's change happens in the
+  server itself) }
+function Unsettled(ID, Tick, Flags: LongInt): Boolean;
+begin
+  Result := ((Flags and AMF_HUMAN) <> 0) and (Tick - Pl[ID].ChgAt < SETTLE_TICKS);
+end;
+
+{ 4.2: a set or a drop is a ForceWeapon of the server's arrangement of his weapons (Player.Primary.Ammo := V sends the
+  server's primary and secondary with their counts, the drop sends empty hands and the server's secondary; his game takes
+  both weapons from it). While his game may have changed his weapons without the server knowing (Unsettled) that would
+  undo his change on his screen: the old weapon back in his hands, the new one back in the secondary place with the
+  count the server had (its shots given back) - and a throw then throws the old weapon. So it waits (the line is drawn
+  again meanwhile), and comes once he is settled while the server still shows the weapon it was for; a set takes off
+  the shots seen since. When the server shows another weapon first, his change came: it is not sent (Change keeps what
+  the weapon put away really has - it comes back with that). }
+function Settle(ID, Tick, W, Flags, R: LongInt; var Value: LongInt): LongInt;
+var
+  P: ^TAmPlayer;
+begin
+  Result := R;
+  P := @Pl[ID];
+  if (R = AMA_SET) or (R = AMA_DROP) then
+  begin
+    P^.PendAct := AMA_NONE;
+    if not Unsettled(ID, Tick, Flags) then
+      Exit;
+    P^.PendAct := R;
+    P^.PendVal := Value;
+    P^.PendT := Tick;
+    P^.PendW := W;
+    Value := 0;
+    Result := AMA_HUD;
+    Inc(StWaits);
+    Exit;
+  end;
+  if P^.PendAct = AMA_NONE then
+    Exit;
+  if W <> P^.PendW then
+  begin
+    P^.PendAct := AMA_NONE;
+    Exit;
+  end;
+  if Unsettled(ID, Tick, Flags) then
+  begin
+    { the count set stays the one believed while it waits (his reports still show his own) }
+    if P^.PendAct = AMA_SET then
+      if P^.HoldUntil < Tick + HOLD then
+        P^.HoldUntil := Tick + HOLD;
+    Exit;
+  end;
+  if P^.PendAct = AMA_SET then
+  begin
+    { not when the count believed changed meanwhile (a reload he made): that took its place }
+    if (P^.W = W) and (P^.C = P^.PendVal) then
+      Result := SetTo(ID, Tick, P^.PendVal - ShotsIn(P^, P^.PendT, Tick), Value);
+  end
+  else
+  begin
+    Result := AMA_DROP;
+    Value := 0;
+    P^.DropTick := Tick;
+  end;
+  P^.PendAct := AMA_NONE;
+end;
+
+function AmmoObserve(ID, Tick, W, A, SW, SA, Flags: LongInt; X, Y: Single; out Value: LongInt): LongInt;
+begin
+  Result := ObserveCore(ID, Tick, W, A, SW, SA, Flags, X, Y, Value);
+  if CfgOn and ValidID(ID) then
+    if not Pl[ID].Paused then
+    begin
+      Result := Settle(ID, Tick, W, Flags, Result, Value);
+      if Result = AMA_NONE then
+        if DrawStale(ID, W) then
+          Result := AMA_HUD;
+    end;
+end;
+
+function AmmoSettled(ID, Tick: LongInt): LongInt;
+begin
+  Result := 1;
+  if ValidID(ID) then
+    if Tick - Pl[ID].ChgAt < SETTLE_TICKS then
+      Result := 0;
+end;
+
+function AmmoHandW(ID: LongInt): LongInt;
+begin
+  Result := W_NONE;
+  if ValidID(ID) then
+    Result := Pl[ID].W;
+end;
+
+function AmmoDrawn(ID, W: LongInt): LongInt;
+begin
+  Result := 0;
+  if not ValidID(ID) then
+    Exit;
+  Pl[ID].DrawW := W;
+  Pl[ID].DrawOk := LineAgrees(ID, W);
+  if Pl[ID].DrawOk then
+    Result := 1;
 end;
 
 procedure AmmoKeep(ID, W, Rounds: LongInt);
@@ -2224,11 +2494,22 @@ begin
     Exit;
   if W = W_SAW then
   begin
-    Result := ' | Fuel: ' + FuelText(Pl[ID].Pouch[W].Reserve);
+    if Pl[ID].Pouch[W].Used then
+      Result := ' | Fuel: ' + FuelText(Pl[ID].Pouch[W].Reserve);
     Exit;
   end;
   if Clip < 0 then
     Clip := 0;
+  { 4.2: the library has not taken this weapon in yet (its pouch is not made): the magazine only - an unmade pouch is
+    no empty one }
+  if not Pl[ID].Pouch[W].Used then
+    if W = Pl[ID].W then
+      Touch(ID, W);
+  if not Pl[ID].Pouch[W].Used then
+  begin
+    Result := ' | Ammo: ' + IntToStr(Clip);
+    Exit;
+  end;
   if UsesMags(W) then
   begin
     Result := ' | Ammo: ' + IntToStr(Clip) + ' [';
@@ -2332,9 +2613,36 @@ end;
 
 { looting a dead soldier's weapon of the same kind lying under a crouching soldier: 1 = there is
   something to take }
+{ 4.2: there is something to take from record g for weapon W (his pouch has room, or partial magazines to top up) }
+function CanTake(ID, W, g: LongInt): Boolean;
+var
+  k, C: LongInt;
+begin
+  Result := False;
+  if not Ground[g].Corpse then
+    Exit;
+  C := Cap(W);
+  if UsesMags(W) then
+  begin
+    if (Ground[g].MagN > 0) and (Pl[ID].Pouch[W].MagN < MagLimit(W)) then
+      Result := True
+    else if (Ground[g].Reserve > 0) and (Pl[ID].Pouch[W].MagN < MagLimit(W)) then
+      Result := True
+    else if (Ground[g].MagN > 0) or (Ground[g].Reserve > 0) then
+      for k := 0 to Pl[ID].Pouch[W].MagN - 1 do
+        if Pl[ID].Pouch[W].Mags[k] < C then
+        begin
+          Result := True;
+          Break;
+        end;
+  end
+  else if (Ground[g].Reserve > 0) and (Pl[ID].Pouch[W].Reserve < SpareLimit(W)) then
+    Result := True;
+end;
+
 function AmmoCanLoot(ID, W: LongInt; X, Y: Single): LongInt;
 var
-  g, k, C: LongInt;
+  g: LongInt;
 begin
   Result := 0;
   if not CfgOn or not ValidID(ID) or not Counted(W) or (W = W_SAW) then
@@ -2342,25 +2650,94 @@ begin
   g := GroundNear(AmTick, W, X, Y, CfgLootRadius);
   if g < 0 then
     Exit;
-  if not Ground[g].Corpse then
-    Exit;
-  C := Cap(W);
-  if UsesMags(W) then
-  begin
-    if (Ground[g].MagN > 0) and (Pl[ID].Pouch[W].MagN < MagLimit(W)) then
-      Result := 1
-    else if (Ground[g].Reserve > 0) and (Pl[ID].Pouch[W].MagN < MagLimit(W)) then
-      Result := 1
-    else if (Ground[g].MagN > 0) or (Ground[g].Reserve > 0) then
-      for k := 0 to Pl[ID].Pouch[W].MagN - 1 do
-        if Pl[ID].Pouch[W].Mags[k] < C then
-        begin
-          Result := 1;
-          Break;
-        end;
-  end
-  else if (Ground[g].Reserve > 0) and (Pl[ID].Pouch[W].Reserve < SpareLimit(W)) then
+  if CanTake(ID, W, g) then
     Result := 1;
+end;
+
+var
+  MkRec, MkDist: array[0..MARK_MAX - 1] of LongInt;
+  MkX, MkY: array[0..MARK_MAX - 1] of Single;
+  MkN: LongInt = 0;
+
+function AmmoLootMarks(ID, W: LongInt; X, Y, EX, EY, MaxDist: Single; Max: LongInt): LongInt;
+var
+  Cand: array[0..MAX_GROUND - 1] of LongInt;
+  Dst: array[0..MAX_GROUND - 1] of Single;
+  n, g, i, j, t, Rays: LongInt;
+  D: Single;
+begin
+  MkN := 0;
+  Result := 0;
+  FillChar(Cand, SizeOf(Cand), 0);
+  FillChar(Dst, SizeOf(Dst), 0);
+  if not CfgOn or not ValidID(ID) or not Counted(W) or (W = W_SAW) then
+    Exit;
+  if Max > MARK_MAX then
+    Max := MARK_MAX;
+  if Max < 1 then
+    Exit;
+  n := 0;
+  for g := 0 to MAX_GROUND - 1 do
+    if Ground[g].Active and Ground[g].Corpse and (Ground[g].W = W) then
+    begin
+      if GroundOld(g, AmTick) then
+        Continue;
+      if (Ground[g].MagN <= 0) and (Ground[g].Reserve <= 0) then
+        Continue;
+      D := Sqr(Ground[g].X - X) + Sqr(Ground[g].Y - Y);
+      if D > Sqr(MaxDist) then
+        Continue;
+      if not CanTake(ID, W, g) then
+        Continue;
+      { the nearest first (insertion) }
+      i := n;
+      while (i > 0) and (Dst[i - 1] > D) do
+      begin
+        Dst[i] := Dst[i - 1];
+        Cand[i] := Cand[i - 1];
+        Dec(i);
+      end;
+      Dst[i] := D;
+      Cand[i] := g;
+      Inc(n);
+    end;
+  Rays := 0;
+  for j := 0 to n - 1 do
+  begin
+    if MkN >= Max then
+      Break;
+    g := Cand[j];
+    { in his line of sight: his eyes to a little above the loot point (a weapon or a body on the ground touches its polygon) }
+    if MapReady then
+    begin
+      Inc(Rays);
+      if Rays > MARK_RAYS then
+        Break;
+      if MapRay(EX, EY, Ground[g].X, Ground[g].Y - 4, 0, 0) then
+        Continue;
+    end;
+    t := MkN;
+    MkRec[t] := g;
+    MkX[t] := Ground[g].X;
+    MkY[t] := Ground[g].Y;
+    MkDist[t] := Round(Sqrt(Dst[j]));
+    Inc(MkN);
+  end;
+  Result := MkN;
+end;
+
+procedure AmmoLootMarkOp(k: LongInt; out Rec: LongInt; out MX, MY: Single; out Dist: LongInt);
+begin
+  Rec := -1;
+  MX := 0;
+  MY := 0;
+  Dist := 0;
+  if (k < 0) or (k >= MkN) then
+    Exit;
+  Rec := MkRec[k];
+  MX := MkX[k];
+  MY := MkY[k];
+  Dist := MkDist[k];
 end;
 
 { Repack = 0: take a spare magazine (or the reserve, at most up to a full one); Repack = 1: top up
@@ -2619,6 +2996,32 @@ begin
     end;
 end;
 
+procedure AmmoGroundKeep(On: LongInt);
+begin
+  CfgKeepGround := On <> 0;
+end;
+
+{ the weapon whose object was slot Old stands as slot New now (made again at X, Y): its record - the spare
+  magazines with it - follows; 1 = a record was moved. A second record of Old (there is none) stays. }
+function AmmoGroundRebind(Old, New: LongInt; X, Y: Single): LongInt;
+var
+  i: LongInt;
+begin
+  Result := 0;
+  if (Old <= 0) or (New <= 0) then
+    Exit;
+  for i := 0 to MAX_GROUND - 1 do
+    if Ground[i].Active and (not Ground[i].Body) and (Ground[i].Slot = Old) then
+    begin
+      Ground[i].Slot := New;
+      Ground[i].X := X;
+      Ground[i].Y := Y;
+      Ground[i].MissingSince := 0;
+      Result := 1;
+      Exit;
+    end;
+end;
+
 var
   LastW: array[1..BE_PLAYERS] of LongInt;
   PassID, PassAct, PassVal: array[0..BE_PLAYERS - 1] of LongInt;
@@ -2679,6 +3082,8 @@ begin
     end;
     if (Free and Bit) <> 0 then
       Fl := Fl or AMF_FREE;
+    if SpriteSwitchKeys(ID) then
+      Fl := Fl or AMF_CHANGE;
     V := 0;
     Act := AmmoObserve(ID, Tick, W, A, -1, -1, Fl, 0, 0, V);
     if Act <> AMA_NONE then
@@ -2713,8 +3118,8 @@ begin
         Inc(n);
   Result := 'ammo: reloads ' + IntToStr(StReloads) + ', rounds loaded ' + IntToStr(StTaken) + ', magazines set ' +
     IntToStr(StSets) + ', weapons taken ' + IntToStr(StDrops) + ', shots seen ' + IntToStr(StShots) + ', repacks ' +
-    IntToStr(StRepacks) + ', reloads seen only by a shot ' + IntToStr(StProven) + ', on the ground ' + IntToStr(n) +
-    ', with bodies ' + IntToStr(b);
+    IntToStr(StRepacks) + ', reloads seen only by a shot ' + IntToStr(StProven) + ', sets that waited for a weapon ' +
+    'change ' + IntToStr(StWaits) + ', on the ground ' + IntToStr(n) + ', with bodies ' + IntToStr(b);
 end;
 
 procedure InitLastW;
@@ -2722,7 +3127,10 @@ var
   i: LongInt;
 begin
   for i := 1 to BE_PLAYERS do
+  begin
     LastW[i] := -1;
+    Pl[i].DrawW := DRAW_NONE;
+  end;
 end;
 
 initialization

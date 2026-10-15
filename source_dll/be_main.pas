@@ -34,11 +34,11 @@ uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   {$IFDEF WINDOWS}Windows,{$ENDIF}
   SysUtils, SyncObjs, be_store, be_font, be_world, be_texts, be_radar, be_move, be_ballistic, be_gun, be_traj, be_fx, be_sup, be_map, be_ac, be_util, be_bridge, be_hook, be_ammo, be_prof, be_rocket, be_sprite, be_tk, be_mine, be_body, be_names, be_shop, be_hud,
-  be_spawn;
+  be_spawn, be_things;
 
 
 const
-  BE_API_VERSION = 25;
+  BE_API_VERSION = 28;
   GET_MODULE_HANDLE_EX_FLAG_PIN = 1;
   GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = 4;
 {$IFNDEF WINDOWS}
@@ -67,6 +67,7 @@ var
   HudOpBuf: AnsiString = '';
   WoundBuf: AnsiString = '';
   MemInfoBuf: AnsiString = '';
+  ThBuf: AnsiString = '';
   RkBuf: AnsiString = '';
   TkBuf: AnsiString = '';
   MnBuf: AnsiString = '';
@@ -259,6 +260,7 @@ var
   i: LongInt;
 begin
   BridgeReset;
+  ThingsReset;
   for i := 1 to BE_PLAYERS do
   begin
     RadarReset(i);
@@ -1610,6 +1612,65 @@ begin
   end;
 end;
 
+function BE_AmmoLootMarks(ID, W: LongInt; X, Y, EX, EY, MaxDist: Single; Max: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AmmoLootMarks(ID, W, X, Y, EX, EY, MaxDist, Max);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure BE_AmmoLootMarkOp(k: LongInt; var Rec: LongInt; var MX, MY: Single; var Dist: LongInt); cdecl;
+var
+  R0, D0: LongInt;
+  X0, Y0: Single;
+begin
+  try
+    AmmoLootMarkOp(k, R0, X0, Y0, D0);
+    Rec := R0;
+    MX := X0;
+    MY := Y0;
+    Dist := D0;
+  except
+    Rec := -1;
+    MX := 0;
+    MY := 0;
+    Dist := 0;
+  end;
+end;
+
+function BE_AmmoHandW(ID: LongInt): LongInt; cdecl;
+begin
+  Result := 255;
+  try
+    Result := AmmoHandW(ID);
+  except
+    Result := 255;
+  end;
+end;
+
+function BE_AmmoSettled(ID, Tick: LongInt): LongInt; cdecl;
+begin
+  Result := 1;
+  try
+    Result := AmmoSettled(ID, Tick);
+  except
+    Result := 1;
+  end;
+end;
+
+function BE_AmmoDrawn(ID, W: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := AmmoDrawn(ID, W);
+  except
+    Result := 0;
+  end;
+end;
+
 function BE_AmmoDeath(ID, Tick: LongInt; X, Y: Single): LongInt; cdecl;
 begin
   Result := -1;
@@ -2012,6 +2073,8 @@ end;
 
 procedure ThingToAmmo(const E: TThingEvent);
 begin
+  { 4.2 [Looting] KeepWeapons: every object the game makes (a drop, the script's own) }
+  ThingsMade(E.Slot, E.Style, E.Tick);
   if (E.Owner >= 1) and (E.Owner <= 32) then
     AmmoDropped(E.Owner, E.Style, E.Slot, E.Tick);
 end;
@@ -3453,6 +3516,115 @@ begin
   end;
 end;
 
+{ ============ 4.2: [Looting] KeepWeapons - the weapons on the ground stay (be_things) ============ }
+
+{ Method: 0 auto, 1 bridge only, 2 recreate only; MaxKept: the most weapons kept; KeepGround: the ammunition's records
+  of weapons whose object is known do not run out by their age }
+procedure BE_ThingsConfig(Method, MaxKept, KeepGround: LongInt); cdecl;
+begin
+  try
+    ThingsConfig(Method, MaxKept);
+    AmmoGroundKeep(KeepGround);
+  except
+  end;
+end;
+
+procedure BE_ThingsPass(Tick, Armed: LongInt); cdecl;
+begin
+  try
+    ThingsPass(Tick, Armed);
+  except
+  end;
+end;
+
+function BE_ThingsSeen(I, Active, Style: LongInt; X, Y: Single): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := ThingsSeen(I, Active, Style, X, Y);
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_ThingsKeep: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := ThingsKeep;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_ThingsDue(From: LongInt): LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := ThingsDue(From);
+  except
+    Result := 0;
+  end;
+end;
+
+{ the weapon of object Old was made again as object New at X, Y }
+procedure BE_ThingsRenewed(Old, New: LongInt; X, Y: Single); cdecl;
+begin
+  try
+    ThingsRenewed(Old, New);
+    AmmoGroundRebind(Old, New, X, Y);
+  except
+  end;
+end;
+
+procedure BE_ThingsShift(N: LongInt); cdecl;
+begin
+  try
+    ThingsShift(N);
+  except
+  end;
+end;
+
+procedure BE_ThingsMap; cdecl;
+begin
+  try
+    ThingsMap;
+  except
+  end;
+end;
+
+{ 1 bridge, 2 recreate, 0 none (yet / off) }
+function BE_ThingsMethod: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := ThingsMethodNow;
+  except
+    Result := 0;
+  end;
+end;
+
+{ 0 not looked for, 1 waiting for an object, 2 ready, 3 refused, 4 not found }
+function BE_ThingsState: LongInt; cdecl;
+begin
+  Result := 0;
+  try
+    Result := ThingsState;
+  except
+    Result := 0;
+  end;
+end;
+
+function BE_ThingsInfo: PChar; cdecl;
+begin
+  try
+    ThBuf := ThingsInfo;
+    Result := PChar(ThBuf);
+  except
+    Result := 'error';
+  end;
+end;
+
 { ============ 4.1: [Spawns] - the spawn point layouts of the maps (Respawns-Control built in) ============ }
 
 var
@@ -4049,6 +4221,11 @@ exports
   BE_AmmoForced,
   BE_AmmoClip,
   BE_AmmoShown,
+  BE_AmmoHandW,
+  BE_AmmoSettled,
+  BE_AmmoDrawn,
+  BE_AmmoLootMarks,
+  BE_AmmoLootMarkOp,
   BE_AmmoDeath,
   BE_AmmoPickFrom,
   BE_AmmoGroundNext,
@@ -4242,7 +4419,18 @@ exports
   BE_SpCheck,
   BE_SpCheckGet,
   BE_SpInfo,
-  BE_AmmoPassOp;
+  BE_AmmoPassOp,
+  BE_ThingsConfig,
+  BE_ThingsPass,
+  BE_ThingsSeen,
+  BE_ThingsKeep,
+  BE_ThingsDue,
+  BE_ThingsRenewed,
+  BE_ThingsShift,
+  BE_ThingsMap,
+  BE_ThingsMethod,
+  BE_ThingsState,
+  BE_ThingsInfo;
 
 end.
 

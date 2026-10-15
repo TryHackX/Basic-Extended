@@ -389,8 +389,23 @@ begin
   EvTail := (EvTail + 1) mod EVENTS;
 end;
 
-{ an enemy of V within SplashR of him }
-function EnemyNear(V: LongInt): Boolean;
+{ how far from its centre a blast hurts (the game's explosion radii): the frag grenade 85 px, the M79 and the LAW
+  64 px, a cluster grenade's bursts 35 px }
+function BlastReach(Style: LongInt): Single;
+begin
+  case Style of
+    2: Result := 85;
+    4, 12: Result := 64;
+    9, 10: Result := 35;
+  else
+    Result := 0;
+  end;
+end;
+
+{ an enemy of V within SplashR of the blast that reached him: the blast's centre is not known here, it lies within
+  Reach of V, so an enemy within SplashR of the centre is within SplashR + Reach of V (BE2-02: the enemy on the far side
+  of the blast counts too) }
+function EnemyNear(V: LongInt; Reach: Single): Boolean;
 var
   j: LongInt;
   X, Y, EX, EY: Single;
@@ -403,7 +418,7 @@ begin
   for j := 1 to MAX_ID do
     if (j <> V) and Playing(j) and (Team[j] <> Team[V]) then
       if TkPoint(j, 7, EX, EY) then
-        if Sqr(EX - X) + Sqr(EY - Y) <= Sqr(SplashR) then
+        if Sqr(EX - X) + Sqr(EY - Y) <= Sqr(SplashR + Reach) then
         begin
           Result := True;
           Exit;
@@ -429,7 +444,7 @@ begin
     { grenades, M79, cluster: an accident when enemies are near him }
     if (Style = 2) or (Style = 4) or (Style = 9) or (Style = 10) then
     begin
-      if EnemyNear(V) then
+      if EnemyNear(V, BlastReach(Style)) then
       begin
         Reason := TR_SPLASH_ENEMY;
         Result := 10;
@@ -453,7 +468,7 @@ begin
     if AtT + Cross = 0 then
     begin
       { no shot of his went at him: he ran into the fire, a ricochet - or a LAW's blast }
-      if (Style = 12) and not EnemyNear(V) then
+      if (Style = 12) and not EnemyNear(V, BlastReach(Style)) then
       begin
         Reason := TR_SPLASH_ALONE;
         Result := 60;

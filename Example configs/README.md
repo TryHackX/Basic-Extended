@@ -1,6 +1,6 @@
 # Example configs
 
-Ready `settings.ini` files for Basic-Extended 4.2, one folder per kind of server. Each one is the whole default
+Ready `settings.ini` files for Basic-Extended 4.2.2, one folder per kind of server. Each one is the whole default
 file (every key keeps its comment) with a few values changed for that server; every changed value has a
 `; SET <folder>: <why>` line right above it, so a search for `; SET` lists what the set does.
 

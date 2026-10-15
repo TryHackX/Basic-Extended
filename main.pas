@@ -585,6 +585,30 @@ external {$IFDEF WIN32} 'BE_AmmoClip@scripts/Basic-Extended/basicext_dll.dll cde
 function BE_AmmoShown(ID, Tick, W, A: Integer): Integer;
 external {$IFDEF WIN32} 'BE_AmmoShown@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoShown@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
+{ 4.2 [Looting] Markers: the loot points he could take something from with weapon W in his hands, within MaxDist of
+  X, Y, in the line of sight of EX, EY on the map - nearest first, at most Max; the count. BE_AmmoLootMarkOp: number k
+  (record, place, distance) }
+function BE_AmmoLootMarks(ID, W: Integer; X, Y, EX, EY, MaxDist: Single; Max: Integer): Integer;
+external {$IFDEF WIN32} 'BE_AmmoLootMarks@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoLootMarks@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_AmmoLootMarkOp(k: Integer; var Rec: Integer; var MX, MY: Single; var Dist: Integer);
+external {$IFDEF WIN32} 'BE_AmmoLootMarkOp@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoLootMarkOp@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+{ 4.2: the weapon the library follows for him (255 = none) }
+function BE_AmmoHandW(ID: Integer): Integer;
+external {$IFDEF WIN32} 'BE_AmmoHandW@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoHandW@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+{ 4.2: 1 = his weapons may be forced now; 0 = his game may have changed them without the server knowing yet (the change
+  or throw key a moment ago, a bullet of a weapon the server does not show in his hands): a ForceWeapon, or a
+  Player.Primary.Ammo := (the same: it sends the server's primary and secondary), would undo that change }
+function BE_AmmoSettled(ID, Tick: Integer): Integer;
+external {$IFDEF WIN32} 'BE_AmmoSettled@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoSettled@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+{ 4.2: his ammunition line was built for weapon W (-3: none wanted): 1 = the library has that weapon, 0 = not yet (it
+  says so by an AMA_HUD when it has) }
+function BE_AmmoDrawn(ID, W: Integer): Integer;
+external {$IFDEF WIN32} 'BE_AmmoDrawn@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoDrawn@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
 function BE_AmmoDeath(ID, Tick: Integer; X, Y: Single): Integer;
 external {$IFDEF WIN32} 'BE_AmmoDeath@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_AmmoDeath@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
@@ -691,6 +715,40 @@ external {$IFDEF WIN32} 'BE_AmmoGroundAge@scripts/Basic-Extended/basicext_dll.dl
 
 procedure BE_FileSave(FileName, Text: PChar);
 external {$IFDEF WIN32} 'BE_FileSave@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_FileSave@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+{ 4.2 (API 27) [Looting] KeepWeapons: the weapons on the ground stay (be_things in the library) }
+procedure BE_ThingsConfig(Method, MaxKept, KeepGround: Integer);
+external {$IFDEF WIN32} 'BE_ThingsConfig@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsConfig@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_ThingsPass(Tick, Armed: Integer);
+external {$IFDEF WIN32} 'BE_ThingsPass@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsPass@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_ThingsSeen(I, Active, Style: Integer; X, Y: Single): Integer;
+external {$IFDEF WIN32} 'BE_ThingsSeen@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsSeen@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_ThingsKeep(): Integer;
+external {$IFDEF WIN32} 'BE_ThingsKeep@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsKeep@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_ThingsDue(From: Integer): Integer;
+external {$IFDEF WIN32} 'BE_ThingsDue@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsDue@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_ThingsRenewed(Old, New: Integer; X, Y: Single);
+external {$IFDEF WIN32} 'BE_ThingsRenewed@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsRenewed@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_ThingsShift(N: Integer);
+external {$IFDEF WIN32} 'BE_ThingsShift@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsShift@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+procedure BE_ThingsMap();
+external {$IFDEF WIN32} 'BE_ThingsMap@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsMap@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_ThingsMethod(): Integer;
+external {$IFDEF WIN32} 'BE_ThingsMethod@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsMethod@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_ThingsState(): Integer;
+external {$IFDEF WIN32} 'BE_ThingsState@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsState@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
+
+function BE_ThingsInfo(): PChar;
+external {$IFDEF WIN32} 'BE_ThingsInfo@scripts/Basic-Extended/basicext_dll.dll cdecl' {$ELSE} 'BE_ThingsInfo@scripts/Basic-Extended/basicext_dll.so cdecl' {$ENDIF};
 
 { 4.2 (API 25, LEAD-01): what BE_Init took over from the data folder of an earlier release ('' = nothing) }
 function BE_DataNote(): PChar;
@@ -841,13 +899,15 @@ external {$IFDEF WIN32} 'BE_SpInfo@scripts/Basic-Extended/basicext_dll.dll cdecl
 implementation
 
 const
-  VERSION = '4.2';
+  VERSION = '4.2.2';
   { the library this main.pas was written for (source_dll/be_main.pas BE_API_VERSION) }
-  BE_API = 25;
+  BE_API = 28;
   TAG = '[Basic-Extended] ';
   TEAM_SPECTATOR = 5;
   MAX_BULLET_ID = 254;
   MAX_OBJECT_ID = 90;
+  { 4.2 [Looting] KeepWeapons: the ticks between two looks at the objects }
+  KEEP_PASS = 30;
   MAX_SPAWN_ID = 255;
   { kits: object styles and the spawn point styles they are created at }
   OBJECT_MEDKIT = 16;
@@ -1684,6 +1744,8 @@ const
   AMF_RELOAD = 2;
   AMF_SHOOT = 4;
   AMF_FREE = 8;
+  { 4.2: his change-weapon or throw-weapon key is held (his game may change his weapons before the server hears of it) }
+  AMF_CHANGE = 16;
   AB_XMODE_FIXED = 0;
   AB_XMODE_SPREAD = 1;
   AB_XMODE_CORPSE = 2;
@@ -1839,6 +1901,8 @@ var
   KitObj, KitSpawn: array[0..31] of Boolean;
   KitsAny: Boolean;
   KitSweepTicks: Integer;
+  { SweepSeconds = 0: no periodic sweep, one sweep about 3 s after each map load (DueSweep) }
+  KitSweepOnce: Boolean;
 
   DmgEnabled, DmgDefaultOn, DmgTaken, DmgShowSelf, DmgPercent, DmgSharp: Boolean;
   DmgMode, DmgStackTicks, DmgDisplayTicks, DmgLayerFirst, DmgLayerLast, DmgSight: Integer;
@@ -1928,6 +1992,22 @@ var
     with his body in survival mode (2); the size and place of the Looting and Repacking texts }
   LootDeadMags: Integer;
   LootTextScale, LootTextX, LootTextY: Single;
+  { 4.2 [Looting] Markers: the loot he could take, marked in the world for him; the layers the markers lie on, how often
+    they are looked for }
+  LootMarkers: Boolean;
+  LootMarkDist, LootMarkScale, LootMarkOffY: Single;
+  LootMarkText: string;
+  LootMarkColor: Longint;
+  LootMarkFirst, LootMarkN, LootMarkRefresh: Integer;
+  { 4.2 [Looting] KeepWeapons (0 off, 1 survival rounds, 2 always), KeepWeaponsMax, KeepWeaponsMethod (0 auto, 1 bridge, 2
+    recreate); KpHold: the survival round has ended (nothing is kept until the next one starts); KpArmed: the keeper is on
+    now; the tick of the last pass; the weapons made again; the state the library was in when it was last told }
+  KpMode, KpMax, KpMethod, KpLastPass, KpRenewed, KpLastState: Integer;
+  KpHold, KpArmed: Boolean;
+  { for each viewer and marker layer: the record it marks (-1 = the layer is empty), where, and when it was sent; how
+    many markers are on screens now }
+  LmRec, LmX, LmY, LmSent: array[1..32] of array[0..15] of Integer;
+  LmDrawn: Integer;
   WpFile, WpRealFile: string;
 
   FxPower: Single;
@@ -2245,6 +2325,11 @@ var
   { [Ammo]: the primary weapon seen last tick and the secondary seen with it (the secondary is read
     only when the primary changed), looting }
   AmLastW, AmLastSW, AmLootTicks: array[1..32] of Integer;
+  { 4.2: the weapon his ammunition line was built for (-2 = not yet, -3 = no line wanted, -1 = it waits for the library)
+    and how many ticks in a row it waited }
+  AmDrawnW, AmDefer: array[1..32] of Integer;
+  { 4.2: the tick of his respawn (ResetLife): a weapon coming into his hands in the first 3 s of a life is the menu's }
+  AmSpawnT: array[1..32] of Integer;
   { round 26: [General] MemoryReads - the ammunition of every soldier read from the server's memory (AmMemOn once
     the library found the places); the next soldier checked against his properties }
   AmMemWant, AmMemOn, AmMemTold: Boolean;
@@ -2967,6 +3052,10 @@ var
   BpKilledBy, BpMultiN, BpMultiTick, BpSvTarget, BpSvTick, BpLastPart: array[1..32] of Integer;
   { BE5-16: the tick of the lethal hit's place (as ShLastPartTick) }
   BpLastPartTick: array[1..32] of Integer;
+  { BE5-08: the same enemy killed again and again (two friends on both sides feeding kills), counted per (killer,
+    victim) pair as the shop's: the kill points from the third kill within a minute are BpRepeatPct percent }
+  BpVicTick, BpVicN: array[1..32] of array[1..32] of Integer;
+  BpRepeatPct: Integer;
   BpFirstDone: Boolean;
   { the scores of the players who left this map (key=score): a rejoin keeps his }
   BpKept: TStringList;
@@ -8324,6 +8413,7 @@ begin
     BpVal[E] := CfgInt('Points', BpKey(E), BpDef(E), -100000, 100000);
   BpAssistPct := CfgInt('Points', 'AssistPercent', 50, 1, 100);
   BpDmgLimit := CfgInt('Points', 'DamageLimit', 150, 0, 100000);
+  BpRepeatPct := CfgInt('Points', 'RepeatKillPercent', 50, 0, 100);
   BpDistFrom := CfgInt('Points', 'DistanceFrom', 640, 0, 100000);
   BpDistBase := CfgInt('Points', 'DistanceBase', 10, 0, 100000);
   BpDistStep := CfgInt('Points', 'DistanceStep', 8, 1, 100000);
@@ -8738,7 +8828,7 @@ begin
   for i := 0 to 31 do
     if KitObj[i] then
       KitsAny := True;
-  KitSweepTicks := CfgInt('Kits', 'SweepSeconds', 3, 1, 30) * 60;
+  KitSweepTicks := CfgInt('Kits', 'SweepSeconds', 0, 0, 30) * 60;
 
   { ---- damage numbers ---- }
   DmgEnabled := CfgBool('DamageNumbers', 'Enabled', True);
@@ -9170,6 +9260,35 @@ begin
   LootTextLayer := CfgInt('Looting', 'TextLayer', 249, 1, 255);
   LootTextX := CfgFloat('Looting', 'TextOffsetX', 2, -200, 200);
   LootTextY := CfgFloat('Looting', 'TextOffsetY', -30, -200, 200);
+  LootMarkers := CfgBool('Looting', 'Markers', True);
+  LootMarkDist := CfgFloat('Looting', 'MarkerDistance', 500, 50, 3000);
+  LootMarkText := Trim(CfgStr('Looting', 'MarkerText', '+'));
+  if LootMarkText = '' then
+    LootMarkText := '+';
+  if Length(LootMarkText) > 12 then
+    LootMarkText := Copy(LootMarkText, 1, 12);
+  LootMarkColor := CfgColor('Looting', 'MarkerColor', $FFD040);
+  LootMarkScale := CfgFloat('Looting', 'MarkerScale', 0.05, 0.01, 1);
+  LootMarkOffY := CfgFloat('Looting', 'MarkerOffsetY', -6, -200, 200);
+  LootMarkFirst := CfgInt('Looting', 'MarkerLayerFirst', 4, 0, 255);
+  LootMarkN := CfgInt('Looting', 'MarkerLayers', 6, 1, 16);
+  if LootMarkFirst + LootMarkN > 256 then
+    LootMarkN := 256 - LootMarkFirst;
+  LootMarkRefresh := CfgInt('Looting', 'MarkerRefreshTicks', 20, 5, 120);
+  { 4.2 KeepWeapons: independent of Enabled (the ammunition's records follow the weapons when [Ammo] TrackGroundWeapons is on) }
+  KpMode := CfgInt('Looting', 'KeepWeapons', 1, 0, 2);
+  KpMax := CfgInt('Looting', 'KeepWeaponsMax', 50, 1, 80);
+  S := LowerCase(Trim(CfgStr('Looting', 'KeepWeaponsMethod', 'auto')));
+  if S = 'bridge' then
+    KpMethod := 1
+  else if S = 'recreate' then
+    KpMethod := 2
+  else
+  begin
+    if S <> 'auto' then
+      CfgWarn('Looting', 'KeepWeaponsMethod', S, 'auto, bridge or recreate; auto used');
+    KpMethod := 0;
+  end;
 
   AmmoMax[0] := CfgInt('Ammo', 'USSOCOM', 48, 0, 100000);
   AmmoMax[1] := CfgInt('Ammo', 'DesertEagles', 28, 0, 100000);
@@ -9212,6 +9331,14 @@ begin
     BE_AmmoOptions(BoolInt(AmmoOneRound), BoolInt(AmmoKeepInterrupted), BoolInt(AmmoSortMags), AmmoRepackStart,
       AmmoRepackStep);
     BE_AmmoLimit(AmmoExtraMags);
+    BE_ThingsConfig(KpMethod, KpMax, BoolInt(KpMode > 0));
+    { switched off by /reloadsettings: what lies on the ground runs out its own time }
+    if KpMode = 0 then
+      if KpArmed then
+      begin
+        KpArmed := False;
+        BE_ThingsPass(Game.TickCount, 0);
+      end;
     BE_AmmoText(0, PChar(AmmoNoSpareText));
     for i := 0 to 16 do
       BE_AmmoSetReserve(i, AmmoMax[i]);
@@ -10731,11 +10858,22 @@ begin
   if not HudWanted(ID, P) then
   begin
     HudLowSet(ID, False);
+    if AmmoEnabled then
+      if AmmoHudMode = 1 then
+        AmDrawnW[ID] := -3;
     Exit;
   end;
   H := P.Health;
   HlDrawnH[ID] := H;
   Pct := HealthPct(H);
+  { 4.2: HudAppend = 1 draws the ammunition into this line: the weapon it is built for }
+  if AmmoEnabled then
+    if AmmoHudMode = 1 then
+    begin
+      AmDrawnW[ID] := P.Primary.WType;
+      if BeOk then
+        BE_AmmoDrawn(ID, AmDrawnW[ID]);
+    end;
   S := HudPStyle[ID];
   if (S < 1) or (S > STYLE_COUNT) then
     S := HudDefStyle;
@@ -10836,14 +10974,15 @@ end;
 { the magazine and the spare ones, coloured by what is left of a full load (Color, LowColor below
   LowPercent, CriticalColor below CriticalPercent); NoAmmoText blinking when nothing is left or the
   weapon was just taken away; '' = no line (HudAppend is not 2, off for him, dead, a spectator) }
-procedure AmmoHudWant(ID: Integer; P: TActivePlayer; var T: string; var C: Longint);
+procedure AmmoHudWant(ID: Integer; P: TActivePlayer; var T: string; var C: Longint; var Pend: Boolean);
 var
-  W, Clip, Lv: Integer;
+  W, Clip, Lv, Dw: Integer;
   Part: string;
-  Blink, Editing: Boolean;
+  Blink, Editing, Told: Boolean;
 begin
   T := '';
   C := AhColor;
+  Pend := False;
   if not (AmmoEnabled and (AmmoHudMode = 2)) then
   begin
     AmmoBlinkSet(ID, False);
@@ -10851,6 +10990,9 @@ begin
   end;
   Part := '';
   Blink := False;
+  { 4.2: the weapon the line is built for (-3: no line is wanted) - the library marks it again when it is the wrong one }
+  Dw := -3;
+  Told := False;
   Editing := EdOn[ID] and (EdKind[ID] = ED_AMMO);
   if P.Alive then
     if AmmoHudIsOn(ID) or Editing then
@@ -10858,6 +11000,7 @@ begin
         if P.Team <> TEAM_SPECTATOR then
         begin
           W := P.Primary.WType;
+          Dw := W;
           { [ExtraRocket]: the rockets left go after it }
           Part := RkHudPart(ID, W);
           if W = WEP_KNIFE then
@@ -10865,20 +11008,46 @@ begin
           else if (W >= 0) and (W <= 16) then
           begin
             Clip := BE_AmmoShown(ID, Game.TickCount, W, P.Primary.Ammo);
-            T := BE_AmmoFormatHud(ID, W, Clip);
-            if Copy(T, 1, 3) = ' | ' then
-              T := Copy(T, 4, Length(T));
-            Lv := BE_AmmoLevel(ID, W, Clip);
-            if Lv <= 0 then
-              Blink := True
-            else if Lv < AhCritPct then
-              C := AhCritColor
-            else if Lv < AhLowPct then
-              C := AhLowColor;
+            { 4.2: the library has not taken this weapon in yet (the game gave it a moment ago, or its count is out of range
+              for a tick): the line stays as it is for up to three ticks - it would show a pouch that is not made. The library
+              marks the line again the moment it has the weapon. }
+            Told := True;
+            if BE_AmmoDrawn(ID, W) = 1 then
+              AmDefer[ID] := 0
+            else if AmDefer[ID] < 3 then
+            begin
+              AmDefer[ID] := AmDefer[ID] + 1;
+              Pend := True;
+            end;
+            if not Pend then
+            begin
+              T := BE_AmmoFormatHud(ID, W, Clip);
+              if Copy(T, 1, 3) = ' | ' then
+                T := Copy(T, 4, Length(T));
+              Lv := BE_AmmoLevel(ID, W, Clip);
+              if Lv <= 0 then
+                Blink := True
+              else if Lv < AhCritPct then
+                C := AhCritColor
+              else if Lv < AhLowPct then
+                C := AhLowColor;
+            end;
           end
           else if Game.TickCount < AmNoAmmoUntil[ID] then
             Blink := True;
         end;
+  if Pend then
+  begin
+    { the old text stays; HudPoll looks again if the library does not mark it }
+    AmDrawnW[ID] := -1;
+    Exit;
+  end;
+  AmDrawnW[ID] := Dw;
+  if not Told then
+  begin
+    AmDefer[ID] := 0;
+    BE_AmmoDrawn(ID, Dw);
+  end;
   if Blink then
   begin
     T := AhNoText;
@@ -11612,7 +11781,7 @@ var
   P: TActivePlayer;
   M, L, k, Below, AX, AY, AH, X, Y, n, La, Ti, Co: Integer;
   ASc, Sc: Single;
-  Force: Boolean;
+  Force, Pend: Boolean;
   T: string;
   C: Longint;
 begin
@@ -11634,9 +11803,19 @@ begin
   end;
   if (M and HLB_AMMO) <> 0 then
   begin
-    AmmoHudWant(ID, P, T, C);
-    HlWant[ID][HL_AMMO] := T;
-    HlWantC[ID][HL_AMMO] := C;
+    AmmoHudWant(ID, P, T, C, Pend);
+    if Pend then
+    begin
+      { 4.2: the library has not the weapon yet: the line as it is now, built again in the next tick }
+      HudLines[ID] := HudLines[ID] or HLB_AMMO;
+      HudDirty[ID] := True;
+      HudAnyDirty := True;
+    end
+    else
+    begin
+      HlWant[ID][HL_AMMO] := T;
+      HlWantC[ID][HL_AMMO] := C;
+    end;
   end;
   if (M and HLB_FLASH) <> 0 then
   begin
@@ -11853,7 +12032,7 @@ procedure HudPollOne(i, Tick: Integer);
 var
   P: TActivePlayer;
   H: Single;
-  S, L: Integer;
+  S, L, W: Integer;
   Due: Boolean;
 begin
   P := PL[i];
@@ -11896,6 +12075,24 @@ begin
   end
   else if HlWant[i][HL_HEALTH] <> '' then
     HudMarkL(i, HLB_HEALTH);
+  { 4.2: the ammunition line built for another weapon than the one in his hands (a mark that never came): built again.
+    The library marks it in the tick of the change; this is the net under it. }
+  if AmmoEnabled then
+    if AmmoHudMode > 0 then
+    if P.Alive then
+      if P.Human or DebugBots then
+      begin
+        W := P.Primary.WType;
+        if AmDrawnW[i] <> -3 then
+        begin
+          if AmDrawnW[i] <> W then
+            HudMarkL(i, HlAmmoBits());
+        end
+        else if AmmoHudMode = 2 then
+          if AmmoHudIsOn(i) then
+            if P.Team <> TEAM_SPECTATOR then
+              HudMarkL(i, HLB_AMMO);
+      end;
   Due := False;
   if BeOk then
     Due := BE_HudDue(i, Tick) = 1
@@ -11977,6 +12174,9 @@ begin
   AmLastSW[ID] := -1;
   AmLootTicks[ID] := 0;
   AmBody[ID] := False;
+  AmDrawnW[ID] := -2;
+  AmDefer[ID] := 0;
+  AmSpawnT[ID] := Game.TickCount;
 end;
 
 { Method = damage heals through Soldat's damage routine (other scripts see a heal), but a vest would
@@ -17693,6 +17893,139 @@ begin
     IntToStr(Same) + ' of ' + IntToStr(Tried), ColorGood);
 end;
 
+{ ---------------- [Looting] KeepWeapons: the weapons on the ground stay ---------------- }
+
+{ the objects as ScriptCore says they are: the library follows the free weapons among them and checks the server's table
+  against them (Active, Style, X, Y of every slot) }
+procedure KeepSeen();
+var
+  i: Integer;
+begin
+  for i := 1 to MAX_OBJECT_ID do
+    if OB[i].Active then
+      BE_ThingsSeen(i, 1, OB[i].Style, OB[i].X, OB[i].Y)
+    else
+      BE_ThingsSeen(i, 0, 0, 0.0, 0.0);
+end;
+
+{ without the bridge: the weapons nearing the game's end of their 20 s are killed and made again where they lie; the
+  library moves the weapon's ammunition record to the new object. At most a few a pass. }
+procedure KeepRenew();
+var
+  s, St, N: Integer;
+  X, Y: Single;
+  O: TNewMapObject;
+  A: TActiveMapObject;
+begin
+  N := 0;
+  s := BE_ThingsDue(1);
+  while (s > 0) and (N < 6) do
+  begin
+    N := N + 1;
+    if OB[s].Active then
+    begin
+      St := OB[s].Style;
+      X := OB[s].X;
+      Y := OB[s].Y;
+      A := nil;
+      O := TNewMapObject.Create;
+      try
+        O.Style := St;
+        O.X := X;
+        { a few pixels above the old place: made at the very point of a weapon lying on a thin floor it can fall through }
+        O.Y := Y - 6;
+        OB[s].Kill;
+        A := Map.AddObject(O);
+      finally
+        O.Free;
+      end;
+      if A <> nil then
+      begin
+        BE_ThingsRenewed(s, A.ID, X, Y);
+        KpRenewed := KpRenewed + 1;
+      end
+      else
+        BE_ThingsRenewed(s, 0, X, Y);
+    end;
+    s := BE_ThingsDue(s + 1);
+  end;
+end;
+
+{ every tick: the keeper is on in a survival round (KeepWeapons = 1, not after the round's end) or always (2); a pass
+  every KEEP_PASS ticks }
+procedure KeepTick(Tick: Integer);
+var
+  Want: Boolean;
+  M, St: Integer;
+begin
+  Want := KpMode = 2;
+  if KpMode = 1 then
+    if Game.Survival then
+      if not KpHold then
+        Want := True;
+  if not Want then
+  begin
+    if KpArmed then
+    begin
+      KpArmed := False;
+      BE_ThingsPass(Tick, 0);
+    end;
+    Exit;
+  end;
+  if not KpArmed then
+  begin
+    { the weapons lying there now were not dropped while the keeper was on: they run out their own time }
+    KpArmed := True;
+    BE_ThingsPass(Tick, 1);
+    KeepSeen();
+    KpLastPass := Tick;
+    Exit;
+  end;
+  if Tick - KpLastPass < KEEP_PASS then
+    Exit;
+  KpLastPass := Tick;
+  BE_ThingsPass(Tick, 1);
+  KeepSeen();
+  M := BE_ThingsMethod();
+  if M = 1 then
+    BE_ThingsKeep()
+  else if M = 2 then
+    KeepRenew();
+  St := BE_ThingsState();
+  if St <> KpLastState then
+  begin
+    KpLastState := St;
+    if St >= 2 then
+      Log('weapons on the ground are kept: ' + BE_ThingsInfo());
+  end;
+end;
+
+{ /be_status: the line about the keeper }
+function KeepStatus(): string;
+var
+  St: Integer;
+  W: string;
+begin
+  if not BeOk then
+    Result := 'off (the library did not start)'
+  else if KpMode = 0 then
+    Result := 'off ([Looting] KeepWeapons = 0)'
+  else
+  begin
+    St := BE_ThingsState();
+    if St = 2 then
+      W := 'ready'
+    else if St = 3 then
+      W := 'refused'
+    else if St = 4 then
+      W := 'not found'
+    else
+      W := 'waiting';
+    Result := W + '; KeepWeapons ' + IntToStr(KpMode) + ', on now: ' + iif(KpArmed, 'yes', 'no') + ', made again by the script ' +
+      IntToStr(KpRenewed) + '; ' + BE_ThingsInfo();
+  end;
+end;
+
 procedure CmdStatus(ID: Integer; Args: string);
 var
   Secs, i, k, Kits, Spawns, Shown, Pairs, Seen, Living: Integer;
@@ -17771,6 +18104,7 @@ begin
     Lib := BE_Status();
     Say(ID, 'library: ' + Lib, ColorGood);
     Say(ID, 'memory bridge: ' + BE_BridgeInfo(), ColorGood);
+    Say(ID, 'things bridge: ' + KeepStatus(), ColorGood);
     if FfEnabled then
     begin
       if FfActive then
@@ -18408,6 +18742,7 @@ begin
   WlN := 0;
   WlAdd(DmgEnabled, DmgLayerFirst, DmgLayerLast - DmgLayerFirst + 1, '[DamageNumbers] LayerFirst..LayerLast');
   WlAdd(LootEnabled, LootTextLayer, 1, '[Looting] TextLayer');
+  WlAdd(LootEnabled and LootMarkers, LootMarkFirst, LootMarkN, '[Looting] MarkerLayerFirst');
   WlAdd(RcEnabled, RcMarkFirst, RcMarkN, '[Spawns] MarkLayerFirst');
   WlAdd(MnEnabled, MnWorkLayer, 1, '[Mines] WorkLayer');
   WlAdd(MnEnabled, MnPlantLayer, 1, '[Mines] PlantLayer');
@@ -18793,8 +19128,10 @@ begin
     Say(ID, 'No weapon in hands.', ColorBad);
     Exit;
   end;
-  { D13: the change of the weapon in his hands is not counted yet (the ammunition's next look) }
-  if W <> AmLastW[ID] then
+  { D13: the change of the weapon in his hands is not counted yet (the ammunition's next look); 4.2: or his game may
+    have changed it and the server does not show it yet - the reload below sends the server's weapons and would undo
+    that }
+  if (W <> AmLastW[ID]) or (BE_AmmoSettled(ID, Game.TickCount) = 0) then
   begin
     Say(ID, 'A moment - the weapon in your hands just changed.', ColorBad);
     Exit;
@@ -18881,6 +19218,7 @@ begin
     42: Result := 'insurgents';
     43: Result := 'shop AP rounds';
     44: Result := 'spawns';
+    45: Result := 'keep weapons';
   else
     Result := '';
   end;
@@ -18916,7 +19254,7 @@ begin
   end;
   Ticks := Game.TickCount - ProfFrom;
   Say(ID, 'Profile of ' + IntToStr(Ticks) + ' ticks (' + IntToStr(Ticks div 60) + ' s); a tick has 16667 us:', ColorGood);
-  for k := 0 to 44 do
+  for k := 0 to 45 do
   begin
     T := BE_ProfText(k, Ticks);
     if T <> '' then
@@ -19104,6 +19442,144 @@ begin
     AmLootTicks[i] := 0;
 end;
 
+{ 4.2 [Looting] Markers: a marker of loot he could take, one WorldText on its own layer (MarkerLayerFirst + k) at the loot
+  point - where the library has it (a weapon's map object, a body where the game has it now: the point looting works
+  from, not the ragdoll that may have drifted since). The library picks the loot points, the nearest in range that his
+  eyes see on the map (his weapon's kind, something to take); the script sends what changed (a new point, a point that
+  moved, a text about to run out) and takes a layer away that is no longer wanted. A record keeps its layer. }
+procedure LootMarkOne(i, Tick: Integer);
+var
+  n, k, s, W, Rec, D: Integer;
+  P: TActivePlayer;
+  EX, EY, PX, PY, TW: Single;
+  Ok, Send: Boolean;
+  RecK, SlotK, XK, YK: array[0..15] of Integer;
+  Hit: array[0..15] of Boolean;
+begin
+  n := 0;
+  P := PL[i];
+  Ok := ActiveSlot[i];
+  if Ok then
+    Ok := HumanOf[i] or DebugBots;
+  if Ok then
+    Ok := P.Active;
+  if Ok then
+    if LootMarkers and LootEnabled and LootCorpse and AmmoEnabled and BeOk then
+      if P.Alive then
+      begin
+        W := AmLastW[i];
+        if (W >= 0) and (W <= 16) and (W <> WEP_KNIFE) and (W <> 12) then
+        begin
+          EX := P.X;
+          EY := P.Y - 15;
+          if BE_SpriteEyes(i, P, P.X, P.Y, PX, PY) = 1 then
+          begin
+            EX := PX;
+            EY := PY;
+          end;
+          n := BE_AmmoLootMarks(i, W, P.X, P.Y, EX, EY, LootMarkDist, LootMarkN);
+        end;
+      end;
+  for s := 0 to 15 do
+    Hit[s] := False;
+  { a record that is on a layer keeps it }
+  for k := 0 to n - 1 do
+  begin
+    BE_AmmoLootMarkOp(k, Rec, PX, PY, D);
+    RecK[k] := Rec;
+    XK[k] := Round(PX);
+    YK[k] := Round(PY);
+    SlotK[k] := -1;
+    for s := 0 to LootMarkN - 1 do
+      if LmRec[i][s] = Rec then
+        if not Hit[s] then
+          if SlotK[k] < 0 then
+          begin
+            SlotK[k] := s;
+            Hit[s] := True;
+          end;
+  end;
+  { a new one takes a layer no record keeps }
+  for k := 0 to n - 1 do
+    if SlotK[k] < 0 then
+      for s := 0 to LootMarkN - 1 do
+        if SlotK[k] < 0 then
+          if not Hit[s] then
+          begin
+            SlotK[k] := s;
+            Hit[s] := True;
+          end;
+  for k := 0 to n - 1 do
+  begin
+    s := SlotK[k];
+    if s >= 0 then
+    begin
+      Send := LmRec[i][s] <> RecK[k];
+      if not Send then
+        if (Abs(LmX[i][s] - XK[k]) > 2) or (Abs(LmY[i][s] - YK[k]) > 2) then
+          Send := True;
+      if not Send then
+        if Tick - LmSent[i][s] >= 150 then
+          Send := True;
+      if Send then
+      begin
+        if BeOk then
+          TW := BE_TextWidth(LootMarkText, LootMarkScale)
+        else
+          TW := Length(LootMarkText) * LootMarkScale * WT_CHAR_WIDTH;
+        P.WorldText(LootMarkFirst + s, LootMarkText, 300, LootMarkColor, LootMarkScale, XK[k] - TW / 2, YK[k] + LootMarkOffY);
+        if LmRec[i][s] < 0 then
+          LmDrawn := LmDrawn + 1;
+        LmRec[i][s] := RecK[k];
+        LmX[i][s] := XK[k];
+        LmY[i][s] := YK[k];
+        LmSent[i][s] := Tick;
+      end;
+    end;
+  end;
+  { the layers nobody needs any more }
+  for s := 0 to 15 do
+    if LmRec[i][s] >= 0 then
+      if not Hit[s] then
+      begin
+        if ActiveSlot[i] then
+          if P.Active then
+            P.WorldText(LootMarkFirst + s, ' ', 1, ColorGood, 0.01, 0, 0);
+        LmRec[i][s] := -1;
+        LmDrawn := LmDrawn - 1;
+      end;
+  if LmDrawn < 0 then
+    LmDrawn := 0;
+end;
+
+{ each viewer every MarkerRefreshTicks ticks (a couple of slots a tick) }
+procedure LootMarkTick(Tick: Integer);
+var
+  i: Integer;
+begin
+  i := LootMarkRefresh - Tick mod LootMarkRefresh;
+  while i <= TopSlot do
+  begin
+    LootMarkOne(i, Tick);
+    i := i + LootMarkRefresh;
+  end;
+end;
+
+{ a new player in the slot: nothing of his is on a screen }
+procedure LootMarkForget(ID: Integer);
+var
+  s: Integer;
+begin
+  for s := 0 to 15 do
+  begin
+    if LmRec[ID][s] >= 0 then
+      LmDrawn := LmDrawn - 1;
+    LmRec[ID][s] := -1;
+  end;
+  if LmDrawn < 0 then
+    LmDrawn := 0;
+end;
+
 { the map object style of a weapon lying on the ground (0 = it never lies there) }
 function WeaponObjStyle(W: Integer): Integer;
 begin
@@ -19174,7 +19650,7 @@ begin
     Slot := BE_AmmoGroundSlot(k);
     { D8: a weapon 20 s on the ground despawned (the game's GUNRESISTTIME), nobody took it }
     if Slot > 0 then
-      if BE_AmmoGroundAge(k, Tick) < 1190 then
+      if (BE_AmmoGroundAge(k, Tick) < 1190) or KpArmed then
       if WeaponObjGone(Slot, St) then
       begin
         D := BE_AmmoGroundDist(k, X, Y);
@@ -19288,10 +19764,14 @@ begin
           begin
             { D8: only into hands emptied in this life (not the first weapon of a life), and not a weapon the
               script gave a moment ago }
+            { 4.2: not in the first 3 s of a life - the weapon of his menu comes into the hands emptied by the respawn, and
+              the objects of the round before may just have vanished near his spawn: that is no pickup (it would leave
+              him a pouch without spare magazines) }
             if (W >= 0) and (W <= 16) then
               if OldW = WEP_NONE then
                 if Tick - AmGivenT[i] > 3 then
-                  BE_AmmoPickFrom(i, Tick, WeaponObjTaken(W, X, Y, Tick));
+                  if Tick - AmSpawnT[i] > 180 then
+                    BE_AmmoPickFrom(i, Tick, WeaponObjTaken(W, X, Y, Tick));
             if W = WEP_NONE then
               if (OldW >= 0) and (OldW <= 16) and (OldW <> WEP_KNIFE) then
                 Thrown := True;
@@ -19311,6 +19791,9 @@ begin
         end;
         if InfOn[i] then
           F := F + AMF_FREE;
+        { 4.2: a set or a drop of the library waits while his game may change his weapons unseen (BE_AmmoSettled) }
+        if P.KeyChangeWeap or P.KeyThrow then
+          F := F + AMF_CHANGE;
         V := 0;
         Act := BE_AmmoObserve(i, Tick, W, A, SW, SA, F, X, Y, V);
         AmmoAct(i, Act, V, P);
@@ -25690,7 +26173,11 @@ begin
       begin
         ServerKill[V] := Tick;
         if Game.Survival then
+        begin
           CyRoundHit[V] := Tick;
+          { [Looting] KeepWeapons = 1: what lies on the ground now runs out its own time }
+          KpHold := True;
+        end;
       end;
   if not (BdActive or DwActive) then
     Exit;
@@ -34123,6 +34610,7 @@ procedure InfTick(Tick: Integer);
 var
   i, W, A, Low: Integer;
   P: TActivePlayer;
+  Ok: Boolean;
 begin
   if Tick mod 3 <> 0 then
     Exit;
@@ -34151,9 +34639,16 @@ begin
         Continue;
       A := P.Primary.Ammo;
       Low := WpAmmo[W] div 5;
+      { 4.2: not while his game may have changed his weapons unseen (the refill sends the server's weapons) }
       if A <= Low then
         if A < WpAmmo[W] then
-          P.Primary.Ammo := WpAmmo[W];
+        begin
+          Ok := True;
+          if AmmoEnabled then
+            Ok := BE_AmmoSettled(i, Tick) = 1;
+          if Ok then
+            P.Primary.Ammo := WpAmmo[W];
+        end;
     end;
   if InfCount < 0 then
     InfCount := 0;
@@ -34229,6 +34724,15 @@ procedure BpEvent(ID, E: Integer);
 begin
   if BpVal[E] <> 0 then
     BpAdd(ID, BpVal[E], BpWord(E), False);
+end;
+
+{ BE5-08: the points of an event at Pct percent (the kill of an enemy he killed twice within a minute already) }
+procedure BpEventPct(ID, E, Pct: Integer);
+begin
+  if Pct >= 100 then
+    BpEvent(ID, E)
+  else if BpVal[E] <> 0 then
+    BpAdd(ID, Round(BpVal[E] * 0.01 * Pct), BpWord(E), False);
 end;
 
 { health, vest or magazines given to mates: the event's points for every HealEvery, RepairEvery, AmmoEvery }
@@ -34340,7 +34844,7 @@ end;
 { a kill (OnKill; not the end of a survival round, not the server's own kills) }
 procedure BpKill(K, V, Tick, B: Integer; OwnRound: Boolean);
 var
-  i, n, Pts, Tm, T: Integer;
+  i, n, Pts, Tm, T, Pct: Integer;
   DX, DY, D, OX, OY: Single;
 begin
   if not BpActive then
@@ -34363,10 +34867,20 @@ begin
     BpSvTarget[V] := 0;
     Exit;
   end;
-  BpEvent(K, PE_KILL);
+  { BE5-08: the same enemy again within a minute: from the third kill on BpRepeatPct of the kill's points (kill,
+    headshot, distance, multi kill) - the counter is of the pair, so two victims in turn do not reset it }
+  Pct := 100;
+  if (BpVicTick[K][V] > 0) and (Tick - BpVicTick[K][V] < 3600) then
+    BpVicN[K][V] := BpVicN[K][V] + 1
+  else
+    BpVicN[K][V] := 0;
+  BpVicTick[K][V] := Tick;
+  if BpVicN[K][V] >= 2 then
+    Pct := BpRepeatPct;
+  BpEventPct(K, PE_KILL, Pct);
   if BpLastPart[V] = 12 then
     if BpLastPartTick[V] = Tick then
-      BpEvent(K, PE_HEADSHOT);
+      BpEventPct(K, PE_HEADSHOT, Pct);
   if not BpFirstDone then
   begin
     BpFirstDone := True;
@@ -34396,7 +34910,8 @@ begin
         if ClsActive then
           if (ClsOf[K] >= 1) and (ClsOf[K] <= ClsCount) then
             Pts := Round(Pts * ClsDistF[ClsOf[K]]);
-        BpAdd(K, Pts * BpVal[PE_DISTANCE], BpWord(PE_DISTANCE) + ' ' + IntToStr(Round(D / 14)) + ' m', False);
+        BpAdd(K, Round(Pts * 0.01 * Pct * BpVal[PE_DISTANCE]), BpWord(PE_DISTANCE) + ' ' + IntToStr(Round(D / 14)) + ' m',
+          False);
       end;
     end;
   { he had just hurt a mate of the killer }
@@ -34437,7 +34952,7 @@ begin
     n := 6;
   if n >= 2 then
     if BpMulti[n] <> 0 then
-      BpAdd(K, BpMulti[n], BpMultiWord(n), False);
+      BpAdd(K, Round(BpMulti[n] * 0.01 * Pct), BpMultiWord(n), False);
   { an enemy his team had spotted: the spotter }
   if BpVal[PE_SPOTKILL] <> 0 then
   begin
@@ -34626,6 +35141,11 @@ begin
     BpLastPart[i] := 0;
     BpDmgPend[i] := 0;
     BpTeamPend[i] := 0;
+    for k := 1 to 32 do
+    begin
+      BpVicN[i][k] := 0;
+      BpVicTick[i][k] := 0;
+    end;
     for k := 0 to PE_LAST do
       BpEvPend[i][k] := 0;
     if ActiveSlot[i] then
@@ -34679,6 +35199,13 @@ begin
   for i := 1 to 32 do
     if BpKilledBy[i] = ID then
       BpKilledBy[i] := 0;
+  for i := 1 to 32 do
+  begin
+    BpVicN[ID][i] := 0;
+    BpVicTick[ID][i] := 0;
+    BpVicN[i][ID] := 0;
+    BpVicTick[i][ID] := 0;
+  end;
   if BpKept <> nil then
   begin
     k := BpKept.IndexOfName(BpKeyOf(ID));
@@ -42003,6 +42530,7 @@ var
   i, j: Integer;
 begin
   RcClockWrapped(Tick);
+  KpLastPass := Tick;
   DueRegen := Tick;
   DueScan := Tick;
   DueSecond := Tick;
@@ -42017,6 +42545,8 @@ begin
     LastSupp[i] := 0;
     RegenStart[i] := Tick;
     HlClockReset(i);
+    for j := 0 to 15 do
+      LmSent[i][j] := -1000000;
     CallLast[i] := 0;
     SeenTick[i] := -1;
     EdUntil[i] := Tick + HudEditorTicks;
@@ -42068,8 +42598,11 @@ procedure PauseShift(N: Integer);
 var
   i, k: Integer;
 begin
+  KpLastPass := KpLastPass + N;
   if BeOk then
   begin
+    if KpMode > 0 then
+      BE_ThingsShift(N);
     if BdEnabled or DwEnabled then
       BE_BodyShift(N);
     if MnEnabled then
@@ -42538,6 +43071,28 @@ begin
     except
       StageError('ammo');
     end;
+  { 4.2 [Looting] KeepWeapons }
+  if BeOk then
+    if KpMode > 0 then
+      if not PausedNow then
+        try
+          if ProfOn then
+            BE_ProfBegin(45);
+          KeepTick(Tick);
+          if ProfOn then
+            BE_ProfEnd(45);
+        except
+          StageError('keep weapons');
+        end;
+  { 4.2 [Looting] Markers (the library's records are up to date after AmmoTick) }
+  if AmmoEnabled then
+    if not PausedNow then
+      if (LootMarkers and LootEnabled) or (LmDrawn > 0) then
+        try
+          LootMarkTick(Tick);
+        except
+          StageError('loot markers');
+        end;
   if AbCount > 0 then
     try
       if ProfOn then
@@ -42673,10 +43228,13 @@ begin
     StageError('health poll');
   end;
   if KitsAny then
+    if (KitSweepTicks > 0) or KitSweepOnce then
     if Tick >= DueSweep then
     if not PausedNow then
     begin
-      DueSweep := After(Tick, KitSweepTicks);
+      if KitSweepTicks > 0 then
+        DueSweep := After(Tick, KitSweepTicks);
+      KitSweepOnce := False;
       try
         if ProfOn then
           BE_ProfBegin(22);
@@ -43471,6 +44029,9 @@ begin
   if SuActive then
     if Game.Survival then
       SuRoundStart(Game.TickCount);
+  { [Looting] KeepWeapons = 1: a new survival round }
+  if Game.Survival then
+    KpHold := False;
   { [Classes]: the class of this life, its loadout, the check of the weapons (after the shop's buys); after a team
     change OnJoinTeam does it for the new team }
   if ClsActive then
@@ -43671,6 +44232,7 @@ begin
   TrCursor[ID] := False;
   TrAud[ID] := TA_ME;
   HumanOf[ID] := PL[ID].Human;
+  LootMarkForget(ID);
   SnapExtraTick := -1000000;
   SnapIdx[ID] := -1;
   SnapNew := SnapNew + 1;
@@ -44347,12 +44909,23 @@ begin
   begin
     KitSpawnsOff();
     KitSweep();
+    { SweepSeconds = 0: once more in 3 s (a kit made while the map loads) }
+    if KitSweepTicks = 0 then
+    begin
+      KitSweepOnce := True;
+      DueSweep := After(Game.TickCount, 180);
+    end;
   end;
   SpawnsCleared := False;
   ScanTop := MAX_BULLET_ID;
   VicCount := 0;
   if BeOk then
     BE_AmmoGroundClear();
+  { [Looting] KeepWeapons: the new map has its own objects }
+  KpHold := False;
+  KpArmed := False;
+  if BeOk then
+    BE_ThingsMap();
   for i := 1 to 32 do
   begin
     if AcOn then
